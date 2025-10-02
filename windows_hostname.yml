@@ -1,0 +1,17 @@
+---
+- name: Connect to Windows host via SSH and print hostname
+  hosts: aws_ec2
+  gather_facts: false
+  vars:
+    ansible_connection: ssh
+    ansible_shell_type: powershell
+    ansible_become: false
+  
+  tasks:
+    - name: Get Windows hostname
+      win_shell: $env:COMPUTERNAME
+      register: hostname_result
+
+    - name: Display hostname
+      debug:
+        msg: "Windows hostname: {{ hostname_result.stdout | trim }}"
