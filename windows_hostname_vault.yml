@@ -1,40 +1,41 @@
 ---
-- name: Connect to Windows host via SSH using Vault credentials and print hostname
-  hosts: aws_ec2
+- name: Retrieve credentials from Vault
+  hosts: localhost
   gather_facts: false
+  connection: local
   collections:
     - community.hashi_vault
-    
   vars:
-    ansible_connection: ssh
-    ansible_shell_type: powershell
-    ansible_become: false
-    vault_path: "windows/ssh/{{ inventory_hostname }}"
+    vault_path: "windows/ssh/{{ target_host }}"
   
   tasks:
     - name: Retrieve SSH credentials from Vault
       community.hashi_vault.vault_kv2_get:
         path: "{{ vault_path }}"
       register: vault_secrets
-      run_once: true
-      connection: local
 
     - name: Write private key to temporary file
       copy:
         content: "{{ vault_secrets.data.data.private_key }}"
-        dest: "/tmp/private_key_{{ inventory_hostname }}"
+        dest: "/tmp/private_key_{{ target_host }}"
         mode: '0600'
-      run_once: true
-      connection: local
 
-    - name: Set connection variables for Windows host
+    - name: Set credentials as facts
       set_fact:
-        ansible_user: Administrator
-        ansible_ssh_private_key_file: /tmp/private_key_{{ inventory_hostname }}
+        windows_user: Administrator
+        windows_private_key: "/tmp/private_key_{{ target_host }}"
 
-    - name: Reset connection to use new credentials
-      meta: reset_connection
+- name: Connect to Windows host and print hostname
+  hosts: aws_ec2
+  gather_facts: false
+  vars:
+    ansible_connection: ssh
+    ansible_shell_type: powershell
+    ansible_become: false
+    ansible_user: "Administrator"
+    ansible_ssh_private_key_file: "{{ hostvars['localhost']['windows_private_key'] }}"
 
+  tasks:
     - name: Get Windows hostname
       win_shell: $env:COMPUTERNAME
       register: hostname_result
@@ -45,6 +46,6 @@
 
     - name: Clean up temporary private key file
       file:
-        path: "/tmp/private_key_{{ inventory_hostname }}"
+        path: "{{ hostvars['localhost']['windows_private_key'] }}"
         state: absent
-      run_once: true
+      connection: local
