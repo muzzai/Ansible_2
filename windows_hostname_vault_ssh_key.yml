@@ -8,17 +8,14 @@
     ansible_connection: ssh
     ansible_shell_type: powershell
     ansible_become: false
-    vault_secret: "{{ lookup('community.hashi_vault.vault_kv2_get', 'windows/ssh/' + inventory_hostname, auth_method='approle', role_id=lookup('env', 'VAULT_ROLE_ID'), secret_id=lookup('env', 'VAULT_SECRET_ID'), url=lookup('env', 'VAULT_ADDR'), validate_certs=False) }}"
+    vault_secret: "{{ lookup('community.hashi_vault.vault_kv2_get', 'windows/ssh/' + inventory_hostname, auth_method='approle',
+                      role_id=lookup('env', 'VAULT_ROLE_ID'), secret_id=lookup('env', 'VAULT_SECRET_ID'), url=lookup('env', 'VAULT_ADDR'), validate_certs=False) }}"
     ansible_user: Administrator
     ansible_ssh_private_key_file: "/tmp/private_key_{{ inventory_hostname }}"
     ansible_ssh_common_args: '-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o PreferredAuthentications=publickey'
 
   pre_tasks:
-    - name: Debug vault secret structure
-      debug:
-        var: vault_secret
-      delegate_to: localhost
-
+    
     - name: Create temporary private key file
       copy:
         content: "{{ vault_secret.secret.private_key }}"
@@ -34,10 +31,3 @@
     - name: Display hostname
       debug:
         msg: "Windows hostname: {{ hostname_result.stdout | trim }}"
-
-    - name: Clean up temporary private key file
-      file:
-        path: "/tmp/private_key_{{ inventory_hostname }}"
-        state: absent
-      delegate_to: localhost
-      when: ansible_run_tags != ['never']

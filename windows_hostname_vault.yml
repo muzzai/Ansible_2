@@ -11,7 +11,7 @@
     vault_secret: "{{ lookup('community.hashi_vault.vault_kv2_get', 'windows/ssh/' + inventory_hostname, auth_method='approle', role_id=lookup('env', 'VAULT_ROLE_ID'), secret_id=lookup('env', 'VAULT_SECRET_ID'), url=lookup('env', 'VAULT_ADDR'), validate_certs=False) }}"
     ansible_user: Administrator
     ansible_ssh_pass: "{{ vault_secret.secret.admin_password }}"
-    ansible_ssh_common_args: '-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o PasswordAuthentication=yes -o PreferredAuthentications=password -o PubkeyAuthentication=no -vv'
+    ansible_ssh_common_args: '-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o PasswordAuthentication=yes -o PreferredAuthentications=password -o PubkeyAuthentication=no'
 
   tasks:
     - name: Debug vault secret structure
