@@ -20,20 +20,20 @@
         dest: "/tmp/private_key_{{ target_host }}"
         mode: '0600'
 
-    - name: Set credentials as facts
+    - name: Set connection variables for all Windows hosts
       set_fact:
-        windows_user: Administrator
-        windows_private_key: "/tmp/private_key_{{ target_host }}"
+        ansible_user: Administrator
+        ansible_ssh_private_key_file: "/tmp/private_key_{{ item }}"
+        ansible_connection: ssh
+        ansible_shell_type: powershell
+        ansible_become: false
+      delegate_to: "{{ item }}"
+      delegate_facts: true
+      loop: "{{ groups['aws_ec2'] }}"
 
 - name: Connect to Windows host and print hostname
   hosts: aws_ec2
   gather_facts: false
-  vars:
-    ansible_connection: ssh
-    ansible_shell_type: powershell
-    ansible_become: false
-    ansible_user: "Administrator"
-    ansible_ssh_private_key_file: "{{ hostvars['localhost']['windows_private_key'] }}"
 
   tasks:
     - name: Get Windows hostname
@@ -46,6 +46,6 @@
 
     - name: Clean up temporary private key file
       file:
-        path: "{{ hostvars['localhost']['windows_private_key'] }}"
+        path: "{{ ansible_ssh_private_key_file }}"
         state: absent
       connection: local
