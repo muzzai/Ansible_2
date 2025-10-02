@@ -1,0 +1,43 @@
+---
+- name: Connect to Windows host via SSH using Vault credentials and print hostname
+  hosts: aws_ec2
+  gather_facts: false
+  vars:
+    ansible_connection: ssh
+    ansible_shell_type: powershell
+    ansible_become: false
+    vault_path: "windows/ssh/{{ inventory_hostname }}"
+  
+  tasks:
+    - name: Retrieve SSH credentials from Vault
+      hashivault_read:
+        secret: "{{ vault_path }}"
+        key: private_key
+      register: vault_private_key
+      delegate_to: localhost
+
+    - name: Set connection variables
+      set_fact:
+        ansible_user: Administrator
+        ansible_ssh_private_key_file: /tmp/private_key_{{ inventory_hostname }}
+
+    - name: Write private key to temporary file
+      copy:
+        content: "{{ vault_private_key.value }}"
+        dest: "/tmp/private_key_{{ inventory_hostname }}"
+        mode: '0600'
+      delegate_to: localhost
+
+    - name: Get Windows hostname
+      win_shell: $env:COMPUTERNAME
+      register: hostname_result
+
+    - name: Display hostname
+      debug:
+        msg: "Windows hostname: {{ hostname_result.stdout | trim }}"
+
+    - name: Clean up temporary private key file
+      file:
+        path: "/tmp/private_key_{{ inventory_hostname }}"
+        state: absent
+      delegate_to: localhost
