@@ -16,7 +16,7 @@
       community.hashi_vault.vault_kv2_get:
         path: "{{ vault_path }}"
       register: vault_secrets
-      delegate_to: localhost
+      run_once: true
 
     - name: Set connection variables
       set_fact:
@@ -28,7 +28,7 @@
         content: "{{ vault_secrets.data.data.private_key }}"
         dest: "/tmp/private_key_{{ inventory_hostname }}"
         mode: '0600'
-      delegate_to: localhost
+      run_once: true
 
     - name: Get Windows hostname
       win_shell: $env:COMPUTERNAME
@@ -42,4 +42,4 @@
       file:
         path: "/tmp/private_key_{{ inventory_hostname }}"
         state: absent
-      delegate_to: localhost
+      run_once: true
