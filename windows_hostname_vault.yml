@@ -10,17 +10,8 @@
     ansible_become: false
     vault_secret: "{{ lookup('community.hashi_vault.vault_kv2_get', 'windows/ssh/' + inventory_hostname, auth_method='approle', role_id=lookup('env', 'VAULT_ROLE_ID'), secret_id=lookup('env', 'VAULT_SECRET_ID'), url=lookup('env', 'VAULT_ADDR'), validate_certs=False) }}"
     ansible_user: Administrator
-    ansible_ssh_private_key_file: "/tmp/private_key_{{ inventory_hostname }}"
-    ansible_ssh_common_args: '-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -vvv'
-
-  pre_tasks:
-    - name: Write private key to temporary file
-      copy:
-        content: "{{ vault_secret.secret.private_key | replace('\\\\n', '\n') }}"
-        dest: "/tmp/private_key_{{ inventory_hostname }}"
-        mode: '0600'
-      connection: local
-      run_once: true
+    ansible_ssh_pass: "{{ vault_secret.secret.admin_password }}"
+    ansible_ssh_common_args: '-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -vv'
 
   tasks:
     - name: Debug vault secret structure
