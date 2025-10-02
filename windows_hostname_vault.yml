@@ -25,9 +25,3 @@
     - name: Display hostname
       debug:
         msg: "Windows hostname: {{ hostname_result.stdout | trim }}"
-
-    - name: Clean up temporary private key file
-      file:
-        path: "/tmp/private_key_{{ inventory_hostname }}"
-        state: absent
-      connection: local
