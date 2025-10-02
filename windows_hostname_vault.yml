@@ -1,42 +1,26 @@
 ---
-- name: Retrieve credentials from Vault
-  hosts: localhost
-  gather_facts: false
-  connection: local
-  collections:
-    - community.hashi_vault
-  vars:
-    vault_path: "windows/ssh/{{ target_host }}"
-  
-  tasks:
-    - name: Retrieve SSH credentials from Vault
-      community.hashi_vault.vault_kv2_get:
-        path: "{{ vault_path }}"
-      register: vault_secrets
-
-    - name: Write private key to temporary file
-      copy:
-        content: "{{ vault_secrets.data.data.private_key }}"
-        dest: "/tmp/private_key_{{ target_host }}"
-        mode: '0600'
-
-    - name: Store credentials for later use
-      set_fact:
-        windows_credentials:
-          user: Administrator
-          private_key_file: "/tmp/private_key_{{ target_host }}"
-
 - name: Connect to Windows host and print hostname
   hosts: aws_ec2
   gather_facts: false
+  collections:
+    - community.hashi_vault
   vars:
     ansible_connection: ssh
     ansible_shell_type: powershell
     ansible_become: false
-    ansible_user: "{{ hostvars['localhost']['windows_credentials']['user'] }}"
-    ansible_ssh_private_key_file: "{{ hostvars['localhost']['windows_credentials']['private_key_file'] }}"
+    vault_secret: "{{ lookup('community.hashi_vault.hashi_vault', 'windows/ssh/' + inventory_hostname) }}"
+    ansible_user: Administrator
+    ansible_ssh_private_key_file: "/tmp/private_key_{{ inventory_hostname }}"
 
   tasks:
+    - name: Write private key to temporary file
+      copy:
+        content: "{{ vault_secret.private_key }}"
+        dest: "/tmp/private_key_{{ inventory_hostname }}"
+        mode: '0600'
+      connection: local
+      run_once: true
+
     - name: Get Windows hostname
       win_shell: $env:COMPUTERNAME
       register: hostname_result
@@ -47,6 +31,6 @@
 
     - name: Clean up temporary private key file
       file:
-        path: "{{ hostvars['localhost']['windows_credentials']['private_key_file'] }}"
+        path: "/tmp/private_key_{{ inventory_hostname }}"
         state: absent
       connection: local
