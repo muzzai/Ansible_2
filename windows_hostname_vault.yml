@@ -2,6 +2,8 @@
 - name: Connect to Windows host via SSH using Vault credentials and print hostname
   hosts: aws_ec2
   gather_facts: false
+  collections:
+    - community.hashi_vault
   vars:
     ansible_connection: ssh
     ansible_shell_type: powershell
@@ -10,7 +12,7 @@
   
   tasks:
     - name: Retrieve SSH credentials from Vault
-      community.hashi_vault.vault_kv2_get:
+      vault_kv2_get:
         path: "{{ vault_path }}"
       register: vault_secrets
       delegate_to: localhost
