@@ -20,7 +20,7 @@
 
     - name: Write private key to temporary file
       copy:
-        content: "{{ vault_secret.secret.private_key }}"
+        content: "{{ vault_secret.secret.private_key | replace('\\\\n', '\n') }}"
         dest: "/tmp/private_key_{{ inventory_hostname }}"
         mode: '0600'
       connection: local
