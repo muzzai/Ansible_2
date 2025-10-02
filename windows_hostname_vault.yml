@@ -12,9 +12,10 @@
   
   tasks:
     - name: Retrieve SSH credentials from Vault
-      vault_kv2_get:
-        path: "{{ vault_path }}"
-      register: vault_secrets
+      community.hashi_vault.hashi_vault_read:
+        secret: "{{ vault_path }}"
+        key: private_key
+      register: vault_private_key
       delegate_to: localhost
 
     - name: Set connection variables
@@ -24,7 +25,7 @@
 
     - name: Write private key to temporary file
       copy:
-        content: "{{ vault_secrets.data.data.private_key }}"
+        content: "{{ vault_private_key.value }}"
         dest: "/tmp/private_key_{{ inventory_hostname }}"
         mode: '0600'
       delegate_to: localhost
