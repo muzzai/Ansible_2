@@ -17,11 +17,7 @@
         path: "{{ vault_path }}"
       register: vault_secrets
       run_once: true
-
-    - name: Set connection variables
-      set_fact:
-        ansible_user: Administrator
-        ansible_ssh_private_key_file: /tmp/private_key_{{ inventory_hostname }}
+      connection: local
 
     - name: Write private key to temporary file
       copy:
@@ -29,6 +25,15 @@
         dest: "/tmp/private_key_{{ inventory_hostname }}"
         mode: '0600'
       run_once: true
+      connection: local
+
+    - name: Set connection variables for Windows host
+      set_fact:
+        ansible_user: Administrator
+        ansible_ssh_private_key_file: /tmp/private_key_{{ inventory_hostname }}
+
+    - name: Reset connection to use new credentials
+      meta: reset_connection
 
     - name: Get Windows hostname
       win_shell: $env:COMPUTERNAME
