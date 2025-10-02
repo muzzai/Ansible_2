@@ -13,11 +13,7 @@
     ansible_ssh_private_key_file: "/tmp/private_key_{{ inventory_hostname }}"
     ansible_ssh_common_args: '-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -vvv'
 
-  tasks:
-    - name: Debug vault secret structure
-      debug:
-        var: vault_secret
-
+  pre_tasks:
     - name: Write private key to temporary file
       copy:
         content: "{{ vault_secret.secret.private_key | replace('\\\\n', '\n') }}"
@@ -25,6 +21,11 @@
         mode: '0600'
       connection: local
       run_once: true
+
+  tasks:
+    - name: Debug vault secret structure
+      debug:
+        var: vault_secret
 
     - name: Get Windows hostname
       win_shell: $env:COMPUTERNAME
