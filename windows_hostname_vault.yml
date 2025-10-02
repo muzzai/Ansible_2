@@ -13,9 +13,13 @@
     ansible_ssh_private_key_file: "/tmp/private_key_{{ inventory_hostname }}"
 
   tasks:
+    - name: Debug vault secret structure
+      debug:
+        var: vault_secret
+
     - name: Write private key to temporary file
       copy:
-        content: "{{ vault_secret.private_key }}"
+        content: "{{ vault_secret.data.private_key }}"
         dest: "/tmp/private_key_{{ inventory_hostname }}"
         mode: '0600'
       connection: local
