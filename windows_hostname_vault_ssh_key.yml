@@ -12,8 +12,7 @@
 
   tasks:
     - name: Create temporary private key file
-      local_action:
-        module: ansible.builtin.copy
+      ansible.builtin.copy:
         content: >-
           {{ lookup(
                'community.hashi_vault.vault_kv2_get',
@@ -26,6 +25,7 @@
           ).secret.private_key }}
         dest: "/tmp/private_key_{{ inventory_hostname }}"
         mode: '0600'
+      delegate_to: controller
 
     - name: Get Windows hostname
       ansible.windows.win_shell: $env:COMPUTERNAME
