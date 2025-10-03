@@ -6,12 +6,12 @@
     ansible_connection: ssh
     ansible_shell_type: powershell
     ansible_become: false
-  
+
   tasks:
     - name: Get Windows hostname
-      win_shell: $env:COMPUTERNAME
+      ansible.windows.win_shell: $env:COMPUTERNAME
       register: hostname_result
 
     - name: Display hostname
-      debug:
+      ansible.builtin.debug:
         msg: "Windows hostname: {{ hostname_result.stdout | trim }}"

@@ -2,32 +2,35 @@
 - name: Connect to Windows host using SSH key from Vault
   hosts: aws_ec2
   gather_facts: false
-  collections:
-    - community.hashi_vault
   vars:
     ansible_connection: ssh
     ansible_shell_type: powershell
     ansible_become: false
-    vault_secret: "{{ lookup('community.hashi_vault.vault_kv2_get', 'windows/ssh/' + inventory_hostname, auth_method='approle',
-                      role_id=lookup('env', 'VAULT_ROLE_ID'), secret_id=lookup('env', 'VAULT_SECRET_ID'), url=lookup('env', 'VAULT_ADDR'), validate_certs=False) }}"
     ansible_user: Administrator
     ansible_ssh_private_key_file: "/tmp/private_key_{{ inventory_hostname }}"
     ansible_ssh_common_args: '-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o PreferredAuthentications=publickey'
 
-  pre_tasks:
-    
+  tasks:
     - name: Create temporary private key file
-      copy:
-        content: "{{ vault_secret.secret.private_key }}"
+      local_action:
+        module: ansible.builtin.copy
+        content: >-
+          {{ lookup(
+               'community.hashi_vault.vault_kv2_get',
+               'windows/ssh/' ~ inventory_hostname,
+               auth_method='approle',
+               role_id=lookup('ansible.builtin.env', 'VAULT_ROLE_ID'),
+               secret_id=lookup('ansible.builtin.env', 'VAULT_SECRET_ID'),
+               url=lookup('ansible.builtin.env', 'VAULT_ADDR'),
+               validate_certs=False
+          ).secret.private_key }}
         dest: "/tmp/private_key_{{ inventory_hostname }}"
         mode: '0600'
-      delegate_to: localhost
 
-  tasks:
     - name: Get Windows hostname
-      win_shell: $env:COMPUTERNAME
+      ansible.windows.win_shell: $env:COMPUTERNAME
       register: hostname_result
 
     - name: Display hostname
-      debug:
+      ansible.builtin.debug:
         msg: "Windows hostname: {{ hostname_result.stdout | trim }}"
