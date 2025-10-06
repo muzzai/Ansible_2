@@ -46,6 +46,11 @@
           -o PasswordAuthentication=no -o PreferredAuthentications=publickey
 
 
+    - name: Create temp directory
+      ansible.windows.win_file:
+        path: C:\temp
+        state: directory
+
     - name: Download SQL Server installer from S3
       ansible.windows.win_get_url:
         url: "{{ s3_installer_url.url }}"
