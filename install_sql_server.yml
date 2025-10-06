@@ -59,8 +59,26 @@
     - name: Download SQL Server installer from S3
       ansible.windows.win_get_url:
         url: "{{ s3_installer_url.url }}"
-        dest: C:\temp\
+        dest: C:\temp\SQLServer-{{ sql_version }}-{{ sql_edition }}.zip
       register: dl
+
+    - name: Extract SQL Server installer ZIP
+      ansible.windows.win_unzip:
+        src: C:\temp\SQLServer-{{ sql_version }}-{{ sql_edition }}.zip
+        dest: C:\temp\sql_extract
+        creates: C:\temp\sql_extract
+
+    - name: Find SQL Server installer executable
+      ansible.windows.win_find:
+        paths: C:\temp\sql_extract
+        patterns: "*.exe"
+        recurse: yes
+      register: installer_files
+
+    - name: Set installer path variable
+      ansible.builtin.set_fact:
+        sql_installer_path: "{{ installer_files.files[0].path }}"
+      when: installer_files.files | length > 0
 
     - name: Create installation directory
       ansible.windows.win_file:
@@ -69,15 +87,15 @@
 
     - name: Download SQL Server installation media (Express)
       ansible.windows.win_shell: |
-        C:\temp\SQL{{ sql_version }}-SSEI-Expr.exe /ACTION=Download /MEDIAPATH=C:\temp\sql_install /QUIET
-      when: sql_edition == 'Express'
+        "{{ sql_installer_path }}" /ACTION=Download /MEDIAPATH=C:\temp\sql_install /QUIET
+      when: sql_edition == 'Express' and sql_installer_path is defined
 
     - name: Install SQL Server from S3 media
       ansible.windows.win_shell: |
-        C:\temp\SQLServer-{{ sql_version }}-{{ sql_edition }}.exe /CONFIGURATIONFILE=C:\temp\ConfigurationFile.ini /IACCEPTSQLSERVERLICENSETERMS
+        "{{ sql_installer_path }}" /CONFIGURATIONFILE=C:\temp\ConfigurationFile.ini /IACCEPTSQLSERVERLICENSETERMS
       register: sql_install_result
       failed_when: sql_install_result.rc != 0 and sql_install_result.rc != 3010
-      when: s3_installer_url.url is defined
+      when: sql_installer_path is defined
 
     - name: Install SQL Server Express (fallback)
       ansible.windows.win_shell: |
