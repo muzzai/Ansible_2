@@ -53,7 +53,7 @@
 
     - name: Download SQL Server installer from S3
       ansible.windows.win_get_url:
-        url: "{{ s3_installer_url.url }}"
+        url: "{{ s3_installer_url.url | quote }}"
         dest: "C:\\temp\\SQLServer-{{ sql_version }}-{{ sql_edition }}.exe"
         timeout: 600
       when: s3_installer_url.url is defined
