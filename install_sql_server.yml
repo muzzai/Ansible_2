@@ -139,7 +139,7 @@
         start_mode: auto
 
     - name: Configure Windows Firewall for SQL Server
-      community.windows.win_firewall_rule:
+      ansible.windows.win_firewall_rule:
         name: SQL Server
         localport: "{{ sql_port }}"
         action: allow
