@@ -35,7 +35,8 @@
       register: s3_installer_url
       delegate_to: localhost
 
-    - ansible.builtin.debug:
+    - name: Debugging signed urls
+      ansible.builtin.debug:
         msg: "{{ s3_installer_url }}"
 
     - name: Set connection variables
