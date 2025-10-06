@@ -99,7 +99,7 @@
 
     - name: Enable SQL Server TCP/IP protocol
       ansible.windows.win_shell: |
-        Import-Module SqlServer -Force
+        Import-Module SqlServer -Forc
         $smo = New-Object Microsoft.SqlServer.Management.Smo.Server("localhost")
         $smo.Settings.LoginMode = [Microsoft.SqlServer.Management.Smo.ServerLoginMode]::Mixed
         $smo.Alter()
@@ -137,15 +137,6 @@
         name: MSSQLSERVER
         state: restarted
         start_mode: auto
-
-    - name: Configure Windows Firewall for SQL Server
-      ansible.windows.win_firewall_rule:
-        name: SQL Server
-        localport: "{{ sql_port }}"
-        action: allow
-        direction: in
-        protocol: tcp
-        state: present
 
     - name: Verify SQL Server installation and configuration
       ansible.windows.win_shell: |
