@@ -63,7 +63,7 @@
       register: dl
 
     - name: Extract SQL Server installer ZIP
-      ansible.windows.win_unzip:
+      community.windows.win_unzip:
         src: C:\temp\SQLServer-{{ sql_version }}-{{ sql_edition }}.zip
         dest: C:\temp\sql_extract
         creates: C:\temp\sql_extract
