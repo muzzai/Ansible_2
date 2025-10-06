@@ -72,7 +72,7 @@
       ansible.windows.win_find:
         paths: C:\temp\sql_extract
         patterns: "*.exe"
-        recurse: yes
+        recurse: true
       register: installer_files
 
     - name: Set installer path variable
