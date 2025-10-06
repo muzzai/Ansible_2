@@ -27,7 +27,11 @@
         ansible_become: false
         ansible_user: Administrator
         ansible_ssh_private_key_file: "/tmp/private_key_{{ inventory_hostname }}"
-        ansible_ssh_common_args: '-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o PreferredAuthentications=publickey'
+        ansible_ssh_common_args: |
+          -o UserKnownHostsFile=/dev/null
+          -o StrictHostKeyChecking=no
+          -o PasswordAuthentication=no
+          -o PreferredAuthentications=publickey'
 
     - name: Get Windows hostname
       ansible.windows.win_shell: $env:COMPUTERNAME

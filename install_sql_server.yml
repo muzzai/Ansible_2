@@ -1,0 +1,158 @@
+---
+- name: Install SQL Server on Windows
+  hosts: windows_hosts
+  gather_facts: false
+  vars:
+    sql_version: "{{ sql_server_version | default('2022') }}"
+    sql_edition: "{{ sql_server_edition | default('Express') }}"
+    sa_password: "{{ vault_sa_password }}"
+    sql_port: "{{ sql_server_port | default('1433') }}"
+
+  tasks:
+    - name: Create temporary private key file
+      ansible.builtin.copy:
+        content: >-
+          {{ lookup(
+               'community.hashi_vault.vault_kv2_get',
+               'windows/ssh/' ~ inventory_hostname,
+               auth_method='approle',
+               role_id=lookup('ansible.builtin.env', 'VAULT_ROLE_ID'),
+               secret_id=lookup('ansible.builtin.env', 'VAULT_SECRET_ID'),
+               url=lookup('ansible.builtin.env', 'VAULT_ADDR'),
+               validate_certs=False
+          ).secret.private_key }}
+        dest: "/tmp/private_key_{{ inventory_hostname }}"
+        mode: '0600'
+      delegate_to: localhost
+
+    - name: Generate Installer URL
+      amazon.aws.s3_object:
+        mode: geturl
+        bucket: alloy-software-installers
+        object: "SQLServer-{{ sql_version }}-{{ sql_edition }}"
+        expiry: 3600
+      register: s3_installer_url
+      delegate_to: localhost
+
+    - name: Set connection variables
+      ansible.builtin.set_fact:
+        ansible_connection: ssh
+        ansible_shell_type: powershell
+        ansible_become: false
+        ansible_user: Administrator
+        ansible_ssh_private_key_file: "/tmp/private_key_{{ inventory_hostname }}"
+        ansible_ssh_common_args: >-
+          -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no
+          -o PasswordAuthentication=no -o PreferredAuthentications=publickey
+
+
+    - name: Download SQL Server installer from S3
+      ansible.windows.win_get_url:
+        url: "{{ s3_installer_url.url }}"
+        dest: "C:\\temp\\SQLServer-{{ sql_version }}-{{ sql_edition }}.exe"
+        timeout: 600
+      when: s3_installer_url.url is defined
+
+    - name: Create installation directory
+      ansible.windows.win_file:
+        path: C:\temp\sql_install
+        state: directory
+
+    - name: Download SQL Server installation media (Express)
+      ansible.windows.win_shell: |
+        C:\temp\SQL{{ sql_version }}-SSEI-Expr.exe /ACTION=Download /MEDIAPATH=C:\temp\sql_install /QUIET
+      when: sql_edition == 'Express'
+
+    - name: Install SQL Server from S3 media
+      ansible.windows.win_shell: |
+        C:\temp\SQLServer-{{ sql_version }}-{{ sql_edition }}.exe /CONFIGURATIONFILE=C:\temp\ConfigurationFile.ini /IACCEPTSQLSERVERLICENSETERMS
+      register: sql_install_result
+      failed_when: sql_install_result.rc != 0 and sql_install_result.rc != 3010
+      when: s3_installer_url.url is defined
+
+    - name: Install SQL Server Express (fallback)
+      ansible.windows.win_shell: |
+        C:\temp\sql_install\SQLEXPR_x64_ENU.exe /CONFIGURATIONFILE=C:\temp\ConfigurationFile.ini /IACCEPTSQLSERVERLICENSETERMS
+      register: sql_install_result
+      failed_when: sql_install_result.rc != 0 and sql_install_result.rc != 3010
+      when: sql_edition == 'Express' and s3_installer_url.url is not defined
+
+    - name: Create SQL Server configuration file
+      ansible.windows.win_copy:
+        content: |
+          [OPTIONS]
+          ACTION="Install"
+          FEATURES=SQLENGINE
+          INSTANCENAME="MSSQLSERVER"
+          INSTANCEDIR="C:\Program Files\Microsoft SQL Server"
+          INSTALLSQLDATADIR="C:\Program Files\Microsoft SQL Server"
+          SQLSVCACCOUNT="NT AUTHORITY\SYSTEM"
+          SQLSYSADMINACCOUNTS="BUILTIN\Administrators"
+          SECURITYMODE="SQL"
+          SAPWD="{{ sa_password }}"
+          TCPENABLED="1"
+          NPENABLED="0"
+          BROWSERSVCSTARTUPTYPE="Automatic"
+          IACCEPTSQLSERVERLICENSETERMS="True"
+          QUIET="True"
+        dest: C:\temp\ConfigurationFile.ini
+
+    - name: Enable SQL Server TCP/IP protocol
+      ansible.windows.win_shell: |
+        Import-Module SqlServer -Force
+        $smo = New-Object Microsoft.SqlServer.Management.Smo.Server("localhost")
+        $smo.Settings.LoginMode = [Microsoft.SqlServer.Management.Smo.ServerLoginMode]::Mixed
+        $smo.Alter()
+
+        $tcp = $smo.ServerInstances['MSSQLSERVER'].ServerProtocols['Tcp']
+        $tcp.IsEnabled = $true
+        $tcp.Alter()
+
+        # Set TCP port
+        $tcpip = $tcp.IPAddresses['IPAll']
+        $tcpip.IPAddressProperties['TcpPort'].Value = "{{ sql_port }}"
+        $tcpip.IPAddressProperties['TcpDynamicPorts'].Value = ""
+        $tcp.Alter()
+      register: tcp_protocol_result
+      failed_when: false
+      changed_when: tcp_protocol_result.rc == 0
+
+    - name: Configure SQL Server service to use mixed authentication
+      ansible.windows.win_shell: |
+        sqlcmd -S localhost -E -Q "EXEC xp_instance_regwrite N'HKEY_LOCAL_MACHINE', N'Software\Microsoft\MSSQLServer\MSSQLServer', N'LoginMode', REG_DWORD, 2"
+      register: mixed_auth_result
+      failed_when: false
+      changed_when: mixed_auth_result.rc == 0
+
+    - name: Set SA account password
+      ansible.windows.win_shell: |
+        sqlcmd -S localhost -E -Q "ALTER LOGIN sa WITH PASSWORD = '{{ sa_password }}'"
+        sqlcmd -S localhost -E -Q "ALTER LOGIN sa ENABLE"
+      register: sa_password_result
+      failed_when: false
+      changed_when: sa_password_result.rc == 0
+
+    - name: Restart SQL Server service
+      ansible.windows.win_service:
+        name: MSSQLSERVER
+        state: restarted
+        start_mode: auto
+
+    - name: Configure Windows Firewall for SQL Server
+      community.windows.win_firewall_rule:
+        name: SQL Server
+        localport: "{{ sql_port }}"
+        action: allow
+        direction: in
+        protocol: tcp
+        state: present
+
+    - name: Verify SQL Server installation and configuration
+      ansible.windows.win_shell: |
+        sqlcmd -S localhost -U sa -P "{{ sa_password }}" -Q "SELECT @@VERSION"
+      register: sql_version_check
+      failed_when: sql_version_check.rc != 0
+
+    - name: Display SQL Server version
+      ansible.builtin.debug:
+        msg: "{{ sql_version_check.stdout_lines }}"
