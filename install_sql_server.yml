@@ -25,15 +25,6 @@
         mode: '0600'
       delegate_to: localhost
 
-    - name: Generate Installer URL
-      amazon.aws.s3_object:
-        mode: geturl
-        bucket: alloy-software-installers
-        object: "SQLServer-{{ sql_version }}-{{ sql_edition }}.zip"
-        expiry: 3600
-      register: s3_installer_url
-      delegate_to: localhost
-
     - name: Set connection variables
       ansible.builtin.set_fact:
         ansible_connection: ssh
@@ -50,6 +41,15 @@
       ansible.windows.win_file:
         path: C:\temp
         state: directory
+
+    - name: Generate Installer URL
+      amazon.aws.s3_object:
+        mode: geturl
+        bucket: alloy-software-installers
+        object: "SQLServer-{{ sql_version }}-{{ sql_edition }}.zip"
+        expiry: 3600
+        region: "{{ hostvars[inventory_hostname].placement.region }}"
+      register: s3_installer_url
 
     - name: Download SQL Server installer from S3
       ansible.windows.win_get_url:
