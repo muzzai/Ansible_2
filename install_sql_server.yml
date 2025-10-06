@@ -35,10 +35,6 @@
       register: s3_installer_url
       delegate_to: localhost
 
-    - name: Debugging signed urls
-      ansible.builtin.debug:
-        msg: "{{ s3_installer_url }}"
-
     - name: Set connection variables
       ansible.builtin.set_fact:
         ansible_connection: ssh
@@ -49,7 +45,6 @@
         ansible_ssh_common_args: >-
           -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no
           -o PasswordAuthentication=no -o PreferredAuthentications=publickey
-
 
     - name: Create temp directory
       ansible.windows.win_file:
@@ -80,6 +75,26 @@
         sql_installer_path: "{{ installer_files.files[0].path }}"
       when: installer_files.files | length > 0
 
+    - name: Create SQL Server configuration file
+      ansible.windows.win_copy:
+        content: |
+          [OPTIONS]
+          ACTION="Install"
+          FEATURES=SQLENGINE
+          INSTANCENAME="MSSQLSERVER"
+          INSTANCEDIR="C:\Program Files\Microsoft SQL Server"
+          INSTALLSQLDATADIR="C:\Program Files\Microsoft SQL Server"
+          SQLSVCACCOUNT="NT AUTHORITY\SYSTEM"
+          SQLSYSADMINACCOUNTS="BUILTIN\Administrators"
+          SECURITYMODE="SQL"
+          SAPWD="{{ sa_password }}"
+          TCPENABLED="1"
+          NPENABLED="0"
+          BROWSERSVCSTARTUPTYPE="Automatic"
+          IACCEPTSQLSERVERLICENSETERMS="True"
+          QUIET="True"
+        dest: C:\temp\ConfigurationFile.ini
+
     - name: Create installation directory
       ansible.windows.win_file:
         path: C:\temp\sql_install
@@ -102,31 +117,11 @@
         C:\temp\sql_install\SQLEXPR_x64_ENU.exe /CONFIGURATIONFILE=C:\temp\ConfigurationFile.ini /IACCEPTSQLSERVERLICENSETERMS
       register: sql_install_result
       failed_when: sql_install_result.rc != 0 and sql_install_result.rc != 3010
-      when: sql_edition == 'Express' and s3_installer_url.url is not defined
-
-    - name: Create SQL Server configuration file
-      ansible.windows.win_copy:
-        content: |
-          [OPTIONS]
-          ACTION="Install"
-          FEATURES=SQLENGINE
-          INSTANCENAME="MSSQLSERVER"
-          INSTANCEDIR="C:\Program Files\Microsoft SQL Server"
-          INSTALLSQLDATADIR="C:\Program Files\Microsoft SQL Server"
-          SQLSVCACCOUNT="NT AUTHORITY\SYSTEM"
-          SQLSYSADMINACCOUNTS="BUILTIN\Administrators"
-          SECURITYMODE="SQL"
-          SAPWD="{{ sa_password }}"
-          TCPENABLED="1"
-          NPENABLED="0"
-          BROWSERSVCSTARTUPTYPE="Automatic"
-          IACCEPTSQLSERVERLICENSETERMS="True"
-          QUIET="True"
-        dest: C:\temp\ConfigurationFile.ini
+      when: sql_edition == 'Express' and sql_installer_path is not defined
 
     - name: Enable SQL Server TCP/IP protocol
       ansible.windows.win_shell: |
-        Import-Module SqlServer -Forc
+        Import-Module SqlServer -Force
         $smo = New-Object Microsoft.SqlServer.Management.Smo.Server("localhost")
         $smo.Settings.LoginMode = [Microsoft.SqlServer.Management.Smo.ServerLoginMode]::Mixed
         $smo.Alter()
