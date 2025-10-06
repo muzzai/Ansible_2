@@ -29,7 +29,7 @@
       amazon.aws.s3_object:
         mode: geturl
         bucket: alloy-software-installers
-        object: "SQLServer-{{ sql_version }}-{{ sql_edition }}"
+        object: "SQLServer-{{ sql_version }}-{{ sql_edition }}.zip"
         expiry: 3600
       register: s3_installer_url
       delegate_to: localhost
