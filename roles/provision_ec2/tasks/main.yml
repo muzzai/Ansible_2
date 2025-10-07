@@ -1,0 +1,45 @@
+---
+# Entry point for provision_ec2 role.  Tasks are organised to validate inputs,
+# build derived context, provision infrastructure, and persist metadata.
+
+- name: Validate provisioning inputs
+  import_tasks: validate.yml
+  tags: ['provision', 'validation']
+
+- name: Build provisioning context
+  import_tasks: context.yml
+  tags: ['provision', 'context']
+
+- name: Discover AWS networking defaults
+  import_tasks: discover.yml
+  tags: ['provision', 'discovery']
+
+- name: Manage SSH key pair
+  import_tasks: keypair.yml
+  tags: ['provision', 'keypair']
+
+- name: Ensure security group exists
+  import_tasks: security_group.yml
+  tags: ['provision', 'security_group']
+
+- name: Launch and wait for EC2 instance
+  import_tasks: instance.yml
+  tags: ['provision', 'instance']
+
+- name: Configure Route53 record
+  when: provision_configure_route53 | bool
+  import_tasks: route53.yml
+  tags: ['provision', 'route53']
+
+- name: Store SSH key material in Vault
+  import_tasks: vault_store_ssh.yml
+  tags: ['provision', 'vault']
+
+- name: Publish Windows custom facts
+  when: provision_set_custom_facts | bool
+  import_tasks: facts.yml
+  tags: ['provision', 'facts']
+
+- name: Display provisioning summary
+  import_tasks: summary.yml
+  tags: ['provision', 'results']

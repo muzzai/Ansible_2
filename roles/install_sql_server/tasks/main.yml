@@ -1,0 +1,260 @@
+---
+- name: Ensure SA password provided
+  ansible.builtin.assert:
+    that:
+      - sql_sa_password is defined
+      - (sql_sa_password | string | trim) | length > 0
+    fail_msg: "sql_sa_password must be provided for SQL Server installation."
+
+- name: Install SQL Server from S3 media
+  block:
+    - name: Build Vault connection details
+      ansible.builtin.set_fact:
+        sql_vault_addr_effective: >-
+          {{ (vault_url | default('', true))
+             | default(vault_addr | default('', true), true)
+             | default(lookup('env', 'VAULT_ADDR') | default('', true), true) }}
+        sql_vault_role_effective: >-
+          {{ (vault_role_id | default('', true))
+             | default(lookup('env', 'VAULT_ROLE_ID') | default('', true), true) }}
+        sql_vault_secret_effective: >-
+          {{ (vault_secret_id | default('', true))
+             | default(lookup('env', 'VAULT_SECRET_ID') | default('', true), true) }}
+        sql_vault_auth_mount_effective: >-
+          {{ (vault_auth_mount_point | default('approle')) | regex_replace('^/+|/+$', '') | default('approle') }}
+        sql_vault_ca_cert_effective: "{{ lookup('env', sql_vault_ca_cert_env_var) | default('', true) }}"
+
+    - name: Assert Vault credentials are available
+      ansible.builtin.assert:
+        that:
+          - sql_vault_addr_effective | length > 0
+          - sql_vault_role_effective | length > 0
+          - sql_vault_secret_effective | length > 0
+        fail_msg: "Unable to locate Vault credentials (VAULT_ADDR/ROLE_ID/SECRET_ID)."
+
+    - name: Create temporary private key file when not provided
+      ansible.builtin.tempfile:
+        state: file
+        suffix: _sql_key.pem
+      register: sql_temp_key_file
+      when: (sql_temp_private_key_path | default('', true)) | length == 0
+      delegate_to: localhost
+
+    - name: Use provided private key path
+      ansible.builtin.set_fact:
+        sql_effective_private_key_path: "{{ sql_temp_private_key_path }}"
+        sql_private_key_cleanup: false
+      when: (sql_temp_private_key_path | default('', true)) | length > 0
+
+    - name: Use generated private key path
+      ansible.builtin.set_fact:
+        sql_effective_private_key_path: "{{ sql_temp_key_file.path }}"
+        sql_private_key_cleanup: true
+      when: (sql_temp_private_key_path | default('', true)) | length == 0
+
+    - name: Write Vault CA certificate to temporary file when provided
+      when: sql_vault_ca_cert_effective | length > 0
+      delegate_to: localhost
+      block:
+        - name: Create temporary Vault CA file
+          ansible.builtin.tempfile:
+            state: file
+            suffix: _vault_ca.pem
+          register: sql_vault_ca_file
+
+        - name: Persist Vault CA certificate content
+          ansible.builtin.copy:
+            content: "{{ sql_vault_ca_cert_effective }}"
+            dest: "{{ sql_vault_ca_file.path }}"
+            mode: '0600'
+
+    - name: Fetch SSH private key from Vault
+      community.hashi_vault.vault_kv2_get:
+        url: "{{ sql_vault_addr_effective | regex_replace('/+$', '') }}"
+        auth_method: approle
+        auth_mount_point: "{{ sql_vault_auth_mount_effective }}"
+        role_id: "{{ sql_vault_role_effective }}"
+        secret_id: "{{ sql_vault_secret_effective }}"
+        path: "{{ sql_vault_secret_path }}"
+        engine_mount_point: "{{ sql_vault_kv_mount }}"
+        ca_cert: "{{ sql_vault_ca_file.path | default(omit) }}"
+        validate_certs: "{{ sql_vault_verify | bool }}"
+      register: sql_vault_key
+      delegate_to: localhost
+
+    - name: Assert Vault secret contains private key
+      ansible.builtin.assert:
+        that:
+          - sql_vault_key.data is defined
+          - sql_vault_key.data.data.private_key is defined
+          - (sql_vault_key.data.data.private_key | string | trim) | length > 0
+        fail_msg: "Vault secret {{ sql_vault_secret_path }} does not include private_key."
+
+    - name: Write SSH private key to control node
+      ansible.builtin.copy:
+        content: "{{ sql_vault_key.data.data.private_key }}"
+        dest: "{{ sql_effective_private_key_path }}"
+        mode: '0600'
+      delegate_to: localhost
+
+    - name: Configure connection variables for Windows host
+      ansible.builtin.set_fact:
+        ansible_connection: ssh
+        ansible_shell_type: powershell
+        ansible_shell_executable: None
+        ansible_become: false
+        ansible_user: "{{ sql_windows_user }}"
+        ansible_ssh_private_key_file: "{{ sql_effective_private_key_path }}"
+        ansible_ssh_common_args: "{{ sql_connection_common_args }}"
+
+    - name: Prepare temporary directories on Windows host
+      ansible.windows.win_file:
+        path: "{{ sql_install_temp_dir }}"
+        state: directory
+
+    - name: Determine S3 region for installer
+      ansible.builtin.set_fact:
+        sql_s3_region_effective: >-
+          {{ sql_s3_region | default(hostvars[inventory_hostname].placement.region | default(aws_region | default('')) | default('', true)) }}
+
+    - name: Assert S3 region determined
+      ansible.builtin.assert:
+        that:
+          - sql_s3_region_effective | length > 0
+        fail_msg: "Unable to determine AWS region for S3 installer download. Provide sql_s3_region explicitly."
+
+    - name: Generate installer presigned URL
+      amazon.aws.s3_object:
+        mode: geturl
+        bucket: "{{ sql_s3_bucket }}"
+        object: "{{ sql_s3_object }}"
+        expiry: {{ sql_s3_url_expiry }}
+        region: "{{ sql_s3_region_effective }}"
+      register: sql_installer_url
+      delegate_to: localhost
+
+    - name: Assert S3 download URL generated
+      ansible.builtin.assert:
+        that:
+          - sql_installer_url.url is defined
+          - (sql_installer_url.url | string | trim) | length > 0
+        fail_msg: "Failed to generate S3 download URL for {{ sql_s3_object }}."
+
+    - name: Download SQL Server installer archive
+      ansible.windows.win_get_url:
+        url: "{{ sql_installer_url.url }}"
+        dest: "{{ sql_install_temp_dir }}\\{{ sql_s3_object }}"
+      register: sql_download_result
+
+    - name: Extract SQL Server installer archive
+      community.windows.win_unzip:
+        src: "{{ sql_install_temp_dir }}\\{{ sql_s3_object }}"
+        dest: "{{ sql_extract_dir }}"
+        creates: "{{ sql_extract_dir }}"
+
+    - name: Locate SQL Server installer executable
+      ansible.windows.win_find:
+        paths: "{{ sql_extract_dir }}"
+        patterns: "*.exe"
+        recurse: true
+      register: sql_installer_files
+
+    - name: Fail when SQL Server installer executable not found
+      ansible.builtin.fail:
+        msg: "No SQL Server installer executable found under {{ sql_extract_dir }}."
+      when: sql_installer_files.files | default([]) | length == 0
+
+    - name: Select installer executable path
+      ansible.builtin.set_fact:
+        sql_installer_path: "{{ sql_installer_files.files[0].path }}"
+
+    - name: Render SQL Server configuration file
+      ansible.windows.win_copy:
+        content: |
+          [OPTIONS]
+          ACTION="Install"
+          FEATURES=SQL
+          INSTANCENAME="{{ sql_instance_name }}"
+          INSTANCEDIR="C:\\Program Files\\Microsoft SQL Server"
+          INSTALLSQLDATADIR="C:\\Program Files\\Microsoft SQL Server"
+          SQLSVCACCOUNT="{{ sql_service_account }}"
+          SQLSYSADMINACCOUNTS="{{ sql_sysadmins }}"
+          SECURITYMODE="SQL"
+          SAPWD="{{ sql_sa_password }}"
+          TCPENABLED="1"
+          NPENABLED="0"
+          BROWSERSVCSTARTUPTYPE="Automatic"
+          IACCEPTSQLSERVERLICENSETERMS="{{ sql_accept_license | ternary('True', 'False') }}"
+          QUIET="True"
+        dest: "{{ sql_config_file }}"
+
+    - name: Install SQL Server from extracted media
+      ansible.windows.win_shell: |
+        & "{{ sql_installer_path }}" /CONFIGURATIONFILE="{{ sql_config_file }}" /IACCEPTSQLSERVERLICENSETERMS
+      register: sql_install_result
+      failed_when: sql_install_result.rc not in [0, 3010]
+
+    - name: Enable SQL Server TCP/IP protocol
+      ansible.windows.win_shell: |
+        Import-Module SqlServer -Force
+        $smo = New-Object Microsoft.SqlServer.Management.Smo.Server("localhost")
+        $smo.Settings.LoginMode = [Microsoft.SqlServer.Management.Smo.ServerLoginMode]::Mixed
+        $smo.Alter()
+
+        $tcp = $smo.ServerInstances['{{ sql_instance_name }}'].ServerProtocols['Tcp']
+        $tcp.IsEnabled = $true
+        $tcp.Alter()
+
+        $tcpip = $tcp.IPAddresses['IPAll']
+        $tcpip.IPAddressProperties['TcpPort'].Value = "{{ sql_port }}"
+        $tcpip.IPAddressProperties['TcpDynamicPorts'].Value = ""
+        $tcp.Alter()
+      register: sql_tcp_result
+      failed_when: false
+      changed_when: sql_tcp_result.rc == 0
+
+    - name: Configure SQL Server authentication mode
+      ansible.windows.win_shell: |
+        sqlcmd -S localhost -E -Q "EXEC xp_instance_regwrite N'HKEY_LOCAL_MACHINE', N'Software\\Microsoft\\MSSQLServer\\MSSQLServer', N'LoginMode', REG_DWORD, 2"
+      register: sql_auth_result
+      failed_when: false
+      changed_when: sql_auth_result.rc == 0
+
+    - name: Set SA account password and enable login
+      ansible.windows.win_shell: |
+        sqlcmd -S localhost -E -Q "ALTER LOGIN sa WITH PASSWORD = '{{ sql_sa_password }}'"
+        sqlcmd -S localhost -E -Q "ALTER LOGIN sa ENABLE"
+      register: sql_sa_result
+      failed_when: false
+      changed_when: sql_sa_result.rc == 0
+
+    - name: Restart SQL Server service
+      ansible.windows.win_service:
+        name: "{{ sql_instance_name }}"
+        state: restarted
+        start_mode: auto
+
+    - name: Verify SQL Server installation
+      ansible.windows.win_shell: |
+        sqlcmd -S localhost -U sa -P "{{ sql_sa_password }}" -Q "SELECT @@VERSION"
+      register: sql_version_check
+      failed_when: sql_version_check.rc != 0
+
+    - name: Display SQL Server version output
+      ansible.builtin.debug:
+        msg: "{{ sql_version_check.stdout_lines }}"
+
+  always:
+    - name: Remove temporary private key file when created
+      ansible.builtin.file:
+        path: "{{ sql_effective_private_key_path }}"
+        state: absent
+      when: sql_private_key_cleanup | default(false)
+      delegate_to: localhost
+
+    - name: Remove temporary Vault CA file when created
+      ansible.builtin.file:
+        path: "{{ sql_vault_ca_file.path }}"
+        state: absent
+      when: sql_vault_ca_file is defined
+      delegate_to: localhost

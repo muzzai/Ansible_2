@@ -1,0 +1,179 @@
+---
+# Set custom facts on the Windows instance after successful provisioning
+
+- name: Set custom fact that SSH key is stored in Vault
+  ansible.windows.win_powershell:
+    script: |
+      param(
+          [Parameter(Mandatory=$true)]
+          [string]$FactName,
+          [Parameter(Mandatory=$true)]
+          [string]$FactValue,
+          [Parameter(Mandatory=$false)]
+          [string]$FactsScript = "C:\Install\windows_facts.ps1"
+      )
+      
+      # Use the central facts script if available, otherwise inline implementation
+      if (Test-Path $FactsScript) {
+          & $FactsScript -FactName $FactName -FactValue $FactValue
+      } else {
+          # Inline facts management
+          $factsDir = "C:\ProgramData\Ansible\facts.d"
+          $factsFile = "$factsDir\custom.fact"
+          
+          # Create facts directory if it doesn't exist
+          if (-not (Test-Path $factsDir)) {
+              New-Item -ItemType Directory -Path $factsDir -Force | Out-Null
+          }
+          
+          # Load existing facts or create empty object
+          if (Test-Path $factsFile) {
+              try {
+                  $facts = Get-Content $factsFile | ConvertFrom-Json
+              } catch {
+                  Write-Warning "Could not parse existing facts file, creating new one"
+                  $facts = @{}
+              }
+          } else {
+              $facts = @{}
+          }
+          
+          # Convert to hashtable if it's a PSCustomObject
+          if ($facts -is [PSCustomObject]) {
+              $factsHash = @{}
+              $facts.PSObject.Properties | ForEach-Object { $factsHash[$_.Name] = $_.Value }
+              $facts = $factsHash
+          }
+          
+          # Update the specific fact
+          $facts[$FactName] = $FactValue
+          
+          # Save updated facts
+          $facts | ConvertTo-Json | Set-Content -Path $factsFile -Force
+          
+          Write-Output "Updated fact: $FactName = $FactValue"
+          Write-Output "Facts file: $factsFile"
+      }
+    parameters:
+      FactName: "ssh_in_vault"
+      FactValue: "{{ vault_ssh_stored | default(false) | string | lower }}"
+  vars:
+    ansible_host: "{{ ec2_instance_info.public_ip }}"
+    ansible_connection: ssh
+    ansible_user: "{{ windows_admin_user }}"
+    ansible_shell_type: powershell
+    ansible_shell_executable: None
+  register: ssh_fact_result
+  retries: 3
+  delay: 10
+  until: ssh_fact_result is succeeded
+  tags: ['provision', 'facts', 'ssh_vault']
+
+- name: Set additional provisioning facts
+  ansible.windows.win_powershell:
+    script: |
+      param(
+          [Parameter(Mandatory=$true)]
+          [hashtable]$Facts,
+          [Parameter(Mandatory=$false)]
+          [string]$FactsScript = "C:\Install\windows_facts.ps1"
+      )
+      
+      $factsDir = "C:\ProgramData\Ansible\facts.d"
+      $factsFile = "$factsDir\custom.fact"
+      
+      # Create facts directory if it doesn't exist
+      if (-not (Test-Path $factsDir)) {
+          New-Item -ItemType Directory -Path $factsDir -Force | Out-Null
+      }
+      
+      # Load existing facts or create empty object
+      if (Test-Path $factsFile) {
+          try {
+              $existingFacts = Get-Content $factsFile | ConvertFrom-Json
+          } catch {
+              Write-Warning "Could not parse existing facts file, creating new one"
+              $existingFacts = @{}
+          }
+      } else {
+          $existingFacts = @{}
+      }
+      
+      # Convert to hashtable if it's a PSCustomObject
+      if ($existingFacts -is [PSCustomObject]) {
+          $factsHash = @{}
+          $existingFacts.PSObject.Properties | ForEach-Object { $factsHash[$_.Name] = $_.Value }
+          $existingFacts = $factsHash
+      }
+      
+      # Merge new facts with existing ones
+      foreach ($key in $Facts.Keys) {
+          $existingFacts[$key] = $Facts[$key]
+          Write-Output "Updated fact: $key = $($Facts[$key])"
+      }
+      
+      # Save updated facts
+      $existingFacts | ConvertTo-Json | Set-Content -Path $factsFile -Force
+      
+      Write-Output "All facts updated successfully"
+      Write-Output "Facts file: $factsFile"
+      
+      # Display current facts for verification
+      Write-Output "Current facts:"
+      $existingFacts | ConvertTo-Json -Depth 2
+    parameters:
+      Facts:
+        provisioned_at: "{{ ansible_date_time.iso8601 }}"
+        provisioned_by: "{{ ansible_user | default('ansible') }}"
+        instance_id: "{{ ec2_instance_info.instance_id }}"
+        public_ip: "{{ ec2_instance_info.public_ip }}"
+        private_ip: "{{ ec2_instance_info.private_ip }}"
+        hostname: "{{ route53_effective_record_name | default(ec2_effective_name) }}"
+        aws_region: "{{ aws_region }}"
+        instance_type: "{{ ec2_instance_type }}"
+        ssh_enabled: "true"
+        ansible_managed: "true"
+  vars:
+    ansible_host: "{{ ec2_instance_info.public_ip }}"
+    ansible_connection: ssh
+    ansible_user: "{{ windows_admin_user }}"
+    ansible_shell_type: powershell
+    ansible_shell_executable: None
+  register: provision_facts_result
+  retries: 3
+  delay: 10
+  until: provision_facts_result is succeeded
+  tags: ['provision', 'facts', 'metadata']
+
+- name: Verify custom facts are accessible
+  ansible.windows.win_powershell:
+    script: |
+      $factsFile = "C:\ProgramData\Ansible\facts.d\custom.fact"
+      if (Test-Path $factsFile) {
+          $facts = Get-Content $factsFile | ConvertFrom-Json
+          Write-Output "Facts verification successful:"
+          $facts | ConvertTo-Json -Depth 2
+          return $true
+      } else {
+          Write-Error "Facts file not found"
+          return $false
+      }
+  vars:
+    ansible_host: "{{ ec2_instance_info.public_ip }}"
+    ansible_connection: ssh
+    ansible_user: "{{ windows_admin_user }}"
+    ansible_shell_type: powershell
+    ansible_shell_executable: None
+  register: facts_verification
+  ignore_errors: true
+  tags: ['provision', 'facts', 'verify']
+
+- name: Display facts status
+  debug:
+    msg:
+      - "Custom Facts Status: {{ 'SUCCESS' if facts_verification is succeeded else 'FAILED' }}"
+      - "SSH in Vault: {{ vault_ssh_stored | default(false) }}"
+      - "Instance ID: {{ ec2_instance_info.instance_id }}"
+      - "Hostname: {{ route53_effective_record_name | default(ec2_effective_name) }}"
+      - "Facts accessible via: ansible_local.custom.*"
+  tags: ['provision', 'facts', 'debug']

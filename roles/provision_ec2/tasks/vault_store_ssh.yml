@@ -1,0 +1,120 @@
+---
+# Store SSH private key and metadata in HashiCorp Vault (KV v2)
+
+- name: Build Vault connection context
+  set_fact:
+    provision_vault_connection:
+      url: "{{ vault_effective_url | default('') | trim }}"
+      role_id: "{{ vault_effective_role_id | default('') | trim }}"
+      secret_id: "{{ vault_effective_secret_id | default('') | trim }}"
+      kv_mount: "{{ vault_effective_kv_mount }}"
+      ssh_path: "{{ vault_effective_ssh_path }}"
+      validate_certs: "{{ provision_vault_validate_certs | bool }}"
+      ca_cert_env_var: "{{ vault_ca_cert_env_var }}"
+      auth_mount_point: "{{ vault_effective_auth_mount }}"
+
+- name: Load Vault CA certificate from environment
+  set_fact:
+    provision_vault_ca_cert: "{{ lookup('env', provision_vault_connection.ca_cert_env_var) | default('', true) }}"
+
+- name: Write Vault CA certificate to temporary file when provided
+  when: provision_vault_ca_cert | length > 0
+  block:
+    - name: Create temporary CA certificate file
+      tempfile:
+        state: file
+        suffix: .pem
+      register: provision_vault_ca_path
+
+    - name: Persist Vault CA certificate
+      copy:
+        content: "{{ provision_vault_ca_cert }}"
+        dest: "{{ provision_vault_ca_path.path }}"
+        mode: '0600'
+
+    - name: Attach CA certificate path to connection context
+      set_fact:
+        provision_vault_connection: "{{ provision_vault_connection | combine({'ca_cert_path': provision_vault_ca_path.path}, recursive=True) }}"
+
+- name: Determine whether Vault integration is available
+  set_fact:
+    provision_vault_enabled: >-
+      {{ provision_vault_connection.url | length > 0
+         and provision_vault_connection.role_id | length > 0
+         and provision_vault_connection.secret_id | length > 0
+         and provision_vault_connection.kv_mount | length > 0
+         and provision_vault_connection.ssh_path | length > 0 }}
+
+- name: Build Vault payload
+  set_fact:
+    provision_vault_payload:
+      private_key: "{{ ec2_keypair_info.private_key }}"
+      public_key: "{{ ec2_keypair_info.public_key }}"
+      key_fingerprint: "{{ ec2_keypair_info.key_fingerprint }}"
+      instance_id: "{{ ec2_instance_info.instance_id }}"
+      hostname: "{{ route53_effective_record_name }}"
+      public_ip: "{{ ec2_instance_info.public_ip }}"
+      private_ip: "{{ ec2_instance_info.private_ip }}"
+      created_at: "{{ ansible_date_time.iso8601 }}"
+      created_by: "{{ ansible_user | default('ansible') }}"
+      instance_type: "{{ ec2_instance_type }}"
+      region: "{{ aws_region }}"
+      key_type: "{{ ec2_keypair_info.key_type }}"
+      key_bits: "{{ ec2_keypair_info.key_bits }}"
+      admin_password: "{{ windows_admin_password }}"
+
+- name: Store SSH key material in Vault
+  when: provision_vault_enabled | bool
+  block:
+    - name: Write SSH secret to Vault
+      community.hashi_vault.vault_kv2_write:
+        url: "{{ provision_vault_connection.url | regex_replace('/+$', '') }}"
+        auth_method: approle
+        auth_mount_point: "{{ provision_vault_connection.auth_mount_point }}"
+        role_id: "{{ provision_vault_connection.role_id }}"
+        secret_id: "{{ provision_vault_connection.secret_id }}"
+        path: "{{ provision_vault_connection.ssh_path }}"
+        engine_mount_point: "{{ provision_vault_connection.kv_mount }}"
+        data: "{{ provision_vault_payload }}"
+        ca_cert: "{{ provision_vault_connection.ca_cert_path | default(omit) }}"
+        validate_certs: "{{ provision_vault_connection.validate_certs | bool }}"
+      register: vault_write_result
+      delegate_to: "{{ provision_control_host }}"
+      run_once: true
+
+    - name: Verify stored SSH secret
+      community.hashi_vault.vault_kv2_get:
+        url: "{{ provision_vault_connection.url | regex_replace('/+$', '') }}"
+        auth_method: approle
+        auth_mount_point: "{{ provision_vault_connection.auth_mount_point }}"
+        role_id: "{{ provision_vault_connection.role_id }}"
+        secret_id: "{{ provision_vault_connection.secret_id }}"
+        path: "{{ provision_vault_connection.ssh_path }}"
+        engine_mount_point: "{{ provision_vault_connection.kv_mount }}"
+        ca_cert: "{{ provision_vault_connection.ca_cert_path | default(omit) }}"
+        validate_certs: "{{ provision_vault_connection.validate_certs | bool }}"
+      register: vault_verify_result
+      delegate_to: "{{ provision_control_host }}"
+      run_once: true
+      failed_when: false
+
+    - name: Record Vault storage status
+      set_fact:
+        vault_ssh_stored: >-
+          {{ (vault_write_result is defined and vault_write_result is succeeded)
+             and (vault_verify_result is defined and vault_verify_result is succeeded)
+             and (vault_verify_result.data.data.instance_id | default('')) == ec2_instance_info.instance_id }}
+        vault_ssh_path_full: "{{ provision_vault_connection.kv_mount }}/data/{{ provision_vault_connection.ssh_path }}"
+
+- name: Set default Vault status when integration disabled
+  set_fact:
+    vault_ssh_stored: false
+    vault_ssh_path_full: "n/a"
+  when: not provision_vault_enabled | bool
+
+- name: Handle Vault integration result messaging
+  ansible.builtin.debug:
+    msg:
+      - "Vault integration: {{ provision_vault_enabled | ternary('ENABLED', 'DISABLED') }}"
+      - "Vault path: {{ vault_ssh_path_full | default('n/a') }}"
+      - "SSH key stored: {{ (vault_ssh_stored | default(false)) | ternary('YES', 'NO') }}"

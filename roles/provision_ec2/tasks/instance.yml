@@ -1,0 +1,76 @@
+---
+# Launch EC2 instance with specified image, type, storage, and bootstrap configuration
+
+- name: Launch EC2 instance
+  amazon.aws.ec2_instance:
+    name: "{{ ec2_effective_name }}"
+    region: "{{ aws_region }}"
+    image_id: "{{ ec2_image_id }}"
+    instance_type: "{{ ec2_instance_type }}"
+    key_name: "{{ ec2_key_name }}"
+    vpc_subnet_id: "{{ ec2_subnet_id }}"
+    security_group: "{{ ec2_security_group_name if ec2_security_group_id is not defined else omit }}"
+    security_group_ids: "{{ [ec2_security_group_id] if ec2_security_group_id is defined else omit }}"
+    network:
+      assign_public_ip: "{{ ec2_assign_public_ip | bool }}"
+    user_data: "{{ lookup('template', 'user_data.ps1.j2') }}"
+    wait: true
+    wait_timeout: {{ ec2_wait_timeout }}
+    volumes:
+      - device_name: /dev/sda1
+        ebs:
+          volume_type: "{{ ec2_root_volume_type }}"
+          volume_size: {{ ec2_root_volume_size }}
+          delete_on_termination: {{ ec2_delete_on_termination | bool }}
+          encrypted: {{ ec2_root_volume_encrypted | bool }}
+    tags:
+      Name: "{{ ec2_effective_name }}"
+      Environment: "{{ ec2_environment }}"
+      Project: "{{ ec2_project }}"
+      ManagedBy: ansible
+      CreatedAt: "{{ ansible_date_time.iso8601 }}"
+  register: ec2_instance_result
+  delegate_to: "{{ provision_control_host }}"
+  run_once: true
+
+- name: Capture initial instance facts
+  set_fact:
+    ec2_instance_info:
+      instance_id: "{{ ec2_instance_result.instances[0].instance_id }}"
+      public_ip: "{{ ec2_instance_result.instances[0].public_ip_address }}"
+      private_ip: "{{ ec2_instance_result.instances[0].private_ip_address }}"
+      state: "{{ ec2_instance_result.instances[0].state.name }}"
+      availability_zone: "{{ ec2_instance_result.instances[0].placement.availability_zone }}"
+      vpc_id: "{{ ec2_instance_result.instances[0].vpc_id }}"
+      subnet_id: "{{ ec2_instance_result.instances[0].subnet_id }}"
+
+- name: Wait for instance to reach running state
+  amazon.aws.ec2_instance_info:
+    region: "{{ aws_region }}"
+    instance_ids:
+      - "{{ ec2_instance_info.instance_id }}"
+  register: ec2_state_poll
+  until: ec2_state_poll.instances and ec2_state_poll.instances[0].state.name == 'running'
+  retries: {{ ec2_instance_wait_retries }}
+  delay: {{ ec2_instance_wait_delay }}
+  delegate_to: "{{ provision_control_host }}"
+  run_once: true
+
+- name: Refresh instance facts after wait
+  set_fact:
+    ec2_instance_info:
+      instance_id: "{{ ec2_state_poll.instances[0].instance_id }}"
+      public_ip: "{{ ec2_state_poll.instances[0].public_ip_address }}"
+      private_ip: "{{ ec2_state_poll.instances[0].private_ip_address }}"
+      state: "{{ ec2_state_poll.instances[0].state.name }}"
+      availability_zone: "{{ ec2_state_poll.instances[0].placement.availability_zone }}"
+      vpc_id: "{{ ec2_state_poll.instances[0].vpc_id }}"
+      subnet_id: "{{ ec2_state_poll.instances[0].subnet_id }}"
+
+- name: Show instance summary
+  ansible.builtin.debug:
+    msg:
+      - "Instance provisioned: {{ ec2_instance_info.instance_id }}"
+      - "Public IP: {{ ec2_instance_info.public_ip }}"
+      - "Private IP: {{ ec2_instance_info.private_ip }}"
+      - "State: {{ ec2_instance_info.state }}"

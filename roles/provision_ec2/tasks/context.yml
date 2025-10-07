@@ -1,0 +1,42 @@
+---
+- name: Gather local facts for timestamp usage
+  setup:
+  when: ansible_date_time is not defined
+
+- name: Derive key and naming basics
+  set_fact:
+    ec2_effective_name: "{{ ec2_name_tag }}"
+    ec2_key_name: >-
+      {{ (ec2_keypair_name | default('', true)) | length > 0
+         | ternary(ec2_keypair_name, ec2_name_tag ~ '_key') }}
+    provision_private_key_path: >-
+      {{ (provision_local_private_key_path | default('', true)) | length > 0
+         | ternary(provision_local_private_key_path,
+                   '~/.ssh/' ~ ((ec2_keypair_name | default('', true)) | length > 0
+                                 | ternary(ec2_keypair_name, ec2_name_tag)) ~ '.pem') }}
+
+- name: Derive remaining provisioning context
+  set_fact:
+    provision_public_key_path: >-
+      {{ (provision_local_public_key_path | default('', true)) | length > 0
+         | ternary(provision_local_public_key_path,
+                   (provision_private_key_path | regex_replace('\\.pem$', '')) ~ '.pub') }}
+    vault_effective_url: >-
+      {{ (vault_url | default('', true))
+         | default(vault_addr | default('', true), true) }}
+    vault_effective_role_id: "{{ vault_role_id | default('', true) }}"
+    vault_effective_secret_id: "{{ vault_secret_id | default('', true) }}"
+    vault_effective_kv_mount: "{{ vault_kv_mount | default('secret') | regex_replace('^/+|/+$', '') }}"
+    vault_effective_ssh_path: >-
+      {{ (vault_ssh_path | default('', true)) | length > 0
+         | ternary(vault_ssh_path | regex_replace('^/+', ''),
+                   'windows/ssh/' ~ ec2_name_tag) }}
+    vault_effective_auth_mount: >-
+      {{ (vault_auth_mount_point | default('approle'))
+         | regex_replace('^/+|/+$', '')
+         | default('approle', true) }}
+    route53_effective_record_name: >-
+      {{ (route53_record_name | default('', true)) | length > 0
+         | ternary(route53_record_name, ec2_name_tag) }}
+    provision_vault_validate_certs: "{{ vault_verify | default(true) | bool }}"
+*** End Patch

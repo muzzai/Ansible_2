@@ -1,0 +1,27 @@
+---
+# Create security group with SSH and RDP access from anywhere
+
+- name: Ensure security group for instance exists
+  amazon.aws.ec2_security_group:
+    name: "{{ ec2_security_group_name }}"
+    description: "Security group for {{ ec2_effective_name }}"
+    vpc_id: "{{ aws_vpc_id }}"
+    region: "{{ aws_region }}"
+    rules: "{{ security_group_rules }}"
+    tags:
+      Name: "{{ ec2_security_group_name }}"
+      Environment: "{{ ec2_environment }}"
+      Project: "{{ ec2_project }}"
+      ManagedBy: ansible
+      CreatedAt: "{{ ansible_date_time.iso8601 }}"
+  register: security_group_result
+  delegate_to: "{{ provision_control_host }}"
+  run_once: true
+  tags: ['provision', 'security_group']
+
+- name: Share security group details
+  set_fact:
+    ec2_security_group_id: "{{ security_group_result.group_id | default(security_group_result.security_group_id | default(omit)) }}"
+  delegate_to: "{{ provision_control_host }}"
+  run_once: true
+  tags: ['provision', 'security_group']

@@ -1,0 +1,28 @@
+---
+# Default variables for install_sql_server role
+
+sql_version: "{{ sql_server_version | default('2022') }}"
+sql_edition: "{{ sql_server_edition | default('Express') }}"
+sql_port: "{{ sql_server_port | default(1433) }}"
+sql_s3_bucket: "alloy-software-installers"
+sql_s3_object: "SQLServer-{{ sql_version }}-{{ sql_edition }}.zip"
+sql_install_temp_dir: "C:\\temp"
+sql_extract_dir: "C:\\temp\\sql_extract"
+sql_config_file: "C:\\temp\\ConfigurationFile.ini"
+sql_instance_name: "MSSQLSERVER"
+sql_service_account: "NT AUTHORITY\\SYSTEM"
+sql_sysadmins: "BUILTIN\\Administrators"
+sql_accept_license: true
+sql_wait_for_reboot: false
+sql_sa_password: ""
+sql_temp_private_key_path: ""
+sql_vault_secret_path: "windows/ssh/{{ inventory_hostname }}"
+sql_vault_verify: false
+sql_vault_kv_mount: "secret"
+sql_windows_user: "Administrator"
+sql_connection_common_args: >-
+  -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no
+  -o PasswordAuthentication=no -o PreferredAuthentications=publickey
+sql_vault_ca_cert_env_var: "VAULT_CA_CERT_PEM"
+sql_s3_region: ""
+sql_s3_url_expiry: 3600

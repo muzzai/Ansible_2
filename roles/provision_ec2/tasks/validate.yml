@@ -1,0 +1,27 @@
+---
+- name: Ensure required provisioning variables are defined
+  vars:
+    provision_required_vars:
+      - aws_region
+      - ec2_name_tag
+      - ec2_instance_type
+      - ec2_image_id
+      - ec2_root_volume_size
+  assert:
+    that:
+      - vars[item] is defined
+      - (vars[item] | string | trim) | length > 0
+    fail_msg: "Required variable '{{ item }}' is missing or empty. Provide it via inventory, vars, or extra_vars."
+  loop: "{{ provision_required_vars }}"
+
+- name: Validate Route53 inputs when enabled
+  when: provision_configure_route53 | bool
+  vars:
+    provision_route53_required:
+      - route53_zone_id
+  assert:
+    that:
+      - vars[item] is defined
+      - (vars[item] | string | trim) | length > 0
+    fail_msg: "Route53 provisioning requires '{{ item }}'."
+  loop: "{{ provision_route53_required }}"

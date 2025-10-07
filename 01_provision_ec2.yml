@@ -1,0 +1,13 @@
+---
+# Playbook: Provision a Windows EC2 instance with Vault-backed SSH storage
+# Usage: ansible-playbook -i localhost, 01_provision_ec2.yml
+
+- name: Provision Windows EC2 instance with SSH access
+  hosts: localhost
+  gather_facts: false
+  connection: local
+
+  roles:
+    - role: provision_ec2
+      vars:
+        vault_auth_mount_point: approle

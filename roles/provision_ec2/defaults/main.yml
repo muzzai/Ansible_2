@@ -1,0 +1,86 @@
+---
+# Default variables for provision_ec2 role
+# Override these in inventory, playbook vars, or extra vars as needed
+
+# Control node delegation
+provision_control_host: localhost
+
+# AWS configuration
+aws_region: "{{ lookup('env', 'AWS_REGION') | default('', true) }}"
+aws_vpc_id: ""
+aws_subnet_id: ""
+
+# EC2 instance configuration
+ec2_name_tag: ""
+ec2_instance_type: "{{ aws_instance_type | default('t3.large') }}"
+ec2_image_id: "{{ aws_windows_ami | default('ami-05b00365623a86bd3') }}"
+ec2_security_group_name: "ansible-windows-sg"
+ec2_assign_public_ip: true
+
+# Instance naming and tagging
+ec2_environment: "production"
+ec2_project: "ansible-automation"
+
+# Volume configuration
+ec2_root_volume_type: gp3
+ec2_root_volume_size: 50
+ec2_root_volume_encrypted: true
+ec2_delete_on_termination: true
+
+# SSH key management
+ec2_keypair_name: ""
+ec2_ssh_key_type: "rsa"
+ec2_ssh_key_bits: 4096
+provision_local_private_key_path: ""
+provision_local_public_key_path: ""
+
+# Windows account configuration
+windows_admin_user: "Administrator"
+windows_admin_password: "{{ lookup('env', 'WINDOWS_ADMIN_PASSWORD') | default('AdminPass2024!', true) }}"
+powershell_execution_policy: "RemoteSigned"
+windows_create_user: false
+windows_ansible_user: "ansible_automation"
+windows_user_password: "{{ lookup('env', 'WINDOWS_ANSIBLE_PASSWORD') | default('TempPassword123!', true) }}"
+
+# Vault configuration for storing SSH keys
+vault_addr: "{{ lookup('env', 'VAULT_ADDR') | default('', true) }}"
+vault_role_id: "{{ lookup('env', 'VAULT_ROLE_ID') | default('', true) }}"
+vault_secret_id: "{{ lookup('env', 'VAULT_SECRET_ID') | default('', true) }}"
+vault_kv_mount: "secret"
+vault_ssh_path: ""
+vault_verify: true
+vault_ca_cert_env_var: "VAULT_CA_CERT_PEM"
+vault_auth_mount_point: approle
+
+# Route53 configuration
+provision_configure_route53: false
+route53_zone_id: ""
+route53_record_name: ""
+route53_record_type: "A"
+route53_record_ttl: 300
+route53_wait_for_propagation: true
+route53_dns_check_retries: 10
+route53_dns_check_delay: 30
+
+# Custom facts configuration
+provision_set_custom_facts: true
+
+# Wait configuration
+ec2_wait_timeout: 600
+ec2_instance_wait_retries: 20
+ec2_instance_wait_delay: 15
+
+# Security group rules (SSH, RDP, SQL Server access)
+security_group_rules:
+  - proto: tcp
+    ports: [22]
+    cidr_ip: "0.0.0.0/0"
+    rule_desc: "SSH access"
+  - proto: tcp
+    ports: [3389]
+    cidr_ip: "0.0.0.0/0"
+    rule_desc: "RDP access"
+  - proto: tcp
+    ports: [1433]
+    cidr_ip: "10.0.0.0/8"
+    rule_desc: "SQL Server access"
