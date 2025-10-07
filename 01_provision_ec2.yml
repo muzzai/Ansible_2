@@ -11,3 +11,4 @@
     - role: provision_ec2
       vars:
         vault_auth_mount_point: approle
+        vault_ssh_path: "windows/ssh/{{ ec2_name_tag }}"

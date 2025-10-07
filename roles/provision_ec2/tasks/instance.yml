@@ -12,17 +12,17 @@
     security_group: "{{ ec2_security_group_name if ec2_security_group_id is not defined else omit }}"
     security_group_ids: "{{ [ec2_security_group_id] if ec2_security_group_id is defined else omit }}"
     network:
-      assign_public_ip: "{{ ec2_assign_public_ip | bool }}"
+      assign_public_ip: "{{ (ec2_assign_public_ip | bool) | ternary('true', 'false') }}"
     user_data: "{{ lookup('template', 'user_data.ps1.j2') }}"
     wait: true
-    wait_timeout: {{ ec2_wait_timeout }}
+    wait_timeout: "{{ ec2_wait_timeout }}"
     volumes:
       - device_name: /dev/sda1
         ebs:
           volume_type: "{{ ec2_root_volume_type }}"
-          volume_size: {{ ec2_root_volume_size }}
-          delete_on_termination: {{ ec2_delete_on_termination | bool }}
-          encrypted: {{ ec2_root_volume_encrypted | bool }}
+          volume_size: "{{ ec2_root_volume_size }}"
+          delete_on_termination: "{{ ec2_delete_on_termination | bool | ternary('true', 'false') }}"
+          encrypted: "{{ ec2_root_volume_encrypted | bool | ternary('true', 'false') }}"
     tags:
       Name: "{{ ec2_effective_name }}"
       Environment: "{{ ec2_environment }}"
@@ -51,8 +51,8 @@
       - "{{ ec2_instance_info.instance_id }}"
   register: ec2_state_poll
   until: ec2_state_poll.instances and ec2_state_poll.instances[0].state.name == 'running'
-  retries: {{ ec2_instance_wait_retries }}
-  delay: {{ ec2_instance_wait_delay }}
+  retries: "{{ ec2_instance_wait_retries }}"
+  delay: "{{ ec2_instance_wait_delay }}"
   delegate_to: "{{ provision_control_host }}"
   run_once: true
 

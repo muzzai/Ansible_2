@@ -39,4 +39,3 @@
       {{ (route53_record_name | default('', true)) | length > 0
          | ternary(route53_record_name, ec2_name_tag) }}
     provision_vault_validate_certs: "{{ vault_verify | default(true) | bool }}"
-*** End Patch

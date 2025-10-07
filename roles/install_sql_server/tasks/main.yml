@@ -81,6 +81,7 @@
         validate_certs: "{{ sql_vault_verify | bool }}"
       register: sql_vault_key
       delegate_to: localhost
+      no_log: true
 
     - name: Assert Vault secret contains private key
       ansible.builtin.assert:
@@ -96,6 +97,7 @@
         dest: "{{ sql_effective_private_key_path }}"
         mode: '0600'
       delegate_to: localhost
+      no_log: true
 
     - name: Configure connection variables for Windows host
       ansible.builtin.set_fact:
@@ -128,7 +130,7 @@
         mode: geturl
         bucket: "{{ sql_s3_bucket }}"
         object: "{{ sql_s3_object }}"
-        expiry: {{ sql_s3_url_expiry }}
+        expiry: "{{ sql_s3_url_expiry }}"
         region: "{{ sql_s3_region_effective }}"
       register: sql_installer_url
       delegate_to: localhost
@@ -140,22 +142,42 @@
           - (sql_installer_url.url | string | trim) | length > 0
         fail_msg: "Failed to generate S3 download URL for {{ sql_s3_object }}."
 
-    - name: Download SQL Server installer archive
+    - name: Download SQL Server bootstrapper
       ansible.windows.win_get_url:
         url: "{{ sql_installer_url.url }}"
         dest: "{{ sql_install_temp_dir }}\\{{ sql_s3_object }}"
       register: sql_download_result
 
-    - name: Extract SQL Server installer archive
-      community.windows.win_unzip:
-        src: "{{ sql_install_temp_dir }}\\{{ sql_s3_object }}"
-        dest: "{{ sql_extract_dir }}"
-        creates: "{{ sql_extract_dir }}"
+    - name: Set bootstrapper path fact
+      ansible.builtin.set_fact:
+        sql_bootstrapper_path: "{{ sql_install_temp_dir }}\\{{ sql_s3_object }}"
+
+    - name: Check if SQL Server setup already extracted
+      ansible.windows.win_stat:
+        path: "{{ sql_extract_dir }}\\setup.exe"
+      register: sql_setup_stat
+
+    - name: Ensure extraction directory exists
+      ansible.windows.win_file:
+        path: "{{ sql_extract_dir }}"
+        state: directory
+      when: not sql_setup_stat.stat.exists
+
+    - name: Extract SQL Server bootstrapper
+      ansible.windows.win_shell: |
+        $bootstrapper = "{{ sql_bootstrapper_path }}"
+        $extractDir = "{{ sql_extract_dir }}"
+        if (-not (Test-Path $extractDir)) {
+            New-Item -ItemType Directory -Path $extractDir -Force | Out-Null
+        }
+        $quotedExtractDir = '"{0}"' -f $extractDir
+        Start-Process -FilePath $bootstrapper -ArgumentList '/qs', ('/x:' + $quotedExtractDir) -Wait -NoNewWindow
+      when: not sql_setup_stat.stat.exists
 
     - name: Locate SQL Server installer executable
       ansible.windows.win_find:
         paths: "{{ sql_extract_dir }}"
-        patterns: "*.exe"
+        patterns: "setup.exe"
         recurse: true
       register: sql_installer_files
 
@@ -215,7 +237,10 @@
 
     - name: Configure SQL Server authentication mode
       ansible.windows.win_shell: |
-        sqlcmd -S localhost -E -Q "EXEC xp_instance_regwrite N'HKEY_LOCAL_MACHINE', N'Software\\Microsoft\\MSSQLServer\\MSSQLServer', N'LoginMode', REG_DWORD, 2"
+        $authQuery = @"
+        EXEC xp_instance_regwrite N'HKEY_LOCAL_MACHINE', N'Software\Microsoft\MSSQLServer\MSSQLServer', N'LoginMode', REG_DWORD, 2
+        "@
+        sqlcmd -S localhost -E -Q $authQuery
       register: sql_auth_result
       failed_when: false
       changed_when: sql_auth_result.rc == 0
@@ -243,6 +268,75 @@
     - name: Display SQL Server version output
       ansible.builtin.debug:
         msg: "{{ sql_version_check.stdout_lines }}"
+
+    - name: Validate SQL Server responds to GETDATE
+      ansible.windows.win_shell: |
+        sqlcmd -S localhost -U sa -P "{{ sql_sa_password }}" -Q "SELECT GETDATE()"
+      register: sql_getdate_check
+      failed_when: sql_getdate_check.rc != 0
+      changed_when: false
+
+    - name: Build SQL credential payload
+      ansible.builtin.set_fact:
+        sql_vault_secret_update:
+          sa_username: "sa"
+          sa_password: "{{ sql_sa_password }}"
+          sql_port: "{{ sql_port }}"
+          sql_instance_name: "{{ sql_instance_name }}"
+          sql_version: "{{ sql_version }}"
+          sql_edition: "{{ sql_edition }}"
+      no_log: true
+      when: sql_vault_key.data is defined
+
+    - name: Prepare updated Vault payload with SQL credentials
+      ansible.builtin.set_fact:
+        sql_vault_secret_payload: "{{ sql_vault_key.data.data | combine(sql_vault_secret_update, recursive=True) | to_json }}"
+      no_log: true
+      when: sql_vault_secret_update is defined
+
+    - name: Store SQL credentials in Vault
+      community.hashi_vault.vault_kv2_write:
+        url: "{{ sql_vault_addr_effective | regex_replace('/+$', '') }}"
+        auth_method: approle
+        auth_mount_point: "{{ sql_vault_auth_mount_effective }}"
+        role_id: "{{ sql_vault_role_effective }}"
+        secret_id: "{{ sql_vault_secret_effective }}"
+        path: "{{ sql_vault_secret_path }}"
+        engine_mount_point: "{{ sql_vault_kv_mount }}"
+        data: "{{ sql_vault_secret_payload | from_json }}"
+        ca_cert: "{{ sql_vault_ca_file.path | default(omit) }}"
+        validate_certs: "{{ sql_vault_verify | bool }}"
+      delegate_to: localhost
+      run_once: true
+      no_log: true
+      when: sql_vault_secret_payload is defined
+
+    - name: Verify SQL credentials in Vault
+      community.hashi_vault.vault_kv2_get:
+        url: "{{ sql_vault_addr_effective | regex_replace('/+$', '') }}"
+        auth_method: approle
+        auth_mount_point: "{{ sql_vault_auth_mount_effective }}"
+        role_id: "{{ sql_vault_role_effective }}"
+        secret_id: "{{ sql_vault_secret_effective }}"
+        path: "{{ sql_vault_secret_path }}"
+        engine_mount_point: "{{ sql_vault_kv_mount }}"
+        ca_cert: "{{ sql_vault_ca_file.path | default(omit) }}"
+        validate_certs: "{{ sql_vault_verify | bool }}"
+      delegate_to: localhost
+      run_once: true
+      no_log: true
+      register: sql_vault_verify_credentials
+      failed_when: sql_vault_verify_credentials.data.data.sa_password | default('') != sql_sa_password
+      when: sql_vault_secret_payload is defined
+
+    - name: Report SQL credential Vault storage status
+      ansible.builtin.debug:
+        msg:
+          - "Stored SQL credentials for instance {{ sql_instance_name }} in Vault"
+          - "  Vault path: {{ sql_vault_kv_mount }}/data/{{ sql_vault_secret_path }}"
+      delegate_to: localhost
+      run_once: true
+      when: sql_vault_secret_payload is defined
 
   always:
     - name: Remove temporary private key file when created

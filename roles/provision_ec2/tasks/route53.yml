@@ -26,8 +26,8 @@
 - name: Wait for DNS propagation
   ansible.builtin.command: "nslookup {{ route53_effective_record_name }}"
   register: dns_propagation_check
-  retries: {{ route53_dns_check_retries }}
-  delay: {{ route53_dns_check_delay }}
+  retries: "{{ route53_dns_check_retries }}"
+  delay: "{{ route53_dns_check_delay }}"
   until: dns_propagation_check.rc == 0
   changed_when: false
   ignore_errors: true
