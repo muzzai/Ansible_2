@@ -27,7 +27,6 @@
   tags: ['provision', 'instance']
 
 - name: Manage Elastic IP association
-  when: provision_allocate_eip | bool
   ansible.builtin.import_tasks: elastic_ip.yml
   tags: ['provision', 'network', 'elastic_ip']
 

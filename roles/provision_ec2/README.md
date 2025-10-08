@@ -65,7 +65,6 @@ route53_zone_id: Z1234567890ABC
 route53_record_name: sql01.example.com
 
 # Elastic IP
-provision_allocate_eip: true
 # provision_eip_allocation_id: eipalloc-0123456789abcdef0  # reuse existing allocation
 ```
 
@@ -89,7 +88,6 @@ Set `vault_addr`/`vault_url`, `vault_role_id`, and `vault_secret_id` to enable V
 provision_set_custom_facts: true        # Push Ansible facts to the instance
 provision_configure_route53: false      # Skip DNS registration by default
 provision_control_host: localhost       # Host performing AWS/Vault/SSH key actions
-provision_allocate_eip: true            # Allocate/associate an Elastic IP
 provision_eip_allocation_id: ""         # Reuse an existing Elastic IP allocation (optional)
 provision_tag_root_volume: true         # Tag the root EBS volume
 ```

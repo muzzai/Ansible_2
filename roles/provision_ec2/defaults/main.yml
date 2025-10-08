@@ -61,7 +61,6 @@ route53_dns_check_retries: 10
 route53_dns_check_delay: 30
 
 # Elastic IP configuration
-provision_allocate_eip: true
 provision_eip_allocation_id: ""
 
 # Custom facts configuration
