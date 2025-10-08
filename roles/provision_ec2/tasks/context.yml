@@ -30,9 +30,10 @@
     provision_keypair_name_clean: "{{ ec2_keypair_name | default('', true) }}"
     provision_security_group_name_clean: "{{ ec2_security_group_name | default('', true) }}"
   ansible.builtin.set_fact:
-    ec2_key_name: "{{ (provision_keypair_name_clean | default('', true) | string | trim) or ('key-' ~ ec2_name_token) }}"
+    ec2_key_name: "{{ (provision_keypair_name_clean | default('', true) | string | trim)
+                     or (ec2_name_token ~ '-key') }}"
     ec2_security_group_name: "{{ (provision_security_group_name_clean | default('', true) | string | trim)
-                                     or ('sg-' ~ ec2_name_token) }}"
+                                or (ec2_name_token ~ '-sg') }}"
     ec2_root_volume_name: "vol-{{ ec2_name_token }}"
 
 - name: Derive key file paths

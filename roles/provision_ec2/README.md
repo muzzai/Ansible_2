@@ -102,9 +102,9 @@ Every run creates a dedicated security group named after the instance (sanitised
 
 The role derives a reusable slug from `ec2_name_tag` and applies it to related AWS resources:
 
-- EC2 key pair: `key-<instance-slug>`
-- Security group: `sg-<instance-slug>`
-- Local private key path: `~/.ssh/key-<instance-slug>.pem`
+- EC2 key pair: `<instance-slug>-key`
+- Security group: `<instance-slug>-sg`
+- Local private key path: `~/.ssh/<instance-slug>-key.pem`
 
 You can override any name explicitly (for example `ec2_keypair_name`) when required, but the defaults keep resources easy to identify across playbooks.
 
