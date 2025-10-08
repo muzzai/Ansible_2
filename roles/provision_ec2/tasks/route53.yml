@@ -8,7 +8,7 @@
     record: "{{ route53_effective_record_name }}"
     type: "{{ route53_record_type }}"
     value: "{{ ec2_instance_info.public_ip }}"
-    ttl: {{ route53_record_ttl }}
+    ttl: "{{ route53_record_ttl }}"
     wait: true
     wait_timeout: 300
   register: route53_result
@@ -36,7 +36,7 @@
   when: route53_wait_for_propagation | bool
 
 - name: Store Route53 information
-  set_fact:
+  ansible.builtin.set_fact:
     route53_info:
       record_name: "{{ route53_effective_record_name }}"
       record_type: "{{ route53_record_type }}"

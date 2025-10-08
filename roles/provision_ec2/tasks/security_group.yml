@@ -20,7 +20,7 @@
   tags: ['provision', 'security_group']
 
 - name: Share security group details
-  set_fact:
+  ansible.builtin.set_fact:
     ec2_security_group_id: "{{ security_group_result.group_id | default(security_group_result.security_group_id | default(omit)) }}"
   delegate_to: "{{ provision_control_host }}"
   run_once: true

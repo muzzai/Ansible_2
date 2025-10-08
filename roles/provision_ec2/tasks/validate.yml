@@ -7,7 +7,7 @@
       - ec2_instance_type
       - ec2_image_id
       - ec2_root_volume_size
-  assert:
+  ansible.builtin.assert:
     that:
       - vars[item] is defined
       - (vars[item] | string | trim) | length > 0
@@ -19,7 +19,7 @@
   vars:
     provision_route53_required:
       - route53_zone_id
-  assert:
+  ansible.builtin.assert:
     that:
       - vars[item] is defined
       - (vars[item] | string | trim) | length > 0

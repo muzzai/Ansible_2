@@ -99,6 +99,57 @@
       delegate_to: localhost
       no_log: true
 
+    - name: Extract security group metadata from Vault
+      ansible.builtin.set_fact:
+        sql_target_security_group_id: "{{ sql_vault_key.data.data.security_group_id | default('') }}"
+        sql_target_security_group_name: "{{ sql_vault_key.data.data.security_group_name | default('') }}"
+        sql_instance_region_effective: "{{ sql_vault_key.data.data.region | default('') }}"
+        sql_instance_id_from_vault: "{{ sql_vault_key.data.data.instance_id | default('') }}"
+        sql_target_vpc_id: "{{ sql_vault_key.data.data.vpc_id | default('') }}"
+      no_log: true
+
+    - name: Discover security group when Vault metadata missing
+      amazon.aws.ec2_instance_info:
+        region: "{{ sql_instance_region_effective | default(sql_s3_region_effective) }}"
+        instance_ids:
+          - "{{ sql_instance_id_from_vault }}"
+      register: sql_instance_info_lookup
+      delegate_to: localhost
+      run_once: true
+      when:
+        - (sql_target_security_group_id | default('')) | length == 0
+        - (sql_instance_id_from_vault | default('')) | length > 0
+
+    - name: Populate security group metadata from lookup
+      ansible.builtin.set_fact:
+        sql_target_security_group_id: "{{ sql_instance_info_lookup.instances[0].security_groups[0].group_id }}"
+        sql_target_security_group_name: "{{ sql_instance_info_lookup.instances[0].security_groups[0].group_name }}"
+        sql_target_vpc_id: "{{ sql_instance_info_lookup.instances[0].vpc_id | default(sql_target_vpc_id | default('')) }}"
+        sql_instance_region_effective: "{{ sql_instance_region_effective | default(sql_instance_info_lookup.instances[0].placement.region | default('')) }}"
+      when:
+        - sql_instance_info_lookup.instances | length > 0
+        - sql_instance_info_lookup.instances[0].security_groups | length > 0
+      no_log: true
+
+    - name: Ensure SQL port open in instance security group
+      amazon.aws.ec2_security_group:
+        region: "{{ sql_instance_region_effective
+                     | default(sql_s3_region)
+                     | default(hostvars[inventory_hostname].placement.region | default(aws_region | default(''))) }}"
+        group_id: "{{ sql_target_security_group_id }}"
+        name: "{{ sql_target_security_group_name | default(omit) }}"
+        vpc_id: "{{ sql_target_vpc_id | default(omit) }}"
+        purge_rules: false
+        rules:
+          - proto: tcp
+            from_port: "{{ sql_port }}"
+            to_port: "{{ sql_port }}"
+            cidr_ip: "0.0.0.0/0"
+            rule_desc: "SQL Server access"
+      delegate_to: localhost
+      run_once: true
+      when: (sql_target_security_group_id | default('')) | length > 0
+
     - name: Configure connection variables for Windows host
       ansible.builtin.set_fact:
         ansible_connection: ssh
@@ -117,7 +168,9 @@
     - name: Determine S3 region for installer
       ansible.builtin.set_fact:
         sql_s3_region_effective: >-
-          {{ sql_s3_region | default(hostvars[inventory_hostname].placement.region | default(aws_region | default('')) | default('', true)) }}
+          {{ sql_s3_region
+             | default(sql_instance_region_effective | default(''), true)
+             | default(hostvars[inventory_hostname].placement.region | default(aws_region | default('')) | default('', true), true) }}
 
     - name: Assert S3 region determined
       ansible.builtin.assert:

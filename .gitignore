@@ -1,3 +1,5 @@
 .claude
 output
 .vscode
+awx_vars_01_provision.yml
+awx_vars_02_install_sql.yml

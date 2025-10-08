@@ -14,7 +14,7 @@ aws_subnet_id: ""
 ec2_name_tag: ""
 ec2_instance_type: "{{ aws_instance_type | default('t3.large') }}"
 ec2_image_id: "{{ aws_windows_ami | default('ami-05b00365623a86bd3') }}"
-ec2_security_group_name: "ansible-windows-sg"
+ec2_security_group_name: ""
 ec2_assign_public_ip: true
 
 # Instance naming and tagging
@@ -62,6 +62,10 @@ route53_wait_for_propagation: true
 route53_dns_check_retries: 10
 route53_dns_check_delay: 30
 
+# Elastic IP configuration
+provision_allocate_eip: true
+provision_eip_allocation_id: ""
+
 # Custom facts configuration
 provision_set_custom_facts: true
 
@@ -76,11 +80,3 @@ security_group_rules:
     ports: [22]
     cidr_ip: "0.0.0.0/0"
     rule_desc: "SSH access"
-  - proto: tcp
-    ports: [3389]
-    cidr_ip: "0.0.0.0/0"
-    rule_desc: "RDP access"
-  - proto: tcp
-    ports: [1433]
-    cidr_ip: "10.0.0.0/8"
-    rule_desc: "SQL Server access"

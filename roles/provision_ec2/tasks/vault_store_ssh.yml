@@ -2,7 +2,7 @@
 # Store SSH private key and metadata in HashiCorp Vault (KV v2)
 
 - name: Build Vault connection context
-  set_fact:
+  ansible.builtin.set_fact:
     provision_vault_connection:
       url: "{{ vault_effective_url | default('') | trim }}"
       role_id: "{{ vault_effective_role_id | default('') | trim }}"
@@ -14,30 +14,30 @@
       auth_mount_point: "{{ vault_effective_auth_mount }}"
 
 - name: Load Vault CA certificate from environment
-  set_fact:
+  ansible.builtin.set_fact:
     provision_vault_ca_cert: "{{ lookup('env', provision_vault_connection.ca_cert_env_var) | default('', true) }}"
 
 - name: Write Vault CA certificate to temporary file when provided
   when: provision_vault_ca_cert | length > 0
   block:
     - name: Create temporary CA certificate file
-      tempfile:
+      ansible.builtin.tempfile:
         state: file
         suffix: .pem
       register: provision_vault_ca_path
 
     - name: Persist Vault CA certificate
-      copy:
+      ansible.builtin.copy:
         content: "{{ provision_vault_ca_cert }}"
         dest: "{{ provision_vault_ca_path.path }}"
         mode: '0600'
 
     - name: Attach CA certificate path to connection context
-      set_fact:
+      ansible.builtin.set_fact:
         provision_vault_connection: "{{ provision_vault_connection | combine({'ca_cert_path': provision_vault_ca_path.path}, recursive=True) }}"
 
 - name: Determine whether Vault integration is available
-  set_fact:
+  ansible.builtin.set_fact:
     provision_vault_enabled: >-
       {{ provision_vault_connection.url | length > 0
          and provision_vault_connection.role_id | length > 0
@@ -46,7 +46,7 @@
          and provision_vault_connection.ssh_path | length > 0 }}
 
 - name: Build Vault payload
-  set_fact:
+  ansible.builtin.set_fact:
     provision_vault_payload:
       private_key: "{{ ec2_keypair_info.private_key }}"
       public_key: "{{ ec2_keypair_info.public_key }}"
@@ -59,9 +59,12 @@
       created_by: "{{ ansible_user | default('ansible') }}"
       instance_type: "{{ ec2_instance_type }}"
       region: "{{ aws_region }}"
+      vpc_id: "{{ ec2_instance_info.vpc_id | default('') }}"
       key_type: "{{ ec2_keypair_info.key_type }}"
       key_bits: "{{ ec2_keypair_info.key_bits }}"
       admin_password: "{{ windows_admin_password }}"
+      security_group_id: "{{ ec2_security_group_id | default('') }}"
+      security_group_name: "{{ ec2_security_group_name | default('') }}"
 
 - name: Store SSH key material in Vault
   when: provision_vault_enabled | bool
@@ -99,7 +102,7 @@
       failed_when: false
 
     - name: Record Vault storage status
-      set_fact:
+      ansible.builtin.set_fact:
         vault_ssh_stored: >-
           {{ (vault_write_result is defined and vault_write_result is succeeded)
              and (vault_verify_result is defined and vault_verify_result is succeeded)
@@ -107,7 +110,7 @@
         vault_ssh_path_full: "{{ provision_vault_connection.kv_mount }}/data/{{ provision_vault_connection.ssh_path }}"
 
 - name: Set default Vault status when integration disabled
-  set_fact:
+  ansible.builtin.set_fact:
     vault_ssh_stored: false
     vault_ssh_path_full: "n/a"
   when: not provision_vault_enabled | bool

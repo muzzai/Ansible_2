@@ -34,7 +34,7 @@
   run_once: true
 
 - name: Capture initial instance facts
-  set_fact:
+  ansible.builtin.set_fact:
     ec2_instance_info:
       instance_id: "{{ ec2_instance_result.instances[0].instance_id }}"
       public_ip: "{{ ec2_instance_result.instances[0].public_ip_address }}"
@@ -57,7 +57,7 @@
   run_once: true
 
 - name: Refresh instance facts after wait
-  set_fact:
+  ansible.builtin.set_fact:
     ec2_instance_info:
       instance_id: "{{ ec2_state_poll.instances[0].instance_id }}"
       public_ip: "{{ ec2_state_poll.instances[0].public_ip_address }}"

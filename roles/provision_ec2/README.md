@@ -8,9 +8,10 @@ This role provisions Windows EC2 instances configured for SSH-only access (no Wi
 - **SSH-Only Access**: Configures OpenSSH Server via a PowerShell user data template (renders from `templates/user_data.ps1.j2`).
 - **EC2 Key Pair Management**: Creates or reuses key pairs, storing material locally and optionally in Vault.
 - **Route53 Integration (optional)**: Creates DNS A records with propagation checks when enabled.
+- **Elastic IP Management**: Optionally allocates or re-associates an Elastic IP to provide a static public address.
 - **Vault Integration**: Stores SSH private keys securely in HashiCorp Vault KV v2 using AppRole auth.
 - **Custom Facts**: Publishes persistent local facts on Windows instances so downstream playbooks can inspect provisioning metadata.
-- **Security Groups**: Automates security group creation with SSH/RDP/SQL rules.
+- **Security Groups**: Creates a per-instance security group seeded with SSH access.
 
 ## Requirements
 
@@ -61,6 +62,10 @@ security_group_rules:
 provision_configure_route53: true
 route53_zone_id: Z1234567890ABC
 route53_record_name: sql01.example.com
+
+# Elastic IP
+provision_allocate_eip: true
+# provision_eip_allocation_id: eipalloc-0123456789abcdef0  # reuse existing allocation
 ```
 
 ### Vault Options
@@ -84,7 +89,23 @@ provision_set_custom_facts: true        # Push Ansible facts to the instance
 provision_configure_route53: false      # Skip DNS registration by default
 provision_control_host: localhost       # Host performing AWS/Vault/SSH key actions
 provision_local_private_key_path: ""    # Override key storage location
+provision_allocate_eip: true            # Allocate/associate an Elastic IP
+provision_eip_allocation_id: ""         # Reuse an existing Elastic IP allocation (optional)
 ```
+
+### Security Groups
+
+Every run creates a dedicated security group named after the instance (sanitised with a `-sg` suffix). Provisioning opens inbound TCP/22 from `0.0.0.0/0`, and downstream roles can append additional access rules automatically.
+
+### Naming Consistency
+
+The role derives a reusable slug from `ec2_name_tag` and applies it to related AWS resources:
+
+- EC2 key pair: `key-<instance-slug>`
+- Security group: `sg-<instance-slug>`
+- Local private key path: `~/.ssh/key-<instance-slug>.pem`
+
+You can override any name explicitly (for example `ec2_keypair_name`) when required, but the defaults keep resources easy to identify across playbooks.
 
 ## Task Flow
 

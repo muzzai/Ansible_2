@@ -12,7 +12,7 @@
           [Parameter(Mandatory=$false)]
           [string]$FactsScript = "C:\Install\windows_facts.ps1"
       )
-      
+
       # Use the central facts script if available, otherwise inline implementation
       if (Test-Path $FactsScript) {
           & $FactsScript -FactName $FactName -FactValue $FactValue
@@ -20,12 +20,12 @@
           # Inline facts management
           $factsDir = "C:\ProgramData\Ansible\facts.d"
           $factsFile = "$factsDir\custom.fact"
-          
+
           # Create facts directory if it doesn't exist
           if (-not (Test-Path $factsDir)) {
               New-Item -ItemType Directory -Path $factsDir -Force | Out-Null
           }
-          
+
           # Load existing facts or create empty object
           if (Test-Path $factsFile) {
               try {
@@ -37,20 +37,20 @@
           } else {
               $facts = @{}
           }
-          
+
           # Convert to hashtable if it's a PSCustomObject
           if ($facts -is [PSCustomObject]) {
               $factsHash = @{}
               $facts.PSObject.Properties | ForEach-Object { $factsHash[$_.Name] = $_.Value }
               $facts = $factsHash
           }
-          
+
           # Update the specific fact
           $facts[$FactName] = $FactValue
-          
+
           # Save updated facts
           $facts | ConvertTo-Json | Set-Content -Path $factsFile -Force
-          
+
           Write-Output "Updated fact: $FactName = $FactValue"
           Write-Output "Facts file: $factsFile"
       }
@@ -78,15 +78,15 @@
           [Parameter(Mandatory=$false)]
           [string]$FactsScript = "C:\Install\windows_facts.ps1"
       )
-      
+
       $factsDir = "C:\ProgramData\Ansible\facts.d"
       $factsFile = "$factsDir\custom.fact"
-      
+
       # Create facts directory if it doesn't exist
       if (-not (Test-Path $factsDir)) {
           New-Item -ItemType Directory -Path $factsDir -Force | Out-Null
       }
-      
+
       # Load existing facts or create empty object
       if (Test-Path $factsFile) {
           try {
@@ -98,26 +98,26 @@
       } else {
           $existingFacts = @{}
       }
-      
+
       # Convert to hashtable if it's a PSCustomObject
       if ($existingFacts -is [PSCustomObject]) {
           $factsHash = @{}
           $existingFacts.PSObject.Properties | ForEach-Object { $factsHash[$_.Name] = $_.Value }
           $existingFacts = $factsHash
       }
-      
+
       # Merge new facts with existing ones
       foreach ($key in $Facts.Keys) {
           $existingFacts[$key] = $Facts[$key]
           Write-Output "Updated fact: $key = $($Facts[$key])"
       }
-      
+
       # Save updated facts
       $existingFacts | ConvertTo-Json | Set-Content -Path $factsFile -Force
-      
+
       Write-Output "All facts updated successfully"
       Write-Output "Facts file: $factsFile"
-      
+
       # Display current facts for verification
       Write-Output "Current facts:"
       $existingFacts | ConvertTo-Json -Depth 2
@@ -169,7 +169,7 @@
   tags: ['provision', 'facts', 'verify']
 
 - name: Display facts status
-  debug:
+  ansible.builtin.debug:
     msg:
       - "Custom Facts Status: {{ 'SUCCESS' if facts_verification is succeeded else 'FAILED' }}"
       - "SSH in Vault: {{ vault_ssh_stored | default(false) }}"

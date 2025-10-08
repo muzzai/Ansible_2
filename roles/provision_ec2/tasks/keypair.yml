@@ -2,12 +2,12 @@
 # Manage EC2 key pair for SSH access and publish facts for later tasks
 
 - name: Expand local SSH key paths
-  set_fact:
+  ansible.builtin.set_fact:
     provision_private_key_path_expanded: "{{ provision_private_key_path | regex_replace('^~', lookup('env', 'HOME')) }}"
     provision_public_key_path_expanded: "{{ provision_public_key_path | regex_replace('^~', lookup('env', 'HOME')) }}"
 
 - name: Determine SSH key directory path
-  set_fact:
+  ansible.builtin.set_fact:
     provision_private_key_dir: "{{ provision_private_key_path_expanded | regex_replace('^(.*)[/\\\\][^/\\\\]+$', '\\1') }}"
 
 - name: Prepare SSH key material on control host
@@ -39,7 +39,7 @@
       register: provision_key_material
 
 - name: Assemble key pair facts
-  set_fact:
+  ansible.builtin.set_fact:
     ec2_keypair_info:
       key_name: "{{ ec2_key_name }}"
       key_fingerprint: "{{ provision_local_keypair.fingerprint | default('') }}"
@@ -78,7 +78,7 @@
   run_once: true
 
 - name: Backfill fingerprint from AWS response when available
-  set_fact:
+  ansible.builtin.set_fact:
     ec2_keypair_info: "{{ ec2_keypair_info | combine({'key_fingerprint': ec2_keypair_result.key.fingerprint}, recursive=True) }}"
   when: ec2_keypair_result.key is defined and ec2_keypair_result.key.fingerprint is defined
 

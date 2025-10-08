@@ -6,6 +6,7 @@
       - "  Instance ID: {{ ec2_instance_info.instance_id | default('UNKNOWN') }}"
       - "  Public IP: {{ ec2_instance_info.public_ip | default('UNKNOWN') }}"
       - "  Private IP: {{ ec2_instance_info.private_ip | default('UNKNOWN') }}"
+      - "  Elastic IP: {{ ec2_instance_info.elastic_ip | default('N/A') }}"
       - "  State: {{ ec2_instance_info.state | default('UNKNOWN') }}"
       - "  Vault storage: {{ vault_ssh_stored | default(false) | ternary('YES', 'NO') }}"
       - "  Route53: {{ provision_configure_route53 | bool | ternary(route53_info.status | default('skipped'), 'skipped') }}"
