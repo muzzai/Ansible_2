@@ -7,7 +7,7 @@
           instance_id: "{{ ec2_instance_info.instance_id }}"
           instance_type: "{{ ec2_instance_info.instance_type }}"
           image_id: "{{ ec2_instance_info.image_id }}"
-          region: "{{ ec2_instance_info.placement.region }}"
+          region: "{{ ec2_instance_info.availability_zone | default(aws_region) }}"
           private_ip: "{{ ec2_instance_info.private_ip_address }}"
           public_ip: "{{ ec2_instance_info.public_ip_address | default('') }}"
           key_name: "{{ ec2_instance_info.key_name }}"
