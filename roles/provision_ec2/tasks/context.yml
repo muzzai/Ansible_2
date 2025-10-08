@@ -3,22 +3,31 @@
   ansible.builtin.setup:
   when: ansible_date_time is not defined
 
-- name: Derive key and naming basics
+- name: Record effective instance name
   ansible.builtin.set_fact:
     ec2_effective_name: "{{ ec2_name_tag }}"
+
+- name: Build instance name slug
+  ansible.builtin.set_fact:
     ec2_name_slug: >-
-      {{ ec2_name_tag
+      {{ ec2_effective_name
          | regex_replace('[^A-Za-z0-9]+', '-')
          | regex_replace('^-+|-+$', '')
          | lower }}
+
+- name: Determine instance name token
+  ansible.builtin.set_fact:
     ec2_name_token: >-
-      {{ (ec2_name_slug | length > 0)
+      {{ (ec2_name_slug | default('') | length > 0)
          | ternary(ec2_name_slug,
-                   ec2_name_tag
+                   ec2_effective_name
                    | regex_replace('[^A-Za-z0-9]+', '-')
                    | regex_replace('^-+|-+$', '')
                    | lower
-                   | default(ec2_name_tag)) }}
+                   | default(ec2_effective_name)) }}
+
+- name: Derive key, security group, and volume names
+  ansible.builtin.set_fact:
     ec2_key_name: >-
       {{ (ec2_keypair_name | default('', true)) | length > 0
          | ternary(ec2_keypair_name,
