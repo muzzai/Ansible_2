@@ -35,6 +35,21 @@
   when:
     - not private_key_check.stat.exists
 
+- name: Check if public key already exists
+  ansible.builtin.stat:
+    path: "{{ provision_public_key_path_expanded }}"
+  register: public_key_check
+  delegate_to: "{{ provision_control_host }}"
+  run_once: true
+
+- name: Generate public key from private key if it does not exist
+  ansible.builtin.shell: "ssh-keygen -y -f {{ provision_private_key_path_expanded }} > {{ provision_public_key_path_expanded }}"
+  delegate_to: "{{ provision_control_host }}"
+  run_once: true
+  when:
+    - private_key_check.stat.exists
+    - not public_key_check.stat.exists
+
 - name: Read public key content
   ansible.builtin.slurp:
     src: "{{ provision_public_key_path_expanded }}"
