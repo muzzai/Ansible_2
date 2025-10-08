@@ -43,6 +43,7 @@
       availability_zone: "{{ ec2_instance_result.instances[0].placement.availability_zone }}"
       vpc_id: "{{ ec2_instance_result.instances[0].vpc_id }}"
       subnet_id: "{{ ec2_instance_result.instances[0].subnet_id }}"
+      root_volume_id: "{{ ec2_instance_result.instances[0].block_device_mappings[0].ebs.volume_id | default('') }}"
 
 - name: Wait for instance to reach running state
   amazon.aws.ec2_instance_info:
@@ -66,6 +67,7 @@
       availability_zone: "{{ ec2_state_poll.instances[0].placement.availability_zone }}"
       vpc_id: "{{ ec2_state_poll.instances[0].vpc_id }}"
       subnet_id: "{{ ec2_state_poll.instances[0].subnet_id }}"
+      root_volume_id: "{{ ec2_state_poll.instances[0].block_device_mappings[0].ebs.volume_id | default(ec2_instance_info.root_volume_id | default('')) }}"
 
 - name: Show instance summary
   ansible.builtin.debug:

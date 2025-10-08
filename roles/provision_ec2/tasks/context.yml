@@ -33,6 +33,7 @@
       {{ (ec2_security_group_name | default('', true)) | length > 0
          | ternary(ec2_security_group_name,
                    'sg-' ~ ec2_name_token) }}
+    ec2_root_volume_name: "vol-{{ ec2_name_token }}"
 
 - name: Derive remaining provisioning context
   ansible.builtin.set_fact:

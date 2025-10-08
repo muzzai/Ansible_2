@@ -9,6 +9,7 @@ This role provisions Windows EC2 instances configured for SSH-only access (no Wi
 - **EC2 Key Pair Management**: Creates or reuses key pairs, storing material locally and optionally in Vault.
 - **Route53 Integration (optional)**: Creates DNS A records with propagation checks when enabled.
 - **Elastic IP Management**: Optionally allocates or re-associates an Elastic IP to provide a static public address.
+- **Volume Tagging**: Tags the root EBS volume with a consistent name for easier tracing.
 - **Vault Integration**: Stores SSH private keys securely in HashiCorp Vault KV v2 using AppRole auth.
 - **Custom Facts**: Publishes persistent local facts on Windows instances so downstream playbooks can inspect provisioning metadata.
 - **Security Groups**: Creates a per-instance security group seeded with SSH access.
@@ -91,6 +92,7 @@ provision_control_host: localhost       # Host performing AWS/Vault/SSH key acti
 provision_local_private_key_path: ""    # Override key storage location
 provision_allocate_eip: true            # Allocate/associate an Elastic IP
 provision_eip_allocation_id: ""         # Reuse an existing Elastic IP allocation (optional)
+provision_tag_root_volume: true         # Tag the root EBS volume
 ```
 
 ### Security Groups

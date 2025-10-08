@@ -31,6 +31,11 @@
   ansible.builtin.import_tasks: elastic_ip.yml
   tags: ['provision', 'network', 'elastic_ip']
 
+- name: Tag root EBS volume
+  when: provision_tag_root_volume | bool
+  ansible.builtin.import_tasks: volume_tags.yml
+  tags: ['provision', 'volumes']
+
 - name: Configure Route53 record
   when: provision_configure_route53 | bool
   ansible.builtin.import_tasks: route53.yml
