@@ -79,6 +79,10 @@ security_group_rules:
     ports: [22]
     cidr_ip: "0.0.0.0/0"
     rule_desc: "SSH access"
+  - proto: tcp
+    ports: [3389]
+    cidr_ip: "0.0.0.0/0"
+    rule_desc: "RDP Access"
 
 # Volume naming/tagging
 provision_tag_root_volume: true

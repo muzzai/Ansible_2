@@ -14,14 +14,7 @@
   delegate_to: "{{ provision_control_host }}"
   run_once: true
 
-- name: Check if private key already exists
-  ansible.builtin.stat:
-    path: "{{ provision_private_key_path_expanded }}"
-  register: private_key_check
-  delegate_to: "{{ provision_control_host }}"
-  run_once: true
-
-- name: Generate EC2 key pair locally if not exists
+- name: Generate EC2 key pair
   ansible.builtin.shell: |
     umask 0177
     ssh-keygen -t {{ ec2_ssh_key_type }} \
@@ -34,21 +27,6 @@
   run_once: true
   when:
     - not private_key_check.stat.exists
-
-- name: Check if public key already exists
-  ansible.builtin.stat:
-    path: "{{ provision_public_key_path_expanded }}"
-  register: public_key_check
-  delegate_to: "{{ provision_control_host }}"
-  run_once: true
-
-- name: Generate public key from private key if it does not exist
-  ansible.builtin.shell: "ssh-keygen -y -f {{ provision_private_key_path_expanded }} > {{ provision_public_key_path_expanded }}"
-  delegate_to: "{{ provision_control_host }}"
-  run_once: true
-  when:
-    - private_key_check.stat.exists
-    - not public_key_check.stat.exists
 
 - name: Read public key content
   ansible.builtin.slurp:
@@ -92,11 +70,6 @@
   register: ec2_keypair_result
   delegate_to: "{{ provision_control_host }}"
   run_once: true
-
-- name: Backfill fingerprint from AWS response when available
-  ansible.builtin.set_fact:
-    ec2_keypair_info: "{{ ec2_keypair_info | combine({'key_fingerprint': ec2_keypair_result.key.fingerprint}, recursive=True) }}"
-  when: ec2_keypair_result.key is defined and ec2_keypair_result.key.fingerprint is defined
 
 - name: Show key pair status
   ansible.builtin.debug:
