@@ -28,23 +28,17 @@
 - name: Derive key, security group, and volume names
   vars:
     provision_keypair_name_clean: "{{ ec2_keypair_name | default('', true) }}"
-    provision_local_key_path_clean: "{{ provision_local_private_key_path | default('', true) }}"
     provision_security_group_name_clean: "{{ ec2_security_group_name | default('', true) }}"
   ansible.builtin.set_fact:
     ec2_key_name: "{{ (provision_keypair_name_clean | default('', true) | string | trim) or ('key-' ~ ec2_name_token) }}"
-    provision_private_key_path: "{{ (provision_local_key_path_clean | default('', true) | string | trim)
-                                      or ('~/.ssh/' ~ ((provision_keypair_name_clean | default('', true) | string | trim)
-                                                       or ('key-' ~ ec2_name_token)) ~ '.pem') }}"
+    provision_private_key_path: "{{ '~/.ssh/' ~ ec2_key_name ~ '.pem' }}"
     ec2_security_group_name: "{{ (provision_security_group_name_clean | default('', true) | string | trim)
                                      or ('sg-' ~ ec2_name_token) }}"
     ec2_root_volume_name: "vol-{{ ec2_name_token }}"
 
 - name: Derive remaining provisioning context
-  vars:
-    provision_public_key_path_clean: "{{ provision_local_public_key_path | default('', true) }}"
   ansible.builtin.set_fact:
-    provision_public_key_path: "{{ (provision_public_key_path_clean | default('', true) | string | trim)
-                                    or ((provision_private_key_path | regex_replace('\\.pem$', '')) ~ '.pub') }}"
+    provision_public_key_path: "{{ '~/.ssh/' ~ ec2_key_name ~ '.pub' }}"
     vault_effective_url: >-
       {{ (vault_url | default('', true))
          | default(vault_addr | default('', true), true) }}

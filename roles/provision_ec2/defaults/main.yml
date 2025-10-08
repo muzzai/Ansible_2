@@ -31,8 +31,6 @@ ec2_delete_on_termination: true
 ec2_keypair_name: ""
 ec2_ssh_key_type: "rsa"
 ec2_ssh_key_bits: 4096
-provision_local_private_key_path: ""
-provision_local_public_key_path: ""
 
 # Windows account configuration
 windows_admin_user: "Administrator"

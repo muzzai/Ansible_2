@@ -42,14 +42,6 @@ argument_specs:
         type: str
         required: false
         description: Reuse an existing AWS key pair instead of generating one.
-      provision_local_private_key_path:
-        type: str
-        required: false
-        description: Local filesystem path for the SSH private key.
-      provision_local_public_key_path:
-        type: str
-        required: false
-        description: Local filesystem path for the SSH public key.
       provision_configure_route53:
         type: bool
         required: false

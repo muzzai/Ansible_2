@@ -2,14 +2,9 @@
 # Manage EC2 key pair for SSH access and publish facts for later tasks
 
 - name: Expand local SSH key paths
-  vars:
-    provision_local_public_path_raw: "{{ provision_public_key_path | default('', true) }}"
   ansible.builtin.set_fact:
     provision_private_key_path_expanded: "{{ provision_private_key_path | regex_replace('^~', lookup('env', 'HOME')) }}"
-    provision_public_key_path_expanded: "{{ provision_local_public_path_raw | regex_replace('^~', lookup('env', 'HOME')) }}"
-    provision_public_key_path_final: >-
-      {{ (provision_local_public_path_raw | default('', true) | string | trim)
-         or ((provision_private_key_path | regex_replace('^~', lookup('env','HOME')) | regex_replace('\\.pem$', '')) ~ '.pub') }}
+    provision_public_key_path_expanded: "{{ provision_public_key_path | regex_replace('^~', lookup('env', 'HOME')) }}"
 
 - name: Determine SSH key directory path
   ansible.builtin.set_fact:
@@ -42,7 +37,7 @@
 
     - name: Read public key material
       ansible.builtin.slurp:
-        src: "{{ provision_public_key_path_final }}"
+        src: "{{ provision_public_key_path_expanded }}"
       register: provision_public_key_content
 
 - name: Assemble key pair facts
