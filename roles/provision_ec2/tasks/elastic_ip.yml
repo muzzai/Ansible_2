@@ -26,11 +26,12 @@
 
 - name: Update instance facts with Elastic IP details
   ansible.builtin.set_fact:
-    ec2_instance_info: "{{ ec2_instance_info | combine({
-      'public_ip': provision_eip_result.public_ip | default(ec2_instance_info.public_ip),
-      'elastic_ip': provision_eip_result.public_ip | default(ec2_instance_info.public_ip),
-      'elastic_ip_allocation_id': provision_eip_result.allocation_id | default(provision_eip_result.eip.allocation_id | default(''))
-    }, recursive=True) }}"
+    ec2_instance_info: "{{ ec2_instance_info | combine(ip_details, recursive=True) }}"
+  vars:
+    ip_details:
+      public_ip: "{{ provision_eip_result.public_ip | default(ec2_instance_info.public_ip) }}"
+      elastic_ip: "{{ provision_eip_result.public_ip | default(ec2_instance_info.public_ip) }}"
+      elastic_ip_allocation_id: "{{ provision_eip_result.allocation_id | default(provision_eip_result.eip.allocation_id | default('')) }}"
 
 - name: Show Elastic IP assignment
   ansible.builtin.debug:

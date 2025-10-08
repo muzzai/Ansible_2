@@ -1,75 +1,23 @@
 ---
-# Store SSH private key and metadata in HashiCorp Vault (KV v2)
-
-- name: Build Vault connection context
-  ansible.builtin.set_fact:
-    provision_vault_connection:
-      url: "{{ vault_effective_url | default('') | trim }}"
-      role_id: "{{ vault_effective_role_id | default('') | trim }}"
-      secret_id: "{{ vault_effective_secret_id | default('') | trim }}"
-      kv_mount: "{{ vault_effective_kv_mount }}"
-      ssh_path: "{{ vault_effective_ssh_path }}"
-      validate_certs: "{{ provision_vault_validate_certs | bool }}"
-      ca_cert_env_var: "{{ vault_ca_cert_env_var }}"
-      auth_mount_point: "{{ vault_effective_auth_mount }}"
-
-- name: Load Vault CA certificate from environment
-  ansible.builtin.set_fact:
-    provision_vault_ca_cert: "{{ lookup('env', provision_vault_connection.ca_cert_env_var) | default('', true) }}"
-
-- name: Write Vault CA certificate to temporary file when provided
-  when: (provision_vault_ca_cert | default('', true) | string | trim | length) > 0
-  block:
-    - name: Create temporary CA certificate file
-      ansible.builtin.tempfile:
-        state: file
-        suffix: .pem
-      register: provision_vault_ca_path
-
-    - name: Persist Vault CA certificate
-      ansible.builtin.copy:
-        content: "{{ provision_vault_ca_cert }}"
-        dest: "{{ provision_vault_ca_path.path }}"
-        mode: '0600'
-
-    - name: Attach CA certificate path to connection context
-      ansible.builtin.set_fact:
-        provision_vault_connection: "{{ provision_vault_connection | combine({'ca_cert_path': provision_vault_ca_path.path}, recursive=True) }}"
-
-- name: Determine whether Vault integration is available
-  ansible.builtin.set_fact:
-    provision_vault_enabled: >-
-      {{ (provision_vault_connection.url | default('', true) | string | trim | length) > 0
-         and (provision_vault_connection.role_id | default('', true) | string | trim | length) > 0
-         and (provision_vault_connection.secret_id | default('', true) | string | trim | length) > 0
-         and (provision_vault_connection.kv_mount | default('', true) | string | trim | length) > 0
-         and (provision_vault_connection.ssh_path | default('', true) | string | trim | length) > 0 }}
-
-- name: Build Vault payload
-  ansible.builtin.set_fact:
-    provision_vault_payload:
-      private_key: "{{ ec2_keypair_info.private_key }}"
-      public_key: "{{ ec2_keypair_info.public_key }}"
-      key_fingerprint: "{{ ec2_keypair_info.key_fingerprint }}"
-      instance_id: "{{ ec2_instance_info.instance_id }}"
-      hostname: "{{ route53_effective_record_name }}"
-      public_ip: "{{ ec2_instance_info.public_ip }}"
-      private_ip: "{{ ec2_instance_info.private_ip }}"
-      created_at: "{{ ansible_date_time.iso8601 }}"
-      created_by: "{{ ansible_user | default('ansible') }}"
-      instance_type: "{{ ec2_instance_type }}"
-      region: "{{ aws_region }}"
-      vpc_id: "{{ ec2_instance_info.vpc_id | default('') }}"
-      key_type: "{{ ec2_keypair_info.key_type }}"
-      key_bits: "{{ ec2_keypair_info.key_bits }}"
-      admin_password: "{{ windows_admin_password }}"
-      security_group_id: "{{ ec2_security_group_id | default('') }}"
-      security_group_name: "{{ ec2_security_group_name | default('') }}"
-
-- name: Store SSH key material in Vault
+- name: Store SSH secret in Vault
   when: provision_vault_enabled | bool
   block:
-    - name: Write SSH secret to Vault
+    - name: Build Vault payload for SSH secret
+      ansible.builtin.set_fact:
+        provision_vault_payload:
+          instance_id: "{{ ec2_instance_info.instance_id }}"
+          instance_type: "{{ ec2_instance_info.instance_type }}"
+          image_id: "{{ ec2_instance_info.image_id }}"
+          region: "{{ ec2_instance_info.placement.region }}"
+          private_ip: "{{ ec2_instance_info.private_ip_address }}"
+          public_ip: "{{ ec2_instance_info.public_ip_address | default('') }}"
+          key_name: "{{ ec2_instance_info.key_name }}"
+          security_group_id: "{{ ec2_security_group_info.group_id }}"
+          security_group_name: "{{ ec2_security_group_info.group_name }}"
+          vpc_id: "{{ ec2_security_group_info.vpc_id }}"
+          private_key: "{{ ec2_key_pair.key.private_key }}"
+
+    - name: Store SSH secret
       community.hashi_vault.vault_kv2_write:
         url: "{{ provision_vault_connection.url | regex_replace('/+$', '') }}"
         auth_method: approle
