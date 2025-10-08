@@ -26,8 +26,8 @@
         type: "{{ ec2_ssh_key_type }}"
         size: "{{ ec2_ssh_key_bits }}"
         comment: "ansible-generated-{{ ec2_key_name }}"
+        backend: cryptography
         private_key_format: pkcs1
-        backend: auto
       register: provision_local_keypair
 
     - name: Read private key material
