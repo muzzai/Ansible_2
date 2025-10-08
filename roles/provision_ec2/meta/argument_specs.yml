@@ -58,10 +58,7 @@ argument_specs:
         type: bool
         required: false
         description: When true, push custom Ansible facts onto the Windows instance.
-      provision_vault_enabled:
-        type: bool
-        required: false
-        description: When true, store the generated SSH private key in Vault.
+
       vault_addr:
         type: str
         required: false

@@ -1,6 +1,5 @@
 ---
 - name: Store SSH secret in Vault
-  when: provision_vault_enabled | bool
   block:
     - name: Build Vault payload for SSH secret
       ansible.builtin.set_fact:
@@ -57,15 +56,4 @@
              and (vault_verify_result.data.data.instance_id | default('')) == ec2_instance_info.instance_id }}
         vault_ssh_path_full: "{{ provision_vault_connection.kv_mount }}/data/{{ provision_vault_connection.ssh_path }}"
 
-- name: Set default Vault status when integration disabled
-  ansible.builtin.set_fact:
-    vault_ssh_stored: false
-    vault_ssh_path_full: "n/a"
-  when: not provision_vault_enabled | bool
 
-- name: Handle Vault integration result messaging
-  ansible.builtin.debug:
-    msg:
-      - "Vault integration: {{ provision_vault_enabled | ternary('ENABLED', 'DISABLED') }}"
-      - "Vault path: {{ vault_ssh_path_full | default('n/a') }}"
-      - "SSH key stored: {{ (vault_ssh_stored | default(false)) | ternary('YES', 'NO') }}"

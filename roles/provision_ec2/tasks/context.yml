@@ -58,3 +58,15 @@
     route53_effective_record_name: "{{ (route53_record_name | default('', true) | string | trim)
                                          or ec2_effective_name }}"
     provision_vault_validate_certs: "{{ vault_verify | default(true) | bool }}"
+
+- name: Build Vault connection dictionary
+  ansible.builtin.set_fact:
+    provision_vault_connection:
+      url: "{{ vault_effective_url }}"
+      auth_mount_point: "{{ vault_effective_auth_mount }}"
+      role_id: "{{ vault_effective_role_id }}"
+      secret_id: "{{ vault_effective_secret_id }}"
+      ssh_path: "{{ vault_effective_ssh_path }}"
+      kv_mount: "{{ vault_effective_kv_mount }}"
+      validate_certs: "{{ provision_vault_validate_certs }}"
+      ca_cert_path: "{{ lookup('env', vault_ca_cert_env_var) | default(omit) }}"

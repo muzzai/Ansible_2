@@ -40,8 +40,7 @@ windows_create_user: false
 windows_ansible_user: "ansible_automation"
 windows_user_password: "{{ lookup('env', 'WINDOWS_ANSIBLE_PASSWORD') | default('TempPassword123!', true) }}"
 
-# Vault integration enabled/disabled
-provision_vault_enabled: false
+
 
 # Vault configuration for storing SSH keys
 vault_addr: "{{ lookup('env', 'VAULT_ADDR') | default('', true) }}"
