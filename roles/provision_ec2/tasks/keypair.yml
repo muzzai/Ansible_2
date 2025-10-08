@@ -6,13 +6,9 @@
     provision_private_key_path_expanded: "{{ provision_private_key_path | regex_replace('^~', lookup('env', 'HOME')) }}"
     provision_public_key_path_expanded: "{{ provision_public_key_path | regex_replace('^~', lookup('env', 'HOME')) }}"
 
-- name: Determine SSH key directory path
-  ansible.builtin.set_fact:
-    provision_private_key_dir: "{{ provision_private_key_path_expanded | regex_replace('^(.*)[/\\][^/\\]+$', '\1') }}"
-
 - name: Ensure SSH key directory exists
   ansible.builtin.file:
-    path: "{{ provision_private_key_dir }}"
+    path: "{{ provision_private_key_path_expanded | dirname }}"
     state: directory
     mode: '0700'
   delegate_to: "{{ provision_control_host }}"
