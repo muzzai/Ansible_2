@@ -4,7 +4,7 @@
 - name: Expand local SSH key paths
   ansible.builtin.set_fact:
     provision_private_key_path_expanded: "{{ provision_private_key_path | regex_replace('^~', lookup('env', 'HOME')) }}"
-    provision_public_key_path_expanded: "{{ provision_public_key_path | regex_replace('^~', lookup('env', 'HOME')) }}"
+    provision_public_key_path_expanded: "{{ (provision_public_key_path | default('', true)) | regex_replace('^~', lookup('env', 'HOME')) }}"
 
 - name: Determine SSH key directory path
   ansible.builtin.set_fact:
@@ -27,36 +27,33 @@
         size: "{{ ec2_ssh_key_bits }}"
         comment: "ansible-generated-{{ ec2_key_name }}"
         private_key_format: pkcs1
-        path_public: "{{ provision_public_key_path_expanded }}"
+        backend: auto
       register: provision_local_keypair
 
-    - name: Read SSH key material
+    - name: Read private key material
       ansible.builtin.slurp:
-        src: "{{ item }}"
-      loop:
-        - "{{ provision_private_key_path_expanded }}"
-        - "{{ provision_public_key_path_expanded }}"
-      register: provision_key_material
+        src: "{{ provision_private_key_path_expanded }}"
+      register: provision_private_key_content
+
+    - name: Read public key material
+      ansible.builtin.slurp:
+        src: "{{ provision_private_key_path_expanded }}.pub"
+      when: provision_public_key_path is not defined or provision_public_key_path | trim == ''
+      register: provision_generated_public_key
+
+    - name: Read explicit public key material when provided
+      ansible.builtin.slurp:
+        src: "{{ provision_public_key_path }}"
+      when: provision_public_key_path is defined and provision_public_key_path | trim != ''
+      register: provision_explicit_public_key
 
 - name: Assemble key pair facts
   ansible.builtin.set_fact:
     ec2_keypair_info:
       key_name: "{{ ec2_key_name }}"
       key_fingerprint: "{{ provision_local_keypair.fingerprint | default('') }}"
-      private_key: "{{ provision_key_material.results
-        | selectattr('item', 'equalto', provision_private_key_path_expanded)
-        | map(attribute='content')
-        | list
-        | first
-        | default('')
-        | b64decode }}"
-      public_key: "{{ provision_key_material.results
-        | selectattr('item', 'equalto', provision_public_key_path_expanded)
-        | map(attribute='content')
-        | list
-        | first
-        | default('')
-        | b64decode }}"
+      private_key: "{{ provision_private_key_content.content | default('') | b64decode }}"
+      public_key: "{{ (provision_explicit_public_key.content | default(provision_generated_public_key.content | default(''))) | b64decode }}"
       key_type: "{{ ec2_ssh_key_type }}"
       key_bits: "{{ ec2_ssh_key_bits }}"
 
