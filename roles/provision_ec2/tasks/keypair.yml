@@ -25,8 +25,6 @@
       -C "ansible-generated-{{ ec2_key_name }}"
   delegate_to: "{{ provision_control_host }}"
   run_once: true
-  when:
-    - not private_key_check.stat.exists
 
 - name: Read public key content
   ansible.builtin.slurp:
