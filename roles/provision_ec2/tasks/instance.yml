@@ -37,6 +37,9 @@
   ansible.builtin.set_fact:
     ec2_instance_info:
       instance_id: "{{ ec2_instance_result.instances[0].instance_id }}"
+      instance_type: "{{ ec2_instance_result.instances[0].instance_type }}"
+      image_id: "{{ ec2_instance_result.instances[0].image_id }}"
+      key_name: "{{ ec2_instance_result.instances[0].key_name }}"
       public_ip: "{{ ec2_instance_result.instances[0].public_ip_address | default('') }}"
       private_ip: "{{ ec2_instance_result.instances[0].private_ip_address }}"
       state: "{{ ec2_instance_result.instances[0].state.name }}"
@@ -61,7 +64,10 @@
   ansible.builtin.set_fact:
     ec2_instance_info:
       instance_id: "{{ ec2_state_poll.instances[0].instance_id }}"
-      public_ip: "{{ ec2_state_poll.instances[0].public_ip_address }}"
+      instance_type: "{{ ec2_state_poll.instances[0].instance_type }}"
+      image_id: "{{ ec2_state_poll.instances[0].image_id }}"
+      key_name: "{{ ec2_state_poll.instances[0].key_name }}"
+      public_ip: "{{ ec2_state_poll.instances[0].public_ip_address | default('') }}"
       private_ip: "{{ ec2_state_poll.instances[0].private_ip_address }}"
       state: "{{ ec2_state_poll.instances[0].state.name }}"
       availability_zone: "{{ ec2_state_poll.instances[0].placement.availability_zone }}"
