@@ -1,6 +1,23 @@
 ---
 - name: Store SSH secret in Vault
   block:
+    - name: Create a temporary file for the CA certificate
+      ansible.builtin.tempfile:
+        state: file
+        suffix: .crt
+      register: temp_ca_cert
+      delegate_to: "{{ provision_control_host }}"
+      run_once: true
+      when: provision_vault_connection.ca_cert_path is defined and provision_vault_connection.ca_cert_path != ''
+
+    - name: Write the CA certificate to the temporary file
+      ansible.builtin.copy:
+        content: "{{ provision_vault_connection.ca_cert_path }}"
+        dest: "{{ temp_ca_cert.path }}"
+      delegate_to: "{{ provision_control_host }}"
+      run_once: true
+      when: temp_ca_cert.path is defined
+
     - name: Build Vault payload for SSH secret
       ansible.builtin.set_fact:
         provision_vault_payload:
@@ -26,7 +43,7 @@
         path: "{{ provision_vault_connection.ssh_path }}"
         engine_mount_point: "{{ provision_vault_connection.kv_mount }}"
         data: "{{ provision_vault_payload }}"
-        ca_cert: "{{ provision_vault_connection.ca_cert_path | default(omit) }}"
+        ca_cert: "{{ temp_ca_cert.path | default(omit) }}"
         validate_certs: "{{ provision_vault_connection.validate_certs | bool }}"
       register: vault_write_result
       delegate_to: "{{ provision_control_host }}"
@@ -41,7 +58,7 @@
         secret_id: "{{ provision_vault_connection.secret_id }}"
         path: "{{ provision_vault_connection.ssh_path }}"
         engine_mount_point: "{{ provision_vault_connection.kv_mount }}"
-        ca_cert: "{{ provision_vault_connection.ca_cert_path | default(omit) }}"
+        ca_cert: "{{ temp_ca_cert.path | default(omit) }}"
         validate_certs: "{{ provision_vault_connection.validate_certs | bool }}"
       register: vault_verify_result
       delegate_to: "{{ provision_control_host }}"
@@ -55,3 +72,12 @@
              and (vault_verify_result is defined and vault_verify_result is succeeded)
              and (vault_verify_result.data.data.instance_id | default('')) == ec2_instance_info.instance_id }}
         vault_ssh_path_full: "{{ provision_vault_connection.kv_mount }}/data/{{ provision_vault_connection.ssh_path }}"
+
+  always:
+    - name: Remove the temporary CA certificate file
+      ansible.builtin.file:
+        path: "{{ temp_ca_cert.path }}"
+        state: absent
+      delegate_to: "{{ provision_control_host }}"
+      run_once: true
+      when: temp_ca_cert.path is defined
