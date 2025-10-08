@@ -6,7 +6,7 @@
     state: present
     region: "{{ aws_region }}"
     allocation_id: "{{ provision_eip_allocation_id }}"
-    instance_id: "{{ ec2_instance_info.instance_id }}"
+    device_id: "{{ ec2_instance_info.instance_id }}"
     allow_reassociation: true
   register: provision_eip_result
   delegate_to: "{{ provision_control_host }}"
@@ -17,7 +17,7 @@
   amazon.aws.ec2_eip:  # noqa args[module]
     state: present
     region: "{{ aws_region }}"
-    instance_id: "{{ ec2_instance_info.instance_id }}"
+    device_id: "{{ ec2_instance_info.instance_id }}"
     allow_reassociation: true
   register: provision_eip_result
   delegate_to: "{{ provision_control_host }}"
