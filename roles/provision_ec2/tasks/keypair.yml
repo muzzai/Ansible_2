@@ -5,6 +5,9 @@
   ansible.builtin.set_fact:
     provision_private_key_path_expanded: "{{ provision_private_key_path | regex_replace('^~', lookup('env', 'HOME')) }}"
     provision_public_key_path_expanded: "{{ (provision_public_key_path | default('', true)) | regex_replace('^~', lookup('env', 'HOME')) }}"
+    provision_public_key_path_final: >-
+      {{ (provision_public_key_path_expanded | string | trim)
+         or (provision_private_key_path_expanded ~ '.pub') }}
 
 - name: Determine SSH key directory path
   ansible.builtin.set_fact:
@@ -37,15 +40,8 @@
 
     - name: Read public key material
       ansible.builtin.slurp:
-        src: "{{ provision_private_key_path_expanded }}.pub"
-      when: provision_public_key_path is not defined or provision_public_key_path | trim == ''
-      register: provision_generated_public_key
-
-    - name: Read explicit public key material when provided
-      ansible.builtin.slurp:
-        src: "{{ provision_public_key_path }}"
-      when: provision_public_key_path is defined and provision_public_key_path | trim != ''
-      register: provision_explicit_public_key
+        src: "{{ provision_public_key_path_final }}"
+      register: provision_public_key_content
 
 - name: Assemble key pair facts
   ansible.builtin.set_fact:
@@ -53,7 +49,7 @@
       key_name: "{{ ec2_key_name }}"
       key_fingerprint: "{{ provision_local_keypair.fingerprint | default('') }}"
       private_key: "{{ provision_private_key_content.content | default('') | b64decode }}"
-      public_key: "{{ (provision_explicit_public_key.content | default(provision_generated_public_key.content | default(''))) | b64decode }}"
+      public_key: "{{ provision_public_key_content.content | default('') | b64decode }}"
       key_type: "{{ ec2_ssh_key_type }}"
       key_bits: "{{ ec2_ssh_key_bits }}"
 
