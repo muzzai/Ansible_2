@@ -20,7 +20,7 @@
       community.hashi_vault.vault_kv2_write:
         url: "{{ provision_vault_connection.url | regex_replace('/+$', '') }}"
         auth_method: approle
-        auth_mount_point: "{{ provision_vault_connection.auth_mount_point }}"
+        mount_point: "{{ provision_vault_connection.auth_mount_point }}"
         role_id: "{{ provision_vault_connection.role_id }}"
         secret_id: "{{ provision_vault_connection.secret_id }}"
         path: "{{ provision_vault_connection.ssh_path }}"
@@ -36,7 +36,7 @@
       community.hashi_vault.vault_kv2_get:
         url: "{{ provision_vault_connection.url | regex_replace('/+$', '') }}"
         auth_method: approle
-        auth_mount_point: "{{ provision_vault_connection.auth_mount_point }}"
+        mount_point: "{{ provision_vault_connection.auth_mount_point }}"
         role_id: "{{ provision_vault_connection.role_id }}"
         secret_id: "{{ provision_vault_connection.secret_id }}"
         path: "{{ provision_vault_connection.ssh_path }}"
