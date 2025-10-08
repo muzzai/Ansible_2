@@ -4,17 +4,17 @@
     - name: Build Vault payload for SSH secret
       ansible.builtin.set_fact:
         provision_vault_payload:
-          instance_id: "{{ ec2_instance_info.instance_id }}"
-          instance_type: "{{ ec2_instance_info.instance_type }}"
-          image_id: "{{ ec2_instance_info.image_id }}"
+          instance_id: "{{ ec2_instance_info.instance_id | default('') }}"
+          instance_type: "{{ ec2_instance_info.instance_type | default('') }}"
+          image_id: "{{ ec2_instance_info.image_id | default('') }}"
           region: "{{ ec2_instance_info.availability_zone | default(aws_region) }}"
-          private_ip: "{{ ec2_instance_info.private_ip_address }}"
-          public_ip: "{{ ec2_instance_info.public_ip_address | default('') }}"
-          key_name: "{{ ec2_instance_info.key_name }}"
-          security_group_id: "{{ ec2_security_group_info.group_id }}"
-          security_group_name: "{{ ec2_security_group_info.group_name }}"
-          vpc_id: "{{ ec2_security_group_info.vpc_id }}"
-          private_key: "{{ ec2_key_pair.key.private_key }}"
+          private_ip: "{{ ec2_instance_info.private_ip | default('') }}"
+          public_ip: "{{ ec2_instance_info.public_ip | default('') }}"
+          key_name: "{{ ec2_instance_info.key_name | default('') }}"
+          security_group_id: "{{ ec2_security_group_info.group_id | default('') }}"
+          security_group_name: "{{ ec2_security_group_info.group_name | default('') }}"
+          vpc_id: "{{ ec2_security_group_info.vpc_id | default('') }}"
+          private_key: "{{ ec2_key_pair.key.private_key | default('') }}"
 
     - name: Store SSH secret
       community.hashi_vault.vault_kv2_write:
@@ -55,5 +55,3 @@
              and (vault_verify_result is defined and vault_verify_result is succeeded)
              and (vault_verify_result.data.data.instance_id | default('')) == ec2_instance_info.instance_id }}
         vault_ssh_path_full: "{{ provision_vault_connection.kv_mount }}/data/{{ provision_vault_connection.ssh_path }}"
-
-
