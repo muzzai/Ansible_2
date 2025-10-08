@@ -28,10 +28,10 @@
           private_ip: "{{ ec2_instance_info.private_ip | default('') }}"
           public_ip: "{{ ec2_instance_info.public_ip | default('') }}"
           key_name: "{{ ec2_instance_info.key_name | default('') }}"
-          security_group_id: "{{ ec2_security_group_info.group_id | default('') }}"
-          security_group_name: "{{ ec2_security_group_info.group_name | default('') }}"
-          vpc_id: "{{ ec2_security_group_info.vpc_id | default('') }}"
-          private_key: "{{ ec2_key_pair.key.private_key | default('') }}"
+          security_group_id: "{{ ec2_security_group_id | default('') }}"
+          security_group_name: "{{ ec2_security_group_name | default('') }}"
+          vpc_id: "{{ aws_vpc_id | default('') }}"
+          private_key: "{{ ec2_keypair_info.private_key | default('') }}"
 
     - name: Store SSH secret
       community.hashi_vault.vault_kv2_write:
