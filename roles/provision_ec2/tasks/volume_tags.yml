@@ -17,4 +17,4 @@
   run_once: true
   when:
     - provision_tag_root_volume | bool
-    - ec2_instance_info.root_volume_id | default('') | length > 0
+    - (ec2_instance_info.root_volume_id | default('', true) | string | trim | length) > 0

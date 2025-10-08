@@ -18,13 +18,12 @@
 - name: Determine instance name token
   ansible.builtin.set_fact:
     ec2_name_token: >-
-      {{ (ec2_name_slug | default('') | length > 0)
-         | ternary(ec2_name_slug,
-                   ec2_effective_name
-                   | regex_replace('[^A-Za-z0-9]+', '-')
-                   | regex_replace('^-+|-+$', '')
-                   | lower
-                   | default(ec2_effective_name)) }}
+      {{ (ec2_name_slug | default('', true) | string | trim)
+         or (ec2_effective_name
+             | regex_replace('[^A-Za-z0-9]+', '-')
+             | regex_replace('^-+|-+$', '')
+             | lower
+             | default(ec2_effective_name)) }}
 
 - name: Derive key, security group, and volume names
   vars:
@@ -32,43 +31,32 @@
     provision_local_key_path_clean: "{{ provision_local_private_key_path | default('', true) }}"
     provision_security_group_name_clean: "{{ ec2_security_group_name | default('', true) }}"
   ansible.builtin.set_fact:
-    ec2_key_name: >-
-      {{ (provision_keypair_name_clean | string | length > 0)
-         | ternary(provision_keypair_name_clean,
-                   'key-' ~ ec2_name_token) }}
-    provision_private_key_path: >-
-      {{ (provision_local_key_path_clean | string | length > 0)
-         | ternary(provision_local_key_path_clean,
-                   '~/.ssh/' ~ ((provision_keypair_name_clean | string | length > 0)
-                                 | ternary(provision_keypair_name_clean,
-                                           'key-' ~ ec2_name_token)) ~ '.pem') }}
-    ec2_security_group_name: >-
-      {{ (provision_security_group_name_clean | string | length > 0)
-         | ternary(provision_security_group_name_clean,
-                   'sg-' ~ ec2_name_token) }}
+    ec2_key_name: "{{ (provision_keypair_name_clean | default('', true) | string | trim) or ('key-' ~ ec2_name_token) }}"
+    provision_private_key_path: "{{ (provision_local_key_path_clean | default('', true) | string | trim)
+                                      or ('~/.ssh/' ~ ((provision_keypair_name_clean | default('', true) | string | trim)
+                                                       or ('key-' ~ ec2_name_token)) ~ '.pem') }}"
+    ec2_security_group_name: "{{ (provision_security_group_name_clean | default('', true) | string | trim)
+                                     or ('sg-' ~ ec2_name_token) }}"
     ec2_root_volume_name: "vol-{{ ec2_name_token }}"
 
 - name: Derive remaining provisioning context
+  vars:
+    provision_public_key_path_clean: "{{ provision_local_public_key_path | default('', true) }}"
   ansible.builtin.set_fact:
-    provision_public_key_path: >-
-      {{ (provision_local_public_key_path | default('', true)) | length > 0
-         | ternary(provision_local_public_key_path,
-                   (provision_private_key_path | regex_replace('\\.pem$', '')) ~ '.pub') }}
+    provision_public_key_path: "{{ (provision_public_key_path_clean | default('', true) | string | trim)
+                                    or ((provision_private_key_path | regex_replace('\\.pem$', '')) ~ '.pub') }}"
     vault_effective_url: >-
       {{ (vault_url | default('', true))
          | default(vault_addr | default('', true), true) }}
     vault_effective_role_id: "{{ vault_role_id | default('', true) }}"
     vault_effective_secret_id: "{{ vault_secret_id | default('', true) }}"
     vault_effective_kv_mount: "{{ vault_kv_mount | default('secret') | regex_replace('^/+|/+$', '') }}"
-    vault_effective_ssh_path: >-
-      {{ (vault_ssh_path | default('', true)) | length > 0
-         | ternary(vault_ssh_path | regex_replace('^/+', ''),
-                   'windows/ssh/' ~ ec2_name_tag) }}
+    vault_effective_ssh_path: "{{ (vault_ssh_path | default('', true) | string | trim | regex_replace('^/+', ''))
+                                   or ('windows/ssh/' ~ ec2_name_token) }}"
     vault_effective_auth_mount: >-
       {{ (vault_auth_mount_point | default('approle'))
          | regex_replace('^/+|/+$', '')
          | default('approle', true) }}
-    route53_effective_record_name: >-
-      {{ (route53_record_name | default('', true)) | length > 0
-         | ternary(route53_record_name, ec2_name_tag) }}
+    route53_effective_record_name: "{{ (route53_record_name | default('', true) | string | trim)
+                                         or ec2_effective_name }}"
     provision_vault_validate_certs: "{{ vault_verify | default(true) | bool }}"

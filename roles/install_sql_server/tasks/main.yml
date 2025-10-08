@@ -27,9 +27,9 @@
     - name: Assert Vault credentials are available
       ansible.builtin.assert:
         that:
-          - sql_vault_addr_effective | length > 0
-          - sql_vault_role_effective | length > 0
-          - sql_vault_secret_effective | length > 0
+          - (sql_vault_addr_effective | default('', true) | string | trim | length) > 0
+          - (sql_vault_role_effective | default('', true) | string | trim | length) > 0
+          - (sql_vault_secret_effective | default('', true) | string | trim | length) > 0
         fail_msg: "Unable to locate Vault credentials (VAULT_ADDR/ROLE_ID/SECRET_ID)."
 
     - name: Create temporary private key file when not provided
@@ -37,23 +37,23 @@
         state: file
         suffix: _sql_key.pem
       register: sql_temp_key_file
-      when: (sql_temp_private_key_path | default('', true)) | length == 0
+      when: (sql_temp_private_key_path | default('', true) | string | trim | length) == 0
       delegate_to: localhost
 
     - name: Use provided private key path
       ansible.builtin.set_fact:
         sql_effective_private_key_path: "{{ sql_temp_private_key_path }}"
         sql_private_key_cleanup: false
-      when: (sql_temp_private_key_path | default('', true)) | length > 0
+      when: (sql_temp_private_key_path | default('', true) | string | trim | length) > 0
 
     - name: Use generated private key path
       ansible.builtin.set_fact:
         sql_effective_private_key_path: "{{ sql_temp_key_file.path }}"
         sql_private_key_cleanup: true
-      when: (sql_temp_private_key_path | default('', true)) | length == 0
+      when: (sql_temp_private_key_path | default('', true) | string | trim | length) == 0
 
     - name: Write Vault CA certificate to temporary file when provided
-      when: sql_vault_ca_cert_effective | length > 0
+      when: (sql_vault_ca_cert_effective | default('', true) | string | trim | length) > 0
       delegate_to: localhost
       block:
         - name: Create temporary Vault CA file
@@ -88,7 +88,7 @@
         that:
           - sql_vault_key.data is defined
           - sql_vault_key.data.data.private_key is defined
-          - (sql_vault_key.data.data.private_key | string | trim) | length > 0
+          - (sql_vault_key.data.data.private_key | default('', true) | string | trim | length) > 0
         fail_msg: "Vault secret {{ sql_vault_secret_path }} does not include private_key."
 
     - name: Write SSH private key to control node
@@ -117,8 +117,8 @@
       delegate_to: localhost
       run_once: true
       when:
-        - (sql_target_security_group_id | default('')) | length == 0
-        - (sql_instance_id_from_vault | default('')) | length > 0
+        - (sql_target_security_group_id | default('', true) | string | trim | length) == 0
+        - (sql_instance_id_from_vault | default('', true) | string | trim | length) > 0
 
     - name: Populate security group metadata from lookup
       ansible.builtin.set_fact:
@@ -148,7 +148,7 @@
             rule_desc: "SQL Server access"
       delegate_to: localhost
       run_once: true
-      when: (sql_target_security_group_id | default('')) | length > 0
+      when: (sql_target_security_group_id | default('', true) | string | trim | length) > 0
 
     - name: Configure connection variables for Windows host
       ansible.builtin.set_fact:
@@ -175,7 +175,7 @@
     - name: Assert S3 region determined
       ansible.builtin.assert:
         that:
-          - sql_s3_region_effective | length > 0
+          - (sql_s3_region_effective | default('', true) | string | trim | length) > 0
         fail_msg: "Unable to determine AWS region for S3 installer download. Provide sql_s3_region explicitly."
 
     - name: Generate installer presigned URL

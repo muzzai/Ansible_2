@@ -5,7 +5,7 @@
     filters:
       isDefault: true
   register: provision_default_vpc
-  when: (aws_vpc_id | default('', true)) | length == 0
+  when: (aws_vpc_id | default('', true) | string | trim | length) == 0
   delegate_to: "{{ provision_control_host }}"
   run_once: true
 
@@ -13,7 +13,7 @@
   ansible.builtin.set_fact:
     aws_vpc_id: "{{ provision_default_vpc.vpcs[0].vpc_id }}"
   when:
-    - (aws_vpc_id | default('', true)) | length == 0
+    - (aws_vpc_id | default('', true) | string | trim | length) == 0
     - provision_default_vpc.vpcs | default([]) | length > 0
 
 - name: Discover default subnet when not provided
@@ -23,7 +23,7 @@
       vpc-id: "{{ aws_vpc_id }}"
       default-for-az: true
   register: provision_default_subnets
-  when: (aws_subnet_id | default('', true)) | length == 0
+  when: (aws_subnet_id | default('', true) | string | trim | length) == 0
   delegate_to: "{{ provision_control_host }}"
   run_once: true
 
@@ -31,7 +31,7 @@
   ansible.builtin.set_fact:
     aws_subnet_id: "{{ provision_default_subnets.subnets[0].subnet_id }}"
   when:
-    - (aws_subnet_id | default('', true)) | length == 0
+    - (aws_subnet_id | default('', true) | string | trim | length) == 0
     - provision_default_subnets.subnets | default([]) | length > 0
 
 - name: Ensure network identifiers are available

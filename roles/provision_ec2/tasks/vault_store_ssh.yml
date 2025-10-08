@@ -18,7 +18,7 @@
     provision_vault_ca_cert: "{{ lookup('env', provision_vault_connection.ca_cert_env_var) | default('', true) }}"
 
 - name: Write Vault CA certificate to temporary file when provided
-  when: provision_vault_ca_cert | length > 0
+  when: (provision_vault_ca_cert | default('', true) | string | trim | length) > 0
   block:
     - name: Create temporary CA certificate file
       ansible.builtin.tempfile:
@@ -39,11 +39,11 @@
 - name: Determine whether Vault integration is available
   ansible.builtin.set_fact:
     provision_vault_enabled: >-
-      {{ provision_vault_connection.url | length > 0
-         and provision_vault_connection.role_id | length > 0
-         and provision_vault_connection.secret_id | length > 0
-         and provision_vault_connection.kv_mount | length > 0
-         and provision_vault_connection.ssh_path | length > 0 }}
+      {{ (provision_vault_connection.url | default('', true) | string | trim | length) > 0
+         and (provision_vault_connection.role_id | default('', true) | string | trim | length) > 0
+         and (provision_vault_connection.secret_id | default('', true) | string | trim | length) > 0
+         and (provision_vault_connection.kv_mount | default('', true) | string | trim | length) > 0
+         and (provision_vault_connection.ssh_path | default('', true) | string | trim | length) > 0 }}
 
 - name: Build Vault payload
   ansible.builtin.set_fact:
