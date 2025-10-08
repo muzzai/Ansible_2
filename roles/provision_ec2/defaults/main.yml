@@ -15,7 +15,7 @@ ec2_name_tag: ""
 ec2_instance_type: "{{ aws_instance_type | default('t3.large') }}"
 ec2_image_id: "{{ aws_windows_ami | default('ami-05b00365623a86bd3') }}"
 ec2_security_group_name: ""
-ec2_assign_public_ip: true
+ec2_assign_public_ip: false
 
 # Instance naming and tagging
 ec2_environment: "production"
