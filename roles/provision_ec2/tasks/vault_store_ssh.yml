@@ -32,6 +32,7 @@
           security_group_name: "{{ ec2_security_group_name | default('') }}"
           vpc_id: "{{ aws_vpc_id | default('') }}"
           private_key: "{{ ec2_keypair_info.private_key | default('') }}"
+          admin_password: "{{ windows_admin_password }}"
 
     - name: Store SSH secret
       community.hashi_vault.vault_kv2_write:
