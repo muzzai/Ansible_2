@@ -27,20 +27,24 @@
                    | default(ec2_effective_name)) }}
 
 - name: Derive key, security group, and volume names
+  vars:
+    provision_keypair_name_clean: "{{ ec2_keypair_name | default('', true) }}"
+    provision_local_key_path_clean: "{{ provision_local_private_key_path | default('', true) }}"
+    provision_security_group_name_clean: "{{ ec2_security_group_name | default('', true) }}"
   ansible.builtin.set_fact:
     ec2_key_name: >-
-      {{ (ec2_keypair_name | default('', true)) | length > 0
-         | ternary(ec2_keypair_name,
+      {{ (provision_keypair_name_clean | string | length > 0)
+         | ternary(provision_keypair_name_clean,
                    'key-' ~ ec2_name_token) }}
     provision_private_key_path: >-
-      {{ (provision_local_private_key_path | default('', true)) | length > 0
-         | ternary(provision_local_private_key_path,
-                   '~/.ssh/' ~ ((ec2_keypair_name | default('', true)) | length > 0
-                                 | ternary(ec2_keypair_name,
+      {{ (provision_local_key_path_clean | string | length > 0)
+         | ternary(provision_local_key_path_clean,
+                   '~/.ssh/' ~ ((provision_keypair_name_clean | string | length > 0)
+                                 | ternary(provision_keypair_name_clean,
                                            'key-' ~ ec2_name_token)) ~ '.pem') }}
     ec2_security_group_name: >-
-      {{ (ec2_security_group_name | default('', true)) | length > 0
-         | ternary(ec2_security_group_name,
+      {{ (provision_security_group_name_clean | string | length > 0)
+         | ternary(provision_security_group_name_clean,
                    'sg-' ~ ec2_name_token) }}
     ec2_root_volume_name: "vol-{{ ec2_name_token }}"
 
