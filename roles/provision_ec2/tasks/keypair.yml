@@ -30,6 +30,21 @@
         private_key_format: pkcs1
       register: provision_local_keypair
 
+    - name: Check existing public key file
+      ansible.builtin.stat:
+        path: "{{ provision_public_key_path_expanded }}"
+      register: provision_public_key_stat
+
+    - name: Write public key file when missing
+      ansible.builtin.copy:
+        dest: "{{ provision_public_key_path_expanded }}"
+        content: "{{ provision_local_keypair.public_key }}"
+        mode: '0644'
+      when:
+        - provision_public_key_stat.stat.exists is defined
+        - not provision_public_key_stat.stat.exists
+        - provision_local_keypair.public_key is defined
+
     - name: Read private key material
       ansible.builtin.slurp:
         src: "{{ provision_private_key_path_expanded }}"
