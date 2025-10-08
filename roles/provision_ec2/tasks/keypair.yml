@@ -26,7 +26,7 @@
         type: "{{ ec2_ssh_key_type }}"
         size: "{{ ec2_ssh_key_bits }}"
         comment: "ansible-generated-{{ ec2_key_name }}"
-        private_key_format: pem
+        private_key_format: pkcs1
         public_key_path: "{{ provision_public_key_path_expanded }}"
       register: provision_local_keypair
 
