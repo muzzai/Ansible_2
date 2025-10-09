@@ -6,7 +6,6 @@
   vars:
     sql_version: "{{ sql_server_version | default('2022') }}"
     sql_edition: "{{ sql_server_edition | default('Express') }}"
-    sql_sa_password: "{{ sql_sa_password }}"
     sql_port: "{{ sql_server_port | default(1433) }}"
 
   roles:
