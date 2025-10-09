@@ -108,9 +108,7 @@
 
     - name: Ensure SQL port open in instance security group
       amazon.aws.ec2_security_group:
-        region: "{{ sql_instance_region_effective
-                     | default(sql_s3_region)
-                     | default(hostvars[inventory_hostname].placement.region | default(aws_region | default(''))) }}"
+        region: "{{ hostvars[inventory_hostname].placement.region }}"
         group_id: "{{ sql_target_security_group_id }}"
         name: "{{ sql_target_security_group_name | default(omit) }}"
         vpc_id: "{{ sql_target_vpc_id | default(omit) }}"
