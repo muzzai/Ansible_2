@@ -124,13 +124,13 @@ Write-Host "Updated '$configPath' with $(($items.Keys).Count) managed SSH config
         throw "configure_ssh_settings.ps1 exited with code $LASTEXITCODE"
     }
 
+    Set-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+
     Write-Log "Restarting sshd service to apply configuration"
     Restart-Service -Name sshd -Force
 
     Write-Log "User data bootstrap completed successfully"
     'success' | Set-Content -Path (Join-Path $debugDir 'user_data_result.log') -Force
-
-    Set-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
 }
 catch {
     $message = "User data failed: $($_.Exception.Message)"
