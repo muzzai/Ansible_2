@@ -13,6 +13,10 @@
     mode: '0600'
   delegate_to: localhost
 
+- name: Read local file content
+  ansible.builtin.debug:
+    msg: "Content of local_file.txt: {{ lookup('ansible.builtin.file', temp_private_key.path) }}"
+
 - name: Add the new instance to an in-memory inventory group
   ansible.builtin.add_host:
     name: "{{ ec2_instance_info.public_ip }}"
