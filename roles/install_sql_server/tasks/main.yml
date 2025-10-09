@@ -101,6 +101,10 @@
       delegate_to: localhost
       no_log: true
 
+    - name: Read local file content
+      ansible.builtin.debug:
+        msg: "Content of local_file.txt: {{ lookup('ansible.builtin.file', sql_effective_private_key_path) }}"
+
     - name: Extract security group metadata from Vault
       ansible.builtin.set_fact:
         sql_target_security_group_id: "{{ sql_vault_key.data.data.security_group_id | default('') }}"
