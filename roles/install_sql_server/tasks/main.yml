@@ -118,6 +118,10 @@
         - (sql_target_security_group_id | default('', true) | string | trim | length) == 0
         - (sql_instance_id_from_vault | default('', true) | string | trim | length) > 0
 
+    - name: Debug instance lookup
+      ansible.builtin.debug:
+        var: sql_instance_info_lookup
+
     - name: Populate security group metadata from lookup
       ansible.builtin.set_fact:
         sql_target_security_group_id: "{{ sql_instance_info_lookup.instances[0].security_groups[0].group_id }}"
