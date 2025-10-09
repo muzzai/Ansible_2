@@ -109,19 +109,19 @@ if (-not (Test-Path -Path $configPath)) {
     throw "OpenSSH configuration file not found at '$configPath'."
 }
 
-$configLines = Get-Content -Path $configPath -ErrorAction Stop
+$configLines = (Get-Content -Path $configPath -ErrorAction Stop) -split "`n"
 
-$escapedKeys = $items.Keys | ForEach-Object { [regex]::Escape($_) }
-$keyPattern = '^(\\s*#\\s*)?(?:' + ($escapedKeys -join '|') + ')\\b.*$'
-
-$filteredLines = $configLines | Where-Object { $_ -notmatch $keyPattern }
-
-$replacementLines = @()
-foreach ($entry in $items.GetEnumerator()) {
-    $replacementLines += "{0} {1}" -f $entry.Key, $entry.Value
+$newConfig = $configLines | % {
+  $existingKey = ($_ -split " ")[0] -replace '#', ''
+  if ($null -ne $items[$existingKey]) {
+    return "$existingKey $($items[$existingKey])"
+  }
+  else {
+    return $_
+  }
 }
 
-$newConfig = $filteredLines + $replacementLines
+$newConfig = $newConfig -join "`n"
 
 Set-Content -Path $configPath -Value $newConfig -Encoding UTF8
 
