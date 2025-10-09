@@ -81,7 +81,6 @@
         validate_certs: "{{ sql_vault_verify | bool }}"
       register: sql_vault_key
       delegate_to: localhost
-      no_log: true
 
     - name: Assert Vault secret contains private key
       ansible.builtin.assert:
