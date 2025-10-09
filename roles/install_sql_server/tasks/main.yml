@@ -127,7 +127,7 @@
       when:
         - sql_instance_info_lookup.instances | length > 0
         - sql_instance_info_lookup.instances[0].security_groups | length > 0
-      no_log: true
+
 
     - name: Ensure SQL port open in instance security group
       amazon.aws.ec2_security_group:
