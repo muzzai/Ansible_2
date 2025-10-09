@@ -115,6 +115,7 @@
         name: "{{ sql_target_security_group_name | default(omit) }}"
         vpc_id: "{{ sql_target_vpc_id | default(omit) }}"
         purge_rules: false
+        description: "some description"
         rules:
           - proto: tcp
             from_port: "{{ sql_port }}"
