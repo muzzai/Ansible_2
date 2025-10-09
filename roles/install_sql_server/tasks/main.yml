@@ -81,6 +81,10 @@
       register: sql_vault_key
       delegate_to: localhost
 
+    - name: Debug vault call
+      ansible.builtin.debug:
+        msg: sql_vault_key
+
     - name: Assert Vault secret contains private key
       ansible.builtin.assert:
         that:
