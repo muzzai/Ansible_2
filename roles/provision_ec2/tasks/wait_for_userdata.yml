@@ -23,6 +23,14 @@
     ansible_connection: ssh
     ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
 
+- name: Wait for SSH port to be open
+  ansible.builtin.wait_for:
+    host: "{{ ec2_instance_info.public_ip }}"
+    port: 22
+    delay: 15
+    timeout: 300
+  delegate_to: localhost
+
 - name: Wait for the user data script to complete
   ansible.windows.win_wait_for:
     path: C:\debug\user_data_result.log
