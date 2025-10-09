@@ -52,11 +52,6 @@
   ansible.builtin.import_tasks: vault_store_ssh.yml
   tags: ['provision', 'vault']
 
-- name: Publish Windows custom facts
-  when: provision_set_custom_facts | bool
-  ansible.builtin.import_tasks: facts.yml
-  tags: ['provision', 'facts']
-
 - name: Display provisioning summary
   ansible.builtin.import_tasks: summary.yml
   tags: ['provision', 'results']
