@@ -95,7 +95,7 @@
 
     - name: Write SSH private key to control node
       ansible.builtin.copy:
-        content: "{{ sql_vault_key.data.data.private_key }}"
+        content: "{{ sql_vault_key.data.data.private_key | replace('\\n', '\n') }}"
         dest: "{{ sql_effective_private_key_path }}"
         mode: '0600'
       delegate_to: localhost
