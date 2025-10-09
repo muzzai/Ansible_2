@@ -72,7 +72,6 @@
       community.hashi_vault.vault_kv2_get:
         url: "{{ sql_vault_addr_effective | regex_replace('/+$', '') }}"
         auth_method: approle
-        auth_mount_point: "{{ sql_vault_auth_mount_effective }}"
         role_id: "{{ sql_vault_role_effective }}"
         secret_id: "{{ sql_vault_secret_effective }}"
         path: "{{ sql_vault_secret_path }}"
