@@ -38,24 +38,7 @@ try {
         Start-Service -Name sshd
     }
 
-    Write-Log "Ensuring PowerShell 7 is installed"
-    if (-not (Get-Command -Name pwsh -ErrorAction SilentlyContinue)) {
-        $pwshVersion = '7.4.3'
-        $pwshDownloadUrl = "https://github.com/PowerShell/PowerShell/releases/download/v$pwshVersion/PowerShell-$pwshVersion-win-x64.msi"
-        $pwshMsiPath = Join-Path -Path $env:TEMP -ChildPath "PowerShell-$pwshVersion-win-x64.msi"
-
-        Write-Log "Downloading PowerShell $pwshVersion"
-        Invoke-WebRequest -Uri $pwshDownloadUrl -OutFile $pwshMsiPath
-
-        Write-Log "Installing PowerShell $pwshVersion"
-        $msiArgs = "/i `"$pwshMsiPath`" /qn ADD_PATH=1 ENABLE_PSREMOTING=1"
-        Start-Process -FilePath msiexec.exe -ArgumentList $msiArgs -Wait
-
-        Write-Log "Cleaning up PowerShell installer"
-        Remove-Item -Path $pwshMsiPath -Force -ErrorAction SilentlyContinue
-    } else {
-        Write-Log "PowerShell 7 already installed"
-    }
+    Write-Log "PowerShell 7 installation will be handled by Ansible."
 
     Write-Log "Configuring administrators_authorized_keys"
     $authorizedKeysPath = 'C:\\ProgramData\\ssh\\administrators_authorized_keys'
@@ -147,7 +130,7 @@ Write-Host "Updated '$configPath' with $(($items.Keys).Count) managed SSH config
     Write-Log "User data bootstrap completed successfully"
     'success' | Set-Content -Path (Join-Path $debugDir 'user_data_result.log') -Force
 
-    Set-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Program Files\PowerShell\7\pwsh.exe"
+    Set-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
 }
 catch {
     $message = "User data failed: $($_.Exception.Message)"

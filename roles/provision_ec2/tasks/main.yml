@@ -26,6 +26,14 @@
   ansible.builtin.import_tasks: instance.yml
   tags: ['provision', 'instance']
 
+- name: Wait for user data script to complete
+  ansible.builtin.import_tasks: wait_for_userdata.yml
+  tags: ['provision', 'wait']
+
+- name: Install PowerShell 7
+  ansible.builtin.import_tasks: install_powershell7.yml
+  tags: ['provision', 'software']
+
 - name: Manage Elastic IP association
   ansible.builtin.import_tasks: elastic_ip.yml
   tags: ['provision', 'network', 'elastic_ip']

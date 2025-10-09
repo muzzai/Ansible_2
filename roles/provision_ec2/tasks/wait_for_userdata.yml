@@ -1,0 +1,36 @@
+---
+- name: Create a temporary file for the private key
+  ansible.builtin.tempfile:
+    state: file
+    suffix: .pem
+  register: temp_private_key
+  delegate_to: localhost
+
+- name: Write private key to the temporary file
+  ansible.builtin.copy:
+    content: "{{ ec2_keypair_info.private_key }}"
+    dest: "{{ temp_private_key.path }}"
+    mode: '0600'
+  delegate_to: localhost
+
+- name: Add the new instance to an in-memory inventory group
+  ansible.builtin.add_host:
+    name: "{{ ec2_instance_info.public_ip }}"
+    groups: provisioned_ec2
+    ansible_user: "{{ windows_admin_user }}"
+    ansible_ssh_private_key_file: "{{ temp_private_key.path }}"
+    ansible_shell_type: powershell
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
+- name: Wait for the user data script to complete
+  ansible.windows.win_wait_for:
+    path: C:\debug\user_data_result.log
+    timeout: "{{ ec2_wait_timeout | default(600) }}"
+  delegate_to: "{{ ec2_instance_info.public_ip }}"
+
+- name: Remove the temporary private key file
+  ansible.builtin.file:
+    path: "{{ temp_private_key.path }}"
+    state: absent
+  delegate_to: localhost
+  when: temp_private_key.path is defined
