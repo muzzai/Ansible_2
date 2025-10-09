@@ -21,7 +21,8 @@
     ansible_ssh_private_key_file: "{{ temp_private_key.path }}"
     ansible_shell_type: powershell
     ansible_connection: ssh
-    ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+    ansible_ssh_common_args: >-
+      '-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o PreferredAuthentications=publickey -vvv'
 
 - name: Wait for SSH port to be open
   ansible.builtin.wait_for:
