@@ -83,7 +83,7 @@
 
     - name: Debug vault call
       ansible.builtin.debug:
-        msg: sql_vault_key
+        var: sql_vault_key
 
     - name: Assert Vault secret contains private key
       ansible.builtin.assert:
