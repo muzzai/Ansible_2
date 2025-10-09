@@ -22,7 +22,7 @@ sql_vault_kv_mount: "secret"
 sql_windows_user: "Administrator"
 sql_connection_common_args: >-
   -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no
-  -o PasswordAuthentication=no -o PreferredAuthentications=publickey
+  -o PasswordAuthentication=no -o PreferredAuthentications=publickey -vvv
 sql_vault_ca_cert_env_var: "VAULT_CA_CERT_PEM"
 sql_s3_region: ""
 sql_s3_url_expiry: 3600
