@@ -252,7 +252,7 @@
 
     - name: Install SQL Server from extracted media
       ansible.windows.win_shell: |
-        & "{{ sql_installer_path }}" /CONFIGURATIONFILE="{{ sql_config_file }}" /IACCEPTSQLSERVERLICENSETERMS
+        & "{{ sql_installer_path }}" /CONFIGURATIONFILE="{{ sql_config_file }}" /IACCEPTSQLSERVERLICENSETERMS /UpdateEnabled=0
       register: sql_install_result
       failed_when: sql_install_result.rc not in [0, 3010]
 
