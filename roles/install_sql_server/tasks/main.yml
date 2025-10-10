@@ -196,15 +196,34 @@
         state: directory
       when: not sql_setup_stat.stat.exists
 
-    - name: Extract SQL Server bootstrapper
+    - name: Extract SQL Server ZIP
+      ansible.windows.win_unzip:
+        src: "{{ sql_bootstrapper_path }}"        # e.g., C:\temp\SQLServer-2022-Express.zip
+        dest: "{{ sql_extract_dir }}"             # e.g., C:\temp\sql_extract
+        recurse: true
+        delete_archive: true
+      when: not sql_setup_stat.stat.exists
+
+    - name: Run SQL bootstrapper EXE found in extract dir (extract contents)
       ansible.windows.win_shell: |
-        $bootstrapper = "{{ sql_bootstrapper_path }}"
+        $ErrorActionPreference = 'Stop'
+
         $extractDir = "{{ sql_extract_dir }}"
         if (-not (Test-Path $extractDir)) {
-            New-Item -ItemType Directory -Path $extractDir -Force | Out-Null
+          New-Item -ItemType Directory -Path $extractDir -Force | Out-Null
         }
+
+        # Find an EXE in the extract dir (prefer the largest file if multiple)
+        $exe = Get-ChildItem -Path $extractDir -Filter *.exe -Recurse -ErrorAction SilentlyContinue |
+              Sort-Object Length -Descending |
+              Select-Object -First 1
+
+        if (-not $exe) {
+          throw "No .exe found under $extractDir"
+        }
+
         $quotedExtractDir = '"{0}"' -f $extractDir
-        Start-Process -FilePath $bootstrapper -ArgumentList '/qs', ('/x:' + $quotedExtractDir) -Wait -NoNewWindow
+        Start-Process -FilePath $exe.FullName -ArgumentList '/qs', ('/x:' + $quotedExtractDir) -Wait -NoNewWindow
       when: not sql_setup_stat.stat.exists
 
     - name: Locate SQL Server installer executable
