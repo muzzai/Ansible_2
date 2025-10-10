@@ -18,6 +18,14 @@
   ansible.builtin.debug:
     msg: "Content of local_file.txt: {{ lookup('ansible.builtin.file', temp_private_key.path) }}"
 
+- name: Wait for SSH port to be open
+  ansible.builtin.wait_for:
+    host: "{{ ec2_instance_info.public_ip }}"
+    port: 22
+    delay: 15
+    timeout: 300
+  delegate_to: localhost
+
 - name: Add the new instance to an in-memory inventory group
   ansible.builtin.add_host:
     name: "{{ ec2_instance_info.public_ip }}"
@@ -29,11 +37,4 @@
     ansible_ssh_common_args: >-
       '-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o PreferredAuthentications=publickey -vvv'
 
-- name: Wait for SSH port to be open
-  ansible.builtin.wait_for:
-    host: "{{ ec2_instance_info.public_ip }}"
-    port: 22
-    delay: 15
-    timeout: 300
-  delegate_to: localhost
 
