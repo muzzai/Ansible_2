@@ -8,7 +8,8 @@
 
 - name: Write private key to the temporary file
   ansible.builtin.copy:
-    content: "{{ ec2_keypair_info.private_key }}"
+    content: |
+      {{ ec2_keypair_info.private_key }}
     dest: "{{ temp_private_key.path }}"
     mode: '0600'
   delegate_to: localhost
@@ -36,15 +37,3 @@
     timeout: 300
   delegate_to: localhost
 
-- name: Wait for the user data script to complete
-  ansible.windows.win_wait_for:
-    path: C:\debug\user_data_result.log
-    timeout: "{{ ec2_wait_timeout | default(600) }}"
-  delegate_to: "{{ ec2_instance_info.public_ip }}"
-
-- name: Remove the temporary private key file
-  ansible.builtin.file:
-    path: "{{ temp_private_key.path }}"
-    state: absent
-  delegate_to: localhost
-  when: temp_private_key.path is defined
