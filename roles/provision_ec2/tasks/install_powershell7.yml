@@ -1,6 +1,6 @@
 ---
 - name: Install PowerShell 7 and update SSH shell
-  # delegate_to: "{{ ec2_instance_info.public_ip }}"
+  delegate_to: "{{ ec2_instance_info.public_ip }}"
   block:
     - name: Create Temp directory if it does not exist
       ansible.windows.win_file:
