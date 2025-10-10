@@ -33,7 +33,10 @@
     ansible_connection: ssh
     ansible_shell_type: cmd
     ansible_ssh_common_args: >-
-      -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o PasswordAuthentication=no
+      -o UserKnownHostsFile=/dev/null
+      -o StrictHostKeyChecking=no
+      -o PasswordAuthentication=no
+      -o PreferredAuthentications=publickey
   ansible.windows.win_stat:
     path: C:\debug\user_data_result.log
   register: user_data_status_cmd
@@ -50,7 +53,10 @@
     ansible_connection: ssh
     ansible_shell_type: powershell
     ansible_ssh_common_args: >-
-      -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o PasswordAuthentication=no
+      -o UserKnownHostsFile=/dev/null
+      -o StrictHostKeyChecking=no
+      -o PasswordAuthentication=no
+      -o PreferredAuthentications=publickey
   ansible.windows.win_stat:
     path: C:\debug\user_data_result.log
   register: user_data_status_ps
