@@ -27,13 +27,6 @@
   delegate_to: localhost
 
 - name: Wait for user data script to complete (trying with cmd)
-  ansible.windows.win_stat:
-    path: C:\debug\user_data_result.log
-  register: user_data_status_cmd
-  until: user_data_status_cmd.stat.exists
-  retries: 10
-  delay: 15
-  delegate_to: "{{ ec2_instance_info.public_ip }}"
   vars:
     ansible_user: "{{ windows_admin_user }}"
     ansible_ssh_private_key_file: "{{ hostvars['localhost'].temp_private_key.path }}"
@@ -41,16 +34,16 @@
     ansible_shell_type: cmd
     ansible_ssh_common_args: >-
       -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o PasswordAuthentication=no
-  ignore_errors: true
-
-- name: Wait for user data script to complete (falling back to powershell)
   ansible.windows.win_stat:
     path: C:\debug\user_data_result.log
-  register: user_data_status_ps
-  until: user_data_status_ps.stat.exists
+  register: user_data_status_cmd
+  until: user_data_status_cmd.stat.exists
   retries: 10
   delay: 15
   delegate_to: "{{ ec2_instance_info.public_ip }}"
+  ignore_errors: true
+
+- name: Wait for user data script to complete (falling back to powershell)
   vars:
     ansible_user: "{{ windows_admin_user }}"
     ansible_ssh_private_key_file: "{{ hostvars['localhost'].temp_private_key.path }}"
@@ -58,6 +51,13 @@
     ansible_shell_type: powershell
     ansible_ssh_common_args: >-
       -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o PasswordAuthentication=no
+  ansible.windows.win_stat:
+    path: C:\debug\user_data_result.log
+  register: user_data_status_ps
+  until: user_data_status_ps.stat.exists
+  retries: 10
+  delay: 15
+  delegate_to: "{{ ec2_instance_info.public_ip }}"
   when: user_data_status_cmd is failed
 
 - name: Add the new instance to an in-memory inventory group
