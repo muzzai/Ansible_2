@@ -234,7 +234,7 @@
         }
 
         $quotedExtractDir = '"{0}"' -f $extractDir
-        Start-Process -FilePath $exe.FullName -ArgumentList '/qs', ('/x:' + $quotedExtractDir) -Wait -NoNewWindow
+        Start-Process -FilePath $exe.FullName -ArgumentList '/qs', '/extract', ('/X:' + $quotedExtractDir) -Wait -NoNewWindow
       when: not sql_setup_stat.stat.exists
 
     - name: Locate SQL Server installer executable
