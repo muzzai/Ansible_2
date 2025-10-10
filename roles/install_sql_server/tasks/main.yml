@@ -150,9 +150,7 @@
     - name: Determine S3 region for installer
       ansible.builtin.set_fact:
         sql_s3_region_effective: >-
-          {{ sql_s3_region
-             | default(sql_instance_region_effective | default(''), true)
-             | default(hostvars[inventory_hostname].placement.region | default(aws_region | default('')) | default('', true), true) }}
+          {{ hostvars[inventory_hostname].placement.region }}
 
     - name: Assert S3 region determined
       ansible.builtin.assert:
