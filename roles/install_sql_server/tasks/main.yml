@@ -197,7 +197,7 @@
       when: not sql_setup_stat.stat.exists
 
     - name: Extract SQL Server ZIP
-      ansible.windows.win_unzip:
+      community.windows.win_unzip:
         src: "{{ sql_bootstrapper_path }}"        # e.g., C:\temp\SQLServer-2022-Express.zip
         dest: "{{ sql_extract_dir }}"             # e.g., C:\temp\sql_extract
         recurse: true
