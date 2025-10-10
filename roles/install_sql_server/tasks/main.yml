@@ -214,29 +214,6 @@
           }
       when: not sql_setup_stat.stat.exists
 
-
-    - name: Run SQL bootstrapper EXE found in extract dir (extract contents)
-      ansible.windows.win_shell: |
-        $ErrorActionPreference = 'Stop'
-
-        $extractDir = "{{ sql_extract_dir }}"
-        if (-not (Test-Path $extractDir)) {
-          New-Item -ItemType Directory -Path $extractDir -Force | Out-Null
-        }
-
-        # Find an EXE in the extract dir (prefer the largest file if multiple)
-        $exe = Get-ChildItem -Path $extractDir -Filter *.exe -Recurse -ErrorAction SilentlyContinue |
-              Sort-Object Length -Descending |
-              Select-Object -First 1
-
-        if (-not $exe) {
-          throw "No .exe found under $extractDir"
-        }
-
-        $quotedExtractDir = '"{0}"' -f $extractDir
-        Start-Process -FilePath $exe.FullName -ArgumentList '/qs', '/extract', ('/X:' + $quotedExtractDir) -Wait -NoNewWindow
-      when: not sql_setup_stat.stat.exists
-
     - name: Locate SQL Server installer executable
       ansible.windows.win_find:
         paths: "{{ sql_extract_dir }}"
