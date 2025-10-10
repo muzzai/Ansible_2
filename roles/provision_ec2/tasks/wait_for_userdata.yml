@@ -6,17 +6,21 @@
   register: temp_private_key
   delegate_to: localhost
 
+- name: Set temp_private_key_path as a fact
+  ansible.builtin.set_fact:
+    temp_private_key_path: "{{ temp_private_key.path }}"
+
 - name: Write private key to the temporary file
   ansible.builtin.copy:
     content: |
       {{ ec2_keypair_info.private_key }}
-    dest: "{{ temp_private_key.path }}"
+    dest: "{{ temp_private_key_path }}"
     mode: '0600'
   delegate_to: localhost
 
 - name: Read local file content
   ansible.builtin.debug:
-    msg: "Content of local_file.txt: {{ lookup('ansible.builtin.file', temp_private_key.path) }}"
+    msg: "Content of local_file.txt: {{ lookup('ansible.builtin.file', temp_private_key_path) }}"
 
 - name: Wait for SSH port to be open
   ansible.builtin.wait_for:
@@ -36,7 +40,7 @@
   delegate_to: "{{ ec2_instance_info.public_ip }}"
   vars:
     ansible_user: "{{ windows_admin_user }}"
-    ansible_ssh_private_key_file: "{{ temp_private_key.path }}"
+    ansible_ssh_private_key_file: "{{ temp_private_key_path }}"
     ansible_connection: ssh
     ansible_shell_type: cmd
     ansible_ssh_common_args: >-
@@ -53,7 +57,7 @@
   delegate_to: "{{ ec2_instance_info.public_ip }}"
   vars:
     ansible_user: "{{ windows_admin_user }}"
-    ansible_ssh_private_key_file: "{{ temp_private_key.path }}"
+    ansible_ssh_private_key_file: "{{ temp_private_key_path }}"
     ansible_connection: ssh
     ansible_shell_type: powershell
     ansible_ssh_common_args: >-
@@ -65,7 +69,7 @@
     name: "{{ ec2_instance_info.public_ip }}"
     groups: provisioned_ec2
     ansible_user: "{{ windows_admin_user }}"
-    ansible_ssh_private_key_file: "{{ temp_private_key.path }}"
+    ansible_ssh_private_key_file: "{{ temp_private_key_path }}"
     ansible_shell_type: powershell
     ansible_connection: ssh
     ansible_ssh_common_args: >-
