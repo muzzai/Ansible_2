@@ -26,6 +26,40 @@
     timeout: 300
   delegate_to: localhost
 
+- name: Wait for user data script to complete on the instance
+  block:
+    - name: Wait for user data script to complete (trying with cmd)
+      ansible.windows.win_stat:
+        path: C:\debug\user_data_result.log
+      register: user_data_status
+      until: user_data_status.stat.exists
+      retries: 10
+      delay: 15
+      delegate_to: "{{ ec2_instance_info.public_ip }}"
+      vars:
+        ansible_user: "{{ windows_admin_user }}"
+        ansible_ssh_private_key_file: "{{ temp_private_key.path }}"
+        ansible_connection: ssh
+        ansible_shell_type: cmd
+        ansible_ssh_common_args: >-
+          -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o PasswordAuthentication=no
+  rescue:
+    - name: Wait for user data script to complete (falling back to powershell)
+      ansible.windows.win_stat:
+        path: C:\debug\user_data_result.log
+      register: user_data_status
+      until: user_data_status.stat.exists
+      retries: 10
+      delay: 15
+      delegate_to: "{{ ec2_instance_info.public_ip }}"
+      vars:
+        ansible_user: "{{ windows_admin_user }}"
+        ansible_ssh_private_key_file: "{{ temp_private_key.path }}"
+        ansible_connection: ssh
+        ansible_shell_type: powershell
+        ansible_ssh_common_args: >-
+          -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o PasswordAuthentication=no
+
 - name: Add the new instance to an in-memory inventory group
   ansible.builtin.add_host:
     name: "{{ ec2_instance_info.public_ip }}"
