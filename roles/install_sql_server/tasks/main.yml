@@ -196,24 +196,24 @@
         state: directory
       when: not sql_setup_stat.stat.exists
 
-    - name: Extract SQL Server ZIP without PSCX
-      ansible.windows.win_shell: |
-        $src  = "{{ sql_bootstrapper_path }}"   # e.g. C:\temp\SQLServer-2022-Express.zip
-        $dest = "{{ sql_extract_dir }}"         # e.g. C:\temp\sql_extract
+    - name: Extract SQL Server ZIP (no PSCX, robust quoting)
+      ansible.windows.win_powershell:
+        script: |
+          $src  = '{{ sql_bootstrapper_path }}'
+          $dest = '{{ sql_extract_dir }}'
 
-        if (-not (Test-Path $dest)) {
-          New-Item -ItemType Directory -Path $dest -Force | Out-Null
-        }
+          if (-not (Test-Path -LiteralPath $dest)) {
+            New-Item -ItemType Directory -Path $dest -Force | Out-Null
+          }
 
-        if (Get-Command -Name Expand-Archive -ErrorAction SilentlyContinue) {
-          Expand-Archive -Path $src -DestinationPath $dest -Force
-        } else {
-          Add-Type -AssemblyName System.IO.Compression.FileSystem
-          [System.IO.Compression.ZipFile]::ExtractToDirectory($src, $dest)
-        }
-      args:
-        executable: powershell.exe
+          if (Get-Command -Name Expand-Archive -ErrorAction SilentlyContinue) {
+            Expand-Archive -LiteralPath $src -DestinationPath $dest -Force
+          } else {
+            Add-Type -AssemblyName System.IO.Compression.FileSystem
+            [System.IO.Compression.ZipFile]::ExtractToDirectory($src, $dest)
+          }
       when: not sql_setup_stat.stat.exists
+
 
     - name: Run SQL bootstrapper EXE found in extract dir (extract contents)
       ansible.windows.win_shell: |
