@@ -297,15 +297,15 @@
         $authQuery = @"
         EXEC xp_instance_regwrite N'HKEY_LOCAL_MACHINE', N'Software\Microsoft\MSSQLServer\MSSQLServer', N'LoginMode', REG_DWORD, 2
         "@
-        & {{ sqlcmd_path }} -S localhost -E -Q $authQuery
+        & '{{ sqlcmd_path }}' -S localhost -E -Q $authQuery
       register: sql_auth_result
       failed_when: false
       changed_when: sql_auth_result.rc == 0
 
     - name: Set SA account password and enable login
       ansible.windows.win_shell: |
-        & {{ sqlcmd_path }} -S localhost -E -Q "ALTER LOGIN sa WITH PASSWORD = '{{ sql_sa_password }}'"
-        & {{ sqlcmd_path }} -S localhost -E -Q "ALTER LOGIN sa ENABLE"
+        & '{{ sqlcmd_path }}' -S localhost -E -Q "ALTER LOGIN sa WITH PASSWORD = '{{ sql_sa_password }}'"
+        & '{{ sqlcmd_path }}' -S localhost -E -Q "ALTER LOGIN sa ENABLE"
       register: sql_sa_result
       failed_when: false
       changed_when: sql_sa_result.rc == 0
@@ -318,7 +318,7 @@
 
     - name: Verify SQL Server installation
       ansible.windows.win_shell: |
-        & {{ sqlcmd_path }} -S localhost -U sa -P "{{ sql_sa_password }}" -Q "SELECT @@VERSION"
+        & '{{ sqlcmd_path }}' -S localhost -U sa -P "{{ sql_sa_password }}" -Q "SELECT @@VERSION"
       register: sql_version_check
       failed_when: sql_version_check.rc != 0
 
@@ -328,7 +328,7 @@
 
     - name: Validate SQL Server responds to GETDATE
       ansible.windows.win_shell: |
-        & {{ sqlcmd_path }} -S localhost -U sa -P "{{ sql_sa_password }}" -Q "SELECT GETDATE()"
+        & '{{ sqlcmd_path }}' -S localhost -U sa -P "{{ sql_sa_password }}" -Q "SELECT GETDATE()"
       register: sql_getdate_check
       failed_when: sql_getdate_check.rc != 0
       changed_when: false
