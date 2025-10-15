@@ -312,10 +312,16 @@
         dest: "{{ sql_config_file }}"
 
     - name: Install SQL Server from extracted media
-      ansible.windows.win_shell: |
-        & "{{ sql_installer_path }}" /CONFIGURATIONFILE="{{ sql_config_file }}" /IACCEPTSQLSERVERLICENSETERMS /UpdateEnabled=0
+      ansible.windows.win_command: >
+        cmd /c "runas /profile /user:Administrator ^
+        '\"{{ sql_installer_path }}\" /CONFIGURATIONFILE=\"{{ sql_config_file }}\" /IACCEPTSQLSERVERLICENSETERMS /QUIET /UpdateEnabled=0'"
+      environment:
+        USERPROFILE: "C:\\Users\\Administrator"
+        TEMP: "C:\\Temp"
+        TMP: "C:\\Temp"
       register: sql_install_result
       failed_when: sql_install_result.rc not in [0, 3010]
+
 
     - name: Find sqlcmd executable
       ansible.windows.win_find:
