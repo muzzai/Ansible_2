@@ -116,6 +116,7 @@
 - name: Check for existing SQL Server installation
   ansible.windows.win_reg_stat:
     path: HKLM:\\SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL
+    name: MSSQLSERVER
   register: sql_instance_names
 
 - name: Debug reg query Names
