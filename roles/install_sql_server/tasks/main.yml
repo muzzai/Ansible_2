@@ -45,6 +45,26 @@
     - installed_sql_edition == 'Express'
     - sql_edition in ['Developer', 'Standard', 'Enterprise']
   block:
+    - name: Render SQL Server configuration file for upgrade
+      ansible.windows.win_copy:
+        content: |
+          [OPTIONS]
+          ACTION="Upgrade"
+          INSTANCENAME="{{ sql_instance_name }}"
+          {% if sql_edition == 'Developer' %}
+          EDITION="Developer"
+          {% else %}
+          PID="{{ sql_server_pid | default('') }}"
+          {% endif %}
+          IACCEPTSQLSERVERLICENSETERMS="{{ sql_accept_license | ternary('True', 'False') }}"
+          QUIET="True"
+        dest: "{{ sql_config_file }}"
+
+    - name: Run SQL Server upgrade
+      ansible.windows.win_shell: |
+        & "{{ sql_installer_path }}" /CONFIGURATIONFILE="{{ sql_config_file }}" /IACCEPTSQLSERVERLICENSETERMS /UpdateEnabled=0
+      register: sql_upgrade_result
+      failed_when: sql_upgrade_result.rc not in [0, 3010]
 
 - name: Install SQL Server from S3 media
   when: not (sql_server_installed is defined and sql_server_installed)
@@ -440,8 +460,6 @@
       delegate_to: localhost
       run_once: true
       when: sql_vault_secret_payload is defined
-  when: not (sql_server_installed is defined and sql_server_installed)
-
   always:
     - name: Remove temporary private key file when created
       ansible.builtin.file:
