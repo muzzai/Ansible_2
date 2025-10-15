@@ -40,46 +40,16 @@ windows_create_user: false
 windows_ansible_user: "ansible_automation"
 windows_user_password: "{{ lookup('env', 'WINDOWS_ANSIBLE_PASSWORD') | default('TempPassword123!', true) }}"
 
-
-
 # Vault configuration for storing SSH keys
 
-
-
 vault_addr: "{{ lookup('env', 'VAULT_ADDR') | default('', true) }}"
-
-
-
 vault_role_id: "{{ lookup('env', 'VAULT_ROLE_ID') | default('', true) }}"
-
-
-
 vault_secret_id: "{{ lookup('env', 'VAULT_SECRET_ID') | default('', true) }}"
-
-
-
 vault_kv_mount: "secret"
-
-
-
 vault_ssh_path: ""
-
-
-
 vault_verify: true
-
-
-
 vault_ca_cert_env_var: "VAULT_CA_CERT_PEM"
-
-
-
 vault_auth_mount_point: approle
-
-
-
-
-
 # Route53 configuration
 provision_configure_route53: false
 route53_zone_id: ""

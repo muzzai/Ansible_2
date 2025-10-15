@@ -5,6 +5,19 @@
   when:
     - sql_edition in ['Standard', 'Enterprise']
     - sql_server_pid is not defined or sql_server_pid == ''
+
+- name: Extract security group metadata from Vault
+  ansible.builtin.set_fact:
+    sql_server_pid: >-
+      {{ sql_server_pid
+         if (sql_server_pid is defined and sql_server_pid | trim != '')
+         else edition_pid_map[sql_server_edition] }}
+  vars:
+    edition_pid_map:
+      Evaluation: "00000-00000-00000-00000-00000"
+      Express: "11111-00000-00000-00000-00000"
+      Developer: "22222-00000-00000-00000-00000"
+
 - name: Build Vault connection details
   ansible.builtin.set_fact:
     sql_vault_addr_effective: >-
@@ -119,19 +132,11 @@
     name: MSSQLSERVER
   register: sql_instance_names
 
-- name: Debug reg query Names
-  ansible.builtin.debug:
-    msg: "{{ sql_instance_names }}"
-
 - name: Get SQL Server instance details
   ansible.windows.win_reg_stat:
     path: "HKLM:\\SOFTWARE\\Microsoft\\Microsoft SQL Server\\{{ sql_instance_names.value }}\\Setup"
   register: sql_instance_details
   when: sql_instance_names.exists
-
-- name: Debug reg query details
-  ansible.builtin.debug:
-    msg: "{{ sql_instance_details }}"
 
 - name: Set installed SQL Server facts
   ansible.builtin.set_fact:
