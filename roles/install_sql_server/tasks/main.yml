@@ -120,7 +120,7 @@
 
 - name: Debug reg query Names
   ansible.builtin.debug:
-    msg: {{ sql_instance_names }}
+    msg: "{{ sql_instance_names }}"
 
 - name: Get SQL Server instance details
   ansible.windows.win_reg_stat:
@@ -132,7 +132,7 @@
 
 - name: Debug reg query details
   ansible.builtin.debug:
-    msg: {{ sql_instance_details }}
+    msg: "{{ sql_instance_details }}"
 
 - name: Set installed SQL Server facts
   ansible.builtin.set_fact:
