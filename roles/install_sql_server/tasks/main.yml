@@ -5,31 +5,134 @@
   when:
     - sql_edition in ['Standard', 'Enterprise']
     - sql_server_pid is not defined or sql_server_pid == ''
+- name: Build Vault connection details
+  ansible.builtin.set_fact:
+    sql_vault_addr_effective: >-
+      {{ (vault_url | default('', true))
+          | default(vault_addr | default('', true), true)
+          | default(lookup('env', 'VAULT_ADDR') | default('', true), true) }}
+    sql_vault_role_effective: >-
+      {{ (vault_role_id | default('', true))
+          | default(lookup('env', 'VAULT_ROLE_ID') | default('', true), true) }}
+    sql_vault_secret_effective: >-
+      {{ (vault_secret_id | default('', true))
+          | default(lookup('env', 'VAULT_SECRET_ID') | default('', true), true) }}
+    sql_vault_auth_mount_effective: >-
+      {{ (vault_auth_mount_point | default('approle')) | regex_replace('^/+|/+$', '') | default('approle') }}
+    sql_vault_ca_cert_effective: "{{ lookup('env', sql_vault_ca_cert_env_var) | default('', true) }}"
+
+- name: Assert Vault credentials are available
+  ansible.builtin.assert:
+    that:
+      - (sql_vault_addr_effective | default('', true) | string | trim | length) > 0
+      - (sql_vault_role_effective | default('', true) | string | trim | length) > 0
+      - (sql_vault_secret_effective | default('', true) | string | trim | length) > 0
+    fail_msg: "Unable to locate Vault credentials (VAULT_ADDR/ROLE_ID/SECRET_ID)."
+
+- name: Create temporary private key file when not provided
+  ansible.builtin.tempfile:
+    state: file
+    suffix: _sql_key.pem
+  register: sql_temp_key_file
+  when: (sql_temp_private_key_path | default('', true) | string | trim | length) == 0
+  delegate_to: localhost
+
+- name: Use provided private key path
+  ansible.builtin.set_fact:
+    sql_effective_private_key_path: "{{ sql_temp_private_key_path }}"
+    sql_private_key_cleanup: false
+  when: (sql_temp_private_key_path | default('', true) | string | trim | length) > 0
+
+- name: Use generated private key path
+  ansible.builtin.set_fact:
+    sql_effective_private_key_path: "{{ sql_temp_key_file.path }}"
+    sql_private_key_cleanup: true
+  when: (sql_temp_private_key_path | default('', true) | string | trim | length) == 0
+
+- name: Write Vault CA certificate to temporary file when provided
+  when: (sql_vault_ca_cert_effective | default('', true) | string | trim | length) > 0
+  delegate_to: localhost
+  block:
+    - name: Create temporary Vault CA file
+      ansible.builtin.tempfile:
+        state: file
+        suffix: _vault_ca.pem
+      register: sql_vault_ca_file
+
+    - name: Persist Vault CA certificate content
+      ansible.builtin.copy:
+        content: "{{ sql_vault_ca_cert_effective }}"
+        dest: "{{ sql_vault_ca_file.path }}"
+        mode: '0600'
+
+- name: Fetch SSH private key from Vault
+  community.hashi_vault.vault_kv2_get:
+    url: "{{ sql_vault_addr_effective | regex_replace('/+$', '') }}"
+    auth_method: approle
+    role_id: "{{ sql_vault_role_effective }}"
+    secret_id: "{{ sql_vault_secret_effective }}"
+    path: "{{ sql_vault_secret_path }}"
+    engine_mount_point: "{{ sql_vault_kv_mount }}"
+    ca_cert: "{{ sql_vault_ca_file.path | default(omit) }}"
+    validate_certs: "{{ sql_vault_verify | bool }}"
+  register: sql_vault_key
+  delegate_to: localhost
+
+- name: Assert Vault secret contains private key
+  ansible.builtin.assert:
+    that:
+      - sql_vault_key.data is defined
+      - sql_vault_key.data.data.private_key is defined
+      - (sql_vault_key.data.data.private_key | default('', true) | string | trim | length) > 0
+    fail_msg: "Vault secret {{ sql_vault_secret_path }} does not include private_key."
+
+- name: Write SSH private key to control node
+  ansible.builtin.copy:
+    content: "{{ sql_vault_key.data.data.private_key | replace('\\n', '\n') }}"
+    dest: "{{ sql_effective_private_key_path }}"
+    mode: '0600'
+  delegate_to: localhost
+  no_log: true
+
+- name: Extract security group metadata from Vault
+  ansible.builtin.set_fact:
+    sql_target_security_group_id: "{{ sql_vault_key.data.data.security_group_id | default('') }}"
+    sql_target_security_group_name: "{{ sql_vault_key.data.data.security_group_name | default('') }}"
+    sql_instance_region_effective: "{{ sql_vault_key.data.data.region | default('') }}"
+    sql_instance_id_from_vault: "{{ sql_vault_key.data.data.instance_id | default('') }}"
+    sql_target_vpc_id: "{{ sql_vault_key.data.data.vpc_id | default('') }}"
+  no_log: true
+
+- name: Configure connection variables for Windows host
+  ansible.builtin.set_fact:
+    ansible_connection: ssh
+    ansible_shell_type: powershell
+    ansible_shell_executable: powershell.exe
+    ansible_become: false
+    ansible_user: "{{ sql_windows_user }}"
+    ansible_ssh_private_key_file: "{{ sql_effective_private_key_path }}"
+    ansible_ssh_common_args: "{{ sql_connection_common_args }}"
 
 - name: Check for existing SQL Server installation
   ansible.windows.win_reg_stat:
-    path: HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL
+    path: HKLM:\\SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL
   register: sql_instance_names
 
 - name: Get SQL Server instance details
   ansible.windows.win_reg_stat:
     path: "HKLM:\\SOFTWARE\\Microsoft\\Microsoft SQL Server\\{{ item }}\\Setup"
-  loop: "{{ sql_instance_names.value_names }}"
+    name: "{{ item }}"
+  loop: "{{ sql_instance_names.names }}"
   register: sql_instance_details
-  when: sql_instance_names.exists and sql_instance_names.value_names
+  when: sql_instance_names.exists
 
 - name: Set installed SQL Server facts
   ansible.builtin.set_fact:
     sql_server_installed: true
-    installed_sql_edition: "{{ item.values.Edition }}"
-    installed_sql_version: "{{ item.values.Version }}"
-  when:
-    - sql_instance_details.results is defined
-    - item.values.Edition is defined
-    - item.values.Version is defined
+    installed_sql_edition: "{{ item.value.Edition }}"
+    installed_sql_version: "{{ item.value.Version }}"
+  when: sql_instance_details.results is defined and sql_instance_details.results | length > 0
   loop: "{{ sql_instance_details.results }}"
-  loop_control:
-    label: "{{ item.path }}"
 
 - name: Log if SQL Server is already installed and matches
   ansible.builtin.debug:
@@ -49,13 +152,9 @@
       ansible.windows.win_copy:
         content: |
           [OPTIONS]
-          ACTION="Upgrade"
+          ACTION="EditionUpgrade"
           INSTANCENAME="{{ sql_instance_name }}"
-          {% if sql_edition == 'Developer' %}
-          EDITION="Developer"
-          {% else %}
           PID="{{ sql_server_pid | default('') }}"
-          {% endif %}
           IACCEPTSQLSERVERLICENSETERMS="{{ sql_accept_license | ternary('True', 'False') }}"
           QUIET="True"
         dest: "{{ sql_config_file }}"
@@ -66,115 +165,10 @@
       register: sql_upgrade_result
       failed_when: sql_upgrade_result.rc not in [0, 3010]
 
+
 - name: Install SQL Server from S3 media
   when: not (sql_server_installed is defined and sql_server_installed)
   block:
-    - name: Build Vault connection details
-      ansible.builtin.set_fact:
-        sql_vault_addr_effective: >-
-          {{ (vault_url | default('', true))
-             | default(vault_addr | default('', true), true)
-             | default(lookup('env', 'VAULT_ADDR') | default('', true), true) }}
-        sql_vault_role_effective: >-
-          {{ (vault_role_id | default('', true))
-             | default(lookup('env', 'VAULT_ROLE_ID') | default('', true), true) }}
-        sql_vault_secret_effective: >-
-          {{ (vault_secret_id | default('', true))
-             | default(lookup('env', 'VAULT_SECRET_ID') | default('', true), true) }}
-        sql_vault_auth_mount_effective: >-
-          {{ (vault_auth_mount_point | default('approle')) | regex_replace('^/+|/+$', '') | default('approle') }}
-        sql_vault_ca_cert_effective: "{{ lookup('env', sql_vault_ca_cert_env_var) | default('', true) }}"
-
-    - name: Assert Vault credentials are available
-      ansible.builtin.assert:
-        that:
-          - (sql_vault_addr_effective | default('', true) | string | trim | length) > 0
-          - (sql_vault_role_effective | default('', true) | string | trim | length) > 0
-          - (sql_vault_secret_effective | default('', true) | string | trim | length) > 0
-        fail_msg: "Unable to locate Vault credentials (VAULT_ADDR/ROLE_ID/SECRET_ID)."
-
-    - name: Create temporary private key file when not provided
-      ansible.builtin.tempfile:
-        state: file
-        suffix: _sql_key.pem
-      register: sql_temp_key_file
-      when: (sql_temp_private_key_path | default('', true) | string | trim | length) == 0
-      delegate_to: localhost
-
-    - name: Use provided private key path
-      ansible.builtin.set_fact:
-        sql_effective_private_key_path: "{{ sql_temp_private_key_path }}"
-        sql_private_key_cleanup: false
-      when: (sql_temp_private_key_path | default('', true) | string | trim | length) > 0
-
-    - name: Use generated private key path
-      ansible.builtin.set_fact:
-        sql_effective_private_key_path: "{{ sql_temp_key_file.path }}"
-        sql_private_key_cleanup: true
-      when: (sql_temp_private_key_path | default('', true) | string | trim | length) == 0
-
-    - name: Write Vault CA certificate to temporary file when provided
-      when: (sql_vault_ca_cert_effective | default('', true) | string | trim | length) > 0
-      delegate_to: localhost
-      block:
-        - name: Create temporary Vault CA file
-          ansible.builtin.tempfile:
-            state: file
-            suffix: _vault_ca.pem
-          register: sql_vault_ca_file
-
-        - name: Persist Vault CA certificate content
-          ansible.builtin.copy:
-            content: "{{ sql_vault_ca_cert_effective }}"
-            dest: "{{ sql_vault_ca_file.path }}"
-            mode: '0600'
-
-    - name: Fetch SSH private key from Vault
-      community.hashi_vault.vault_kv2_get:
-        url: "{{ sql_vault_addr_effective | regex_replace('/+$', '') }}"
-        auth_method: approle
-        role_id: "{{ sql_vault_role_effective }}"
-        secret_id: "{{ sql_vault_secret_effective }}"
-        path: "{{ sql_vault_secret_path }}"
-        engine_mount_point: "{{ sql_vault_kv_mount }}"
-        ca_cert: "{{ sql_vault_ca_file.path | default(omit) }}"
-        validate_certs: "{{ sql_vault_verify | bool }}"
-      register: sql_vault_key
-      delegate_to: localhost
-
-    - name: Debug vault call
-      ansible.builtin.debug:
-        var: sql_vault_key
-
-    - name: Assert Vault secret contains private key
-      ansible.builtin.assert:
-        that:
-          - sql_vault_key.data is defined
-          - sql_vault_key.data.data.private_key is defined
-          - (sql_vault_key.data.data.private_key | default('', true) | string | trim | length) > 0
-        fail_msg: "Vault secret {{ sql_vault_secret_path }} does not include private_key."
-
-    - name: Write SSH private key to control node
-      ansible.builtin.copy:
-        content: "{{ sql_vault_key.data.data.private_key | replace('\\n', '\n') }}"
-        dest: "{{ sql_effective_private_key_path }}"
-        mode: '0600'
-      delegate_to: localhost
-      no_log: true
-
-    - name: Read local file content
-      ansible.builtin.debug:
-        msg: "Content of local_file.txt: {{ lookup('ansible.builtin.file', sql_effective_private_key_path) }}"
-
-    - name: Extract security group metadata from Vault
-      ansible.builtin.set_fact:
-        sql_target_security_group_id: "{{ sql_vault_key.data.data.security_group_id | default('') }}"
-        sql_target_security_group_name: "{{ sql_vault_key.data.data.security_group_name | default('') }}"
-        sql_instance_region_effective: "{{ sql_vault_key.data.data.region | default('') }}"
-        sql_instance_id_from_vault: "{{ sql_vault_key.data.data.instance_id | default('') }}"
-        sql_target_vpc_id: "{{ sql_vault_key.data.data.vpc_id | default('') }}"
-      no_log: true
-
     - name: Ensure SQL port open in instance security group
       amazon.aws.ec2_security_group:
         region: "{{ hostvars[inventory_hostname].placement.region }}"
@@ -193,15 +187,6 @@
       run_once: true
       when: (sql_target_security_group_id | default('', true) | string | trim | length) > 0
 
-    - name: Configure connection variables for Windows host
-      ansible.builtin.set_fact:
-        ansible_connection: ssh
-        ansible_shell_type: powershell
-        ansible_shell_executable: powershell.exe
-        ansible_become: false
-        ansible_user: "{{ sql_windows_user }}"
-        ansible_ssh_private_key_file: "{{ sql_effective_private_key_path }}"
-        ansible_ssh_common_args: "{{ sql_connection_common_args }}"
 
     - name: Prepare temporary directories on Windows host
       ansible.windows.win_file:
@@ -307,11 +292,6 @@
           TCPENABLED="1"
           NPENABLED="0"
           BROWSERSVCSTARTUPTYPE="Automatic"
-          {% if sql_edition == 'Developer' %}
-          EDITION="Developer"
-          {% elif sql_edition in ['Standard', 'Enterprise'] %}
-          PID="{{ sql_server_pid | default('') }}"
-          {% endif %}
           IACCEPTSQLSERVERLICENSETERMS="{{ sql_accept_license | ternary('True', 'False') }}"
           QUIET="True"
         dest: "{{ sql_config_file }}"
@@ -460,6 +440,8 @@
       delegate_to: localhost
       run_once: true
       when: sql_vault_secret_payload is defined
+
+
   always:
     - name: Remove temporary private key file when created
       ansible.builtin.file:
