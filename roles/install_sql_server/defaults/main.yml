@@ -2,10 +2,11 @@
 # Default variables for install_sql_server role
 
 sql_version: "{{ sql_server_version | default('2022') }}"
-sql_edition: "{{ sql_server_edition | default('Express') }}"
+sql_edition: "{{ sql_edition | default('Express') }}"
 sql_port: "{{ sql_server_port | default(1433) }}"
 sql_s3_bucket: "alloy-software-installers"
-sql_s3_object: "SQLServer-{{ sql_version }}-{{ sql_edition }}.zip"
+sql_s3_object: "SQL{{ sql_version }}.zip"
+sql_s3_pid: ""
 sql_install_temp_dir: C:\temp
 sql_extract_dir: C:\temp\sql_extract
 sql_config_file: C:\temp\ConfigurationFile.ini
