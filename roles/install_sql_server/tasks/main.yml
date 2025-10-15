@@ -1,12 +1,53 @@
 ---
-- name: Ensure SA password provided
-  ansible.builtin.assert:
-    that:
-      - sql_sa_password is defined
-      - (sql_sa_password | string | trim) | length > 0
-    fail_msg: "sql_sa_password must be provided for SQL Server installation."
+- name: Fail if PID is missing for Standard/Enterprise Editions
+  ansible.builtin.fail:
+    msg: "The 'sql_server_pid' variable is required for Standard and Enterprise editions."
+  when:
+    - sql_edition in ['Standard', 'Enterprise']
+    - sql_server_pid is not defined or sql_server_pid == ''
+
+- name: Check for existing SQL Server installation
+  ansible.windows.win_reg_stat:
+    path: HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL
+  register: sql_instance_names
+
+- name: Get SQL Server instance details
+  ansible.windows.win_reg_stat:
+    path: "HKLM:\\SOFTWARE\\Microsoft\\Microsoft SQL Server\\{{ item }}\\Setup"
+  loop: "{{ sql_instance_names.value_names }}"
+  register: sql_instance_details
+  when: sql_instance_names.exists and sql_instance_names.value_names
+
+- name: Set installed SQL Server facts
+  ansible.builtin.set_fact:
+    sql_server_installed: true
+    installed_sql_edition: "{{ item.values.Edition }}"
+    installed_sql_version: "{{ item.values.Version }}"
+  when:
+    - sql_instance_details.results is defined
+    - item.values.Edition is defined
+    - item.values.Version is defined
+  loop: "{{ sql_instance_details.results }}"
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Log if SQL Server is already installed and matches
+  ansible.builtin.debug:
+    msg: "SQL Server {{ sql_edition }} {{ sql_version }} is already installed."
+  when:
+    - sql_server_installed is defined and sql_server_installed
+    - installed_sql_edition == sql_edition
+    - installed_sql_version == sql_version
+
+- name: Upgrade SQL Server
+  when:
+    - sql_server_installed is defined and sql_server_installed
+    - installed_sql_edition == 'Express'
+    - sql_edition in ['Developer', 'Standard', 'Enterprise']
+  block:
 
 - name: Install SQL Server from S3 media
+  when: not (sql_server_installed is defined and sql_server_installed)
   block:
     - name: Build Vault connection details
       ansible.builtin.set_fact:
@@ -246,6 +287,11 @@
           TCPENABLED="1"
           NPENABLED="0"
           BROWSERSVCSTARTUPTYPE="Automatic"
+          {% if sql_edition == 'Developer' %}
+          EDITION="Developer"
+          {% elif sql_edition in ['Standard', 'Enterprise'] %}
+          PID="{{ sql_server_pid | default('') }}"
+          {% endif %}
           IACCEPTSQLSERVERLICENSETERMS="{{ sql_accept_license | ternary('True', 'False') }}"
           QUIET="True"
         dest: "{{ sql_config_file }}"
@@ -394,6 +440,7 @@
       delegate_to: localhost
       run_once: true
       when: sql_vault_secret_payload is defined
+  when: not (sql_server_installed is defined and sql_server_installed)
 
   always:
     - name: Remove temporary private key file when created
