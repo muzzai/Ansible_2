@@ -6,12 +6,12 @@
     - sql_edition in ['Standard', 'Enterprise']
     - sql_server_pid is not defined or sql_server_pid == ''
 
-- name: Extract security group metadata from Vault
+- name: Determine edition PID
   ansible.builtin.set_fact:
     sql_server_pid: >-
       {{ sql_server_pid
          if (sql_server_pid is defined and sql_server_pid | trim != '')
-         else edition_pid_map[sql_server_edition] }}
+         else edition_pid_map[sql_edition] }}
   vars:
     edition_pid_map:
       Evaluation: "00000-00000-00000-00000-00000"
