@@ -141,9 +141,14 @@
 - name: Set installed SQL Server facts
   ansible.builtin.set_fact:
     sql_server_installed: true
-    installed_sql_edition: "{{ sql_instance_details.properties.Edition.value }}"
-    installed_sql_version: "{{ sql_instance_details.properties.Version.value }}"
-  when: sql_instance_details is defined
+    installed_sql_edition: "{{ sql_instance_details.properties.Edition.value | default('unknown', true) }}"
+    installed_sql_version: "{{ sql_instance_details.properties.Version.value | default('unknown', true) }}"
+  when:
+    - sql_instance_details is defined
+    - "'properties' in sql_instance_details"
+    - "'Edition' in sql_instance_details.properties"
+    - "'Version' in sql_instance_details.properties"
+
 
 - name: Log if SQL Server is already installed and matches
   ansible.builtin.debug:
