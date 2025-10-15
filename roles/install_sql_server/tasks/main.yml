@@ -136,18 +136,17 @@
 - name: Set installed SQL Server facts
   ansible.builtin.set_fact:
     sql_server_installed: true
-    installed_sql_edition: "{{ item.value.Edition }}"
-    installed_sql_version: "{{ item.value.Version }}"
-  when: sql_instance_details.results is defined and sql_instance_details.results | length > 0
-  loop: "{{ sql_instance_details.results }}"
+    installed_sql_edition: "{{ sql_instance_details.properties.Edition.value }}"
+    installed_sql_version: "{{ sql_instance_details.properties.Version.value }}"
+  when: sql_instance_details.exists
 
 - name: Log if SQL Server is already installed and matches
   ansible.builtin.debug:
     msg: "SQL Server {{ sql_edition }} {{ sql_version }} is already installed."
   when:
     - sql_server_installed is defined and sql_server_installed
-    - installed_sql_edition == sql_edition
-    - installed_sql_version == sql_version
+    - installed_sql_edition is ansible.builtin.contains(sql_edition)
+    - installed_sql_version is ansible.builtin.contains("16")
 
 - name: Upgrade SQL Server
   when:
