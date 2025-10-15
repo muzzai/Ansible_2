@@ -126,7 +126,6 @@
 - name: Get SQL Server instance details
   ansible.windows.win_reg_stat:
     path: "HKLM:\\SOFTWARE\\Microsoft\\Microsoft SQL Server\\{{ sql_instance_names.value }}\\Setup"
-    name: "{{ sql_instance_names.value }}"
   register: sql_instance_details
   when: sql_instance_names.exists
 
