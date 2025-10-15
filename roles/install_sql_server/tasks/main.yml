@@ -143,7 +143,7 @@
     sql_server_installed: true
     installed_sql_edition: "{{ sql_instance_details.properties.Edition.value }}"
     installed_sql_version: "{{ sql_instance_details.properties.Version.value }}"
-  when: sql_instance_details.exists
+  when: sql_instance_details is defined and sql_instance_details.exists
 
 - name: Log if SQL Server is already installed and matches
   ansible.builtin.debug:
