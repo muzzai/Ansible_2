@@ -6,9 +6,9 @@ sql_edition: "{{ sql_server_edition | default('Express') }}"
 sql_port: "{{ sql_server_port | default(1433) }}"
 sql_s3_bucket: "alloy-software-installers"
 sql_s3_object: "SQLServer-{{ sql_version }}-{{ sql_edition }}.zip"
-sql_install_temp_dir: "C:\\temp"
-sql_extract_dir: "C:\\temp\\sql_extract"
-sql_config_file: "C:\\temp\\ConfigurationFile.ini"
+sql_install_temp_dir: C:\temp
+sql_extract_dir: C:\temp\sql_extract
+sql_config_file: C:\temp\ConfigurationFile.ini
 sql_instance_name: "MSSQLSERVER"
 sql_service_account: "NT AUTHORITY\\SYSTEM"
 sql_sysadmins: "BUILTIN\\Administrators"

@@ -258,7 +258,7 @@
 
     - name: Find sqlcmd executable
       ansible.windows.win_find:
-        paths: 'C:\Program Files\Microsoft SQL Server'
+        paths: C:\Program Files\Microsoft SQL Server
         patterns: 'sqlcmd.exe'
         recurse: true
       register: sqlcmd_find_result
