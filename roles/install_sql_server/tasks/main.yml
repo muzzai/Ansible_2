@@ -311,17 +311,27 @@
           QUIET="True"
         dest: "{{ sql_config_file }}"
 
-    - name: Install SQL Server from extracted media
+    - name: Fix crypto folder permissions (needed for DPAPI)
+      ansible.windows.win_shell: |
+        takeown /F "C:\ProgramData\Microsoft\Crypto\RSA" /R /D Y
+        icacls "C:\ProgramData\Microsoft\Crypto\RSA" /grant administrators:F /T
+        takeown /F "C:\ProgramData\Microsoft\Crypto\Protect" /R /D Y
+        icacls "C:\ProgramData\Microsoft\Crypto\Protect" /grant administrators:F /T
+      become: true
+
+    - name: Install SQL Server from extracted media (DPAPI-safe)
       ansible.windows.win_command: >
-        cmd /c "runas /profile /user:Administrator ^
-        '\"{{ sql_installer_path }}\" /CONFIGURATIONFILE=\"{{ sql_config_file }}\" /IACCEPTSQLSERVERLICENSETERMS /QUIET /UpdateEnabled=0'"
+        "{{ sql_installer_path }}"
+        /CONFIGURATIONFILE="{{ sql_config_file }}"
+        /IACCEPTSQLSERVERLICENSETERMS
+        /QUIET
+        /UpdateEnabled=0
       environment:
-        USERPROFILE: "C:\\Users\\Administrator"
+        USERPROFILE: "C:\\Windows\\System32\\config\\systemprofile"
         TEMP: "C:\\Temp"
         TMP: "C:\\Temp"
       register: sql_install_result
       failed_when: sql_install_result.rc not in [0, 3010]
-
 
     - name: Find sqlcmd executable
       ansible.windows.win_find:
