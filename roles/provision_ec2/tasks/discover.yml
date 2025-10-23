@@ -9,12 +9,21 @@
   delegate_to: "{{ provision_control_host }}"
   run_once: true
 
+- name: Debug default vpc
+  ansible.builtin.debug:
+    var: provision_default_vpc
+
 - name: Use discovered VPC ID
   ansible.builtin.set_fact:
     aws_vpc_id: "{{ provision_default_vpc.vpcs[0].vpc_id }}"
   when:
     - (aws_vpc_id | default('', true) | string | trim | length) == 0
     - provision_default_vpc.vpcs | default([]) | length > 0
+
+- name: Debug default vpc id
+  ansible.builtin.debug:
+    var: aws_vpc_id
+
 
 - name: Discover default subnet when not provided
   amazon.aws.ec2_vpc_subnet_info:
@@ -27,12 +36,22 @@
   delegate_to: "{{ provision_control_host }}"
   run_once: true
 
+- name: Debug default vpc
+  ansible.builtin.debug:
+    var: provision_default_subnets
+
+
 - name: Use discovered subnet ID
   ansible.builtin.set_fact:
     aws_subnet_id: "{{ provision_default_subnets.subnets[0].subnet_id }}"
   when:
     - (aws_subnet_id | default('', true) | string | trim | length) == 0
     - provision_default_subnets.subnets | default([]) | length > 0
+
+- name: Debug subnet id
+  ansible.builtin.debug:
+    var: aws_subnet_id
+
 
 - name: Ensure network identifiers are available
   ansible.builtin.assert:
