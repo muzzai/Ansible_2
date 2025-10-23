@@ -19,9 +19,17 @@
   run_once: true
   tags: ['provision', 'security_group']
 
+- name: Debug Security group
+  ansible.builtin.debug:
+    var: security_group_result
+
 - name: Share security group details
   ansible.builtin.set_fact:
     ec2_security_group_id: "{{ security_group_result.group_id | default(security_group_result.security_group_id | default(omit)) }}"
   delegate_to: "{{ provision_control_host }}"
   run_once: true
   tags: ['provision', 'security_group']
+
+- name: Debug Security group
+  ansible.builtin.debug:
+    var: ec2_security_group_id
