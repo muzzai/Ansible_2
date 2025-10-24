@@ -13,5 +13,6 @@
 
 - name: Configure Windows instance
   hosts: provisioned_instance
+  gather_facts: false
   roles:
     - role: configure_windows

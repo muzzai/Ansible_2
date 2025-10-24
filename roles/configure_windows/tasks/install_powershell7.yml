@@ -38,6 +38,5 @@
         path: C:\Temp\PowerShell-7.4.3-win-x64.msi
         state: absent
 
-    # Optional: reconnect so the new DefaultShell (pwsh) is used next
     - name: Reset SSH connection to pick up new default shell
       ansible.builtin.meta: reset_connection
