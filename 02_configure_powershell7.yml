@@ -1,5 +1,6 @@
 ---
 - name: Configure pwoershell 7
   hosts: aws_ec2
+  gather_facts: false
   roles:
     - role: configure_windows
