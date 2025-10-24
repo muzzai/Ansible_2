@@ -18,7 +18,7 @@ try {
     }
 
     Write-Log "Setting Administrator password"
-    net user Administrator "{{ windows_admin_password }}"
+    net user Administrator "{{ provision_ec2_windows_admin_password }}"
 
     Write-Log "Disabling all Windows Defender Firewall profiles"
     Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False
@@ -48,7 +48,7 @@ try {
     }
 
     $publicKeyContent = @'
-{{ ec2_keypair_info.public_key | default('') }}
+{{ provision_ec2_keypair_info.public_key | default('') }}
 '@.Trim()
 
     if ([string]::IsNullOrWhiteSpace($publicKeyContent)) {
@@ -82,6 +82,7 @@ $items = [ordered]@{
     PermitTunnel            = 'no'
     ClientAliveInterval     = 300
     ClientAliveCountMax     = 2
+
 }
 
 $configPath = 'C:\\ProgramData\\ssh\\sshd_config'
@@ -101,6 +102,10 @@ $newConfig = $configLines | % {
     return $_
   }
 }
+
+$newConfig += @"
+Subsystem  powershell C:/progra~1/powershell/7/pwsh.exe -sshs
+"@
 
 $newConfig = $newConfig -join "`n"
 

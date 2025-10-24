@@ -1,85 +1,62 @@
 ---
-- name: Store SSH secret in Vault
-  block:
-    - name: Create a temporary file for the CA certificate
-      ansible.builtin.tempfile:
-        state: file
-        suffix: .crt
-      register: temp_ca_cert
-      delegate_to: "{{ provision_control_host }}"
-      run_once: true
-      when: provision_vault_connection.ca_cert_path is defined and provision_vault_connection.ca_cert_path != ''
+- name: Build Vault payload for SSH secret
+  ansible.builtin.set_fact:
+    provision_vault_payload:
+      instance_id: "{{ ec2_instance_info.instance_id | default('') }}"
+      instance_type: "{{ ec2_instance_info.instance_type | default('') }}"
+      image_id: "{{ ec2_instance_info.image_id | default('') }}"
+      region: "{{ ec2_instance_info.availability_zone | default(aws_region) }}"
+      private_ip: "{{ ec2_instance_info.private_ip | default('') }}"
+      public_ip: "{{ ec2_instance_info.public_ip | default('') }}"
+      key_name: "{{ ec2_instance_info.key_name | default('') }}"
+      security_group_id: "{{ ec2_security_group_id | default('') }}"
+      security_group_name: "{{ ec2_security_group_name | default('') }}"
+      vpc_id: "{{ aws_vpc_id | default('') }}"
+      private_key: "{{ ec2_keypair_info.private_key | default('') }}"
+      admin_password: "{{ windows_admin_password }}"
 
-    - name: Write the CA certificate to the temporary file
-      ansible.builtin.copy:
-        content: "{{ provision_vault_connection.ca_cert_path }}"
-        dest: "{{ temp_ca_cert.path }}"
-        mode: "600"
-      delegate_to: "{{ provision_control_host }}"
-      run_once: true
-      when: temp_ca_cert.path is defined
+- name: Store SSH secret
+  ansible.builtin.include_role:
+    name: manage_secret
+  vars:
+    manage_secret_action: write
+    manage_secret_payload: "{{ provision_vault_payload }}"
+    manage_secret_path: "windows/{{ ec2_name_tag }}"
+  register: provision_ec2_vault_write_result
 
-    - name: Build Vault payload for SSH secret
-      ansible.builtin.set_fact:
-        provision_vault_payload:
-          instance_id: "{{ ec2_instance_info.instance_id | default('') }}"
-          instance_type: "{{ ec2_instance_info.instance_type | default('') }}"
-          image_id: "{{ ec2_instance_info.image_id | default('') }}"
-          region: "{{ ec2_instance_info.availability_zone | default(aws_region) }}"
-          private_ip: "{{ ec2_instance_info.private_ip | default('') }}"
-          public_ip: "{{ ec2_instance_info.public_ip | default('') }}"
-          key_name: "{{ ec2_instance_info.key_name | default('') }}"
-          security_group_id: "{{ ec2_security_group_id | default('') }}"
-          security_group_name: "{{ ec2_security_group_name | default('') }}"
-          vpc_id: "{{ aws_vpc_id | default('') }}"
-          private_key: "{{ ec2_keypair_info.private_key | default('') }}"
-          admin_password: "{{ windows_admin_password }}"
+- name: Debug write result
+  ansible.builtin.debug:
+    var: provision_ec2_vault_write_result
+  when: "provision_ec2_vault_write_result is defined"
 
-    - name: Store SSH secret
-      community.hashi_vault.vault_kv2_write:
-        url: "{{ provision_vault_connection.url | regex_replace('/+$', '') }}"
-        auth_method: approle
-        mount_point: "{{ provision_vault_connection.auth_mount_point }}"
-        role_id: "{{ provision_vault_connection.role_id }}"
-        secret_id: "{{ provision_vault_connection.secret_id }}"
-        path: "{{ provision_vault_connection.ssh_path }}"
-        engine_mount_point: "{{ provision_vault_connection.kv_mount }}"
-        data: "{{ provision_vault_payload }}"
-        ca_cert: "{{ temp_ca_cert.path | default(omit) }}"
-        validate_certs: "{{ provision_vault_connection.validate_certs | bool }}"
-      register: vault_write_result
-      delegate_to: "{{ provision_control_host }}"
-      run_once: true
+- name: Verify stored SSH secret
+  ansible.builtin.include_role:
+    name: manage_secret
+  vars:
+    manage_secret_action: get
+    manage_secret_path: "windows/{{ ec2_name_tag }}"
 
-    - name: Verify stored SSH secret
-      community.hashi_vault.vault_kv2_get:
-        url: "{{ provision_vault_connection.url | regex_replace('/+$', '') }}"
-        auth_method: approle
-        mount_point: "{{ provision_vault_connection.auth_mount_point }}"
-        role_id: "{{ provision_vault_connection.role_id }}"
-        secret_id: "{{ provision_vault_connection.secret_id }}"
-        path: "{{ provision_vault_connection.ssh_path }}"
-        engine_mount_point: "{{ provision_vault_connection.kv_mount }}"
-        ca_cert: "{{ temp_ca_cert.path | default(omit) }}"
-        validate_certs: "{{ provision_vault_connection.validate_certs | bool }}"
-      register: vault_verify_result
-      delegate_to: "{{ provision_control_host }}"
-      run_once: true
-      failed_when: false
+- name: Debug secrets
+  ansible.builtin.debug:
+    var: manage_secret_retrieved_data
 
-    - name: Record Vault storage status
-      ansible.builtin.set_fact:
-        vault_ssh_stored: >-
-          {{ (vault_write_result is defined and vault_write_result is succeeded)
-             and (vault_verify_result is defined and vault_verify_result is succeeded)
-             and (vault_verify_result.data.data.instance_id | default('')) == ec2_instance_info.instance_id }}
-        vault_ssh_path_full: "{{ provision_vault_connection.kv_mount }}/data/{{ provision_vault_connection.ssh_path }}"
+- name: Write temporary private key file
+  ansible.builtin.copy:
+    content: "{{ manage_secret_retrieved_data.data.private_key }}"
+    dest: "/tmp/{{ ec2_name_tag }}_key"
+    mode: '600'
 
-  always:
-    - name: Remove the temporary CA certificate file
-      ansible.builtin.file:
-        path: "{{ temp_ca_cert.path }}"
-        state: absent
-      delegate_to: "{{ provision_control_host }}"
-      run_once: true
-      when: temp_ca_cert.path is defined
+- name: Add host
+  ansible.builtin.add_host:
+    name: "{{ ec2_name_tag }}"
+    ansible_host: "{{ manage_secret_retrieved_data.data.public_ip }}"
+    ansible_user: Administrator
+    ansible_connection: ssh
+    ansible_ssh_private_key_file: "/tmp/{{ ec2_name_tag }}_key"
+    ansible_ssh_common_args: >-
+      -o UserKnownHostsFile=/dev/null
+      -o StrictHostKeyChecking=no
+      -o PasswordAuthentication=no
+      -o PreferredAuthentications=publickey
+      -o ControlMaster=no -o ControlPersist=no
+    groups: "provisioned_instance"

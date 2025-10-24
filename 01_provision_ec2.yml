@@ -1,8 +1,11 @@
 ---
 - name: Provision EC2 instance
   hosts: localhost
-  roles:
-    - role: provision_ec2
+  tasks:
+    - name: Provision EC2
+      ansible.builtin.include_role:
+        name: provision_ec2
+      when: "debug_win_config != 1"
 
 - name: Debug - Show dynamic inventory
   hosts: localhost
@@ -10,9 +13,10 @@
     - name: Display provisioned_instances group
       ansible.builtin.debug:
         msg: "Provisioned hosts: {{ groups['provisioned_instance'] }}"
+      when: "debug_win_config != 1"
 
 - name: Configure Windows instance
-  hosts: provisioned_instance
+  hosts: "{{ (debug_win_config | default(0) == 1) | ternary(debug_win_host, 'provisioned_instance') }}"
   gather_facts: false
   roles:
     - role: configure_windows

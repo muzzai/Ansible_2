@@ -23,10 +23,6 @@
   ansible.builtin.import_tasks: instance.yml
   tags: ['provision', 'instance']
 
-# - name: Wait for user data script to complete
-#   ansible.builtin.import_tasks: wait_for_userdata.yml
-#   tags: ['provision', 'wait']
-
 - name: Manage Elastic IP association
   ansible.builtin.import_tasks: elastic_ip.yml
   tags: ['provision', 'network', 'elastic_ip']
@@ -42,12 +38,8 @@
   tags: ['provision', 'route53']
 
 - name: Store SSH key material in Vault
-  ansible.builtin.import_tasks: vault_store_ssh_r.yml
+  ansible.builtin.import_tasks: vault_store_ssh.yml
   tags: ['provision', 'vault']
-
-# - name: Install PowerShell 7
-#   ansible.builtin.import_tasks: install_powershell7.yml
-#   tags: ['provision', 'software']
 
 - name: Display provisioning summary
   ansible.builtin.import_tasks: summary.yml
