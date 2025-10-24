@@ -1,0 +1,36 @@
+- name: Get hosts secrets
+  ansible.builtin.include_role:
+    name: manage_secret
+  vars:
+    manage_secret_action: get
+    manage_secret_path: "windows/{{ inventory_hostname }}"
+
+- name: Debug secrets
+  ansible.builtin.debug:
+    var: manage_secret_retrieved_data
+
+- name: Create tempfile for host
+  ansible.builtin.tempfile:
+    state: file
+    suffix: .pem
+  register: build_connection_details_key_file
+
+- name: Write temporary private key file
+  ansible.builtin.copy:
+    content: "{{ manage_secret_retrieved_data.data.private_key }}"
+    dest: "{{ build_connection_details_key_file.path }}"
+    mode: '600'
+
+- name: share host connection details
+  ansible.builtin.set_fact:
+    ansible_host: "{{ manage_secret_retrieved_data.data.public_ip }}"
+    ansible_user: Administrator
+    ansible_connection: ssh
+    ansible_ssh_private_key_file: "{{ build_connection_details_key_file.path }}"
+    ansible_ssh_common_args: >-
+      -o UserKnownHostsFile=/dev/null
+      -o StrictHostKeyChecking=no
+      -o PasswordAuthentication=no
+      -o PreferredAuthentications=publickey
+      -o ControlMaster=no -o ControlPersist=no
+    groups: "provisioned_instance"

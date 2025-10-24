@@ -3,16 +3,3 @@
   hosts: localhost
   roles:
     - role: provision_ec2
-
-- name: Debug - Show dynamic inventory
-  hosts: localhost
-  tasks:
-    - name: Display provisioned_instances group
-      ansible.builtin.debug:
-        msg: "Provisioned hosts: {{ groups['provisioned_instance'] }}"
-
-- name: Configure Windows instance
-  hosts: "provisioned_instance"
-  gather_facts: false
-  roles:
-    - role: configure_windows

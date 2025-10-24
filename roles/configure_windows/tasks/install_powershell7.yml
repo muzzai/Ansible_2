@@ -1,6 +1,5 @@
 - name: Install PowerShell 7 and update SSH shell
   block:
-
     - name: Create Temp directory if it does not exist
       ansible.windows.win_file:
         path: C:\Temp
