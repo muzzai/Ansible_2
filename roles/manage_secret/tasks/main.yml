@@ -3,7 +3,17 @@
   ansible.builtin.assert:
     that:
       - manage_secret_action in ['write', 'get']
-    fail_msg: Action must be get or write
+      - manage_secret_action == 'write' and manage_secret_payload is defined
+      - manage_secret_action == 'write' and manage_secret_payload | length > 0
+
+    fail_msg: |
+      {% if manage_secret_action not in ['write', 'get'] %}
+      Action must be get or write
+      {% elif manage_secret_action == 'write' and manage_secret_payload is not defined %}
+      manage_secret_payload must be defined when action is write
+      {% elif manage_secret_action == 'write' and manage_secret_payload | length == 0 %}
+      manage_secret_payload dictionary must not be empty when action is write
+      {% endif %}
 
 - name: Create a temporary file for the CA certificate
   ansible.builtin.tempfile:
@@ -27,7 +37,7 @@
     secret_id: "{{ manage_secret_vault_secret_id }}"
     path: "{{ manage_secret_path }}"
     engine_mount_point: "{{ manage_secret_vault_kv_mount }}"
-    data: "{{ payload }}"
+    data: "{{ manage_secret_payload }}"
     ca_cert: "{{ manage_secret_vault_ca_cert_path }}"
     validate_certs: true
   when: manage_secret_action == 'write'
