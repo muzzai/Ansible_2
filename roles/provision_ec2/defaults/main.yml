@@ -56,7 +56,7 @@ route53_zone_id: ""
 route53_record_name: ""
 route53_record_type: "A"
 route53_record_ttl: 300
-route53_wait_for_propagation: true
+route53_wait_for_propagation: false
 route53_dns_check_retries: 10
 route53_dns_check_delay: 30
 
