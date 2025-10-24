@@ -43,7 +43,7 @@
 
 - name: Write temporary private key file
   ansible.builtin.copy:
-    content: "{{ provision_ec2_host_details.data.data.private_key }}"
+    content: "{{ provision_ec2_host_details.manage_secret_retrieved_data.private_key }}"
     dest: "/tmp/{{ provision_ec2_name_tag }}_key"
     mode: '600'
 

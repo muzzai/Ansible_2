@@ -55,3 +55,15 @@
     validate_certs: true
   when: manage_secret_action == 'get'
   register: manage_secret_data
+
+- name: Set fact with retrieved secret data
+  ansible.builtin.set_fact:
+    manage_secret_retrieved_data: "{{ manage_secret_result.data }}"
+  when: manage_secret_action == 'get'
+  run_once: true
+
+- name: Clean up temporary CA certificate file
+  ansible.builtin.file:
+    path: "{{ manage_secret_temp_ca_cert.path }}"
+    state: absent
+  run_once: true
