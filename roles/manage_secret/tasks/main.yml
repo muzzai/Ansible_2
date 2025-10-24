@@ -58,7 +58,7 @@
 
 - name: Set fact with retrieved secret data
   ansible.builtin.set_fact:
-    manage_secret_retrieved_data: "{{ manage_secret_result.data }}"
+    manage_secret_retrieved_data: "{{ manage_secret_data.data }}"
   when: manage_secret_action == 'get'
   run_once: true
 
