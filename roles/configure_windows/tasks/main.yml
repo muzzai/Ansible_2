@@ -1,3 +1,29 @@
+- name: Get connection details
+  ansible.builtin.include_role:
+    name: manage_secret
+  vars:
+    manage_secret_action: get
+    manage_secret_path: "windows/{{ debug_win_host }}"
+  when: "debug_win_config != 1"
+
+- name: Write temporary private key file
+  ansible.builtin.copy:
+    content: "{{ manage_secret_retrieved_data.data.private_key }}"
+    dest: "/tmp/{{ ec2_name_tag }}_key"
+    mode: '600'
+
+- name: Set connection details
+  ansible.builtin.set_fact:
+    ansible_user: Administrator
+    ansible_ssh_private_key_file: "/tmp/{{ ec2_name_tag }}_key"
+    ansible_ssh_common_args: >-
+      -o UserKnownHostsFile=/dev/null
+      -o StrictHostKeyChecking=no
+      -o PasswordAuthentication=no
+      -o PreferredAuthentications=publickey
+      -o ControlMaster=no -o ControlPersist=no
+  when: "debug_win_config != 1"
+
 - name: Wait for user data script to complete
   ansible.builtin.import_tasks: wait_for_userdata.yml
   tags: ['configure', 'wait']

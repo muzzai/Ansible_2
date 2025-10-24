@@ -7,6 +7,8 @@
     timeout: 300
   delegate_to: localhost
 
+
+
 - name: Wait for user data script to complete (trying with cmd)
   vars:
     ansible_connection: ssh
