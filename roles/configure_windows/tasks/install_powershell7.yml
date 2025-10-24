@@ -4,9 +4,9 @@
     ansible_shell_executable: powershell.exe   # use Windows PowerShell during this block
     ansible_remote_tmp: 'C:\Windows\Temp\ansible'
   block:
-
     - name: Set shell type explicitly
       ansible.builtin.set_fact:
+        ansible_connection: ssh
         ansible_shell_type: powershell
 
     - name: Create Temp directory if it does not exist
