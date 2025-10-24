@@ -19,7 +19,6 @@
   ansible.builtin.tempfile:
     state: file
     suffix: .crt
-    path: "{{ manage_secret_vault_ca_cert_path }}"
   register: manage_secret_temp_ca_cert
   run_once: true
 
