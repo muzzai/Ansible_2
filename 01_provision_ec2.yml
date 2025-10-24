@@ -12,7 +12,7 @@
         msg: "Provisioned hosts: {{ groups['provisioned_instance'] }}"
 
 - name: Configure Windows instance
-  hosts: base-host-17
+  hosts: "provisioned_instance"
   gather_facts: false
   roles:
     - role: configure_windows

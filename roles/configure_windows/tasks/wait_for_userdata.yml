@@ -9,12 +9,11 @@
 
 - name: Debug hostvars
   ansible.builtin.debug:
-    var: hostvars
+    var: hostvars['ansible_host']
 
 - name: Wait for user data script to complete (trying with cmd)
   vars:
     ansible_connection: ssh
-    ansible_user: Administrator
     ansible_shell_type: cmd
     ansible_ssh_common_args: >-
       -o UserKnownHostsFile=/dev/null
