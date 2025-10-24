@@ -51,7 +51,7 @@
     secret_id: "{{ manage_secret_vault_secret_id }}"
     path: "{{ manage_secret_path }}"
     engine_mount_point: "{{ manage_secret_vault_kv_mount }}"
-    ca_cert: "{{ manage_secret_vault_ca_cert_path }}"
+    ca_cert: "{{ manage_secret_temp_ca_cert.path }}"
     validate_certs: true
   when: manage_secret_action == 'get'
   register: manage_secret_data
