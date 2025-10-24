@@ -10,6 +10,7 @@
 - name: Wait for user data script to complete (trying with cmd)
   vars:
     ansible_connection: ssh
+    ansible_user: Administrator
     ansible_shell_type: cmd
     ansible_ssh_common_args: >-
       -o UserKnownHostsFile=/dev/null
@@ -27,6 +28,7 @@
 - name: Wait for user data script to complete (falling back to powershell)
   vars:
     ansible_connection: ssh
+    ansible_user: Administrator
     ansible_shell_type: powershell
     ansible_ssh_common_args: >-
       -o UserKnownHostsFile=/dev/null
