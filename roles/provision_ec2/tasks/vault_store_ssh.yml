@@ -14,6 +14,7 @@
       ansible.builtin.copy:
         content: "{{ provision_vault_connection.ca_cert_path }}"
         dest: "{{ temp_ca_cert.path }}"
+        mode: "600"
       delegate_to: "{{ provision_control_host }}"
       run_once: true
       when: temp_ca_cert.path is defined

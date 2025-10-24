@@ -1,14 +1,17 @@
 ---
-# Playbook: Provision a Windows EC2 instance with Vault-backed SSH storage
-# Usage: ansible-playbook -i localhost, 01_provision_ec2.yml
-
-- name: Provision Windows EC2 instance with SSH access
+- name: Provision EC2 instance
   hosts: localhost
-  gather_facts: false
-  connection: local
-
   roles:
     - role: provision_ec2
-      vars:
-        vault_auth_mount_point: approle
-        vault_ssh_path: "windows/ssh/{{ ec2_name_tag }}"
+
+- name: Debug - Show dynamic inventory
+  hosts: localhost
+  tasks:
+    - name: Display provisioned_instances group
+      ansible.builtin.debug:
+        msg: "Provisioned hosts: {{ groups['provisioned_instances'] }}"
+
+- name: Configure Windows instance
+  hosts: provisioned_instance
+  roles:
+    - role: configure_windows

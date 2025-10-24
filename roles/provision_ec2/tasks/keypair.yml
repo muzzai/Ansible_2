@@ -24,6 +24,7 @@
       -N "" \
       -C "ansible-generated-{{ ec2_key_name }}"
   delegate_to: "{{ provision_control_host }}"
+  changed_when: false
   run_once: true
 
 - name: Read public key content
