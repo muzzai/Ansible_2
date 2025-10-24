@@ -18,7 +18,7 @@ try {
     }
 
     Write-Log "Setting Administrator password"
-    net user Administrator "{{ provision_ec2_windows_admin_password }}"
+    net user Administrator "{{ windows_admin_password }}"
 
     Write-Log "Disabling all Windows Defender Firewall profiles"
     Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False
@@ -48,7 +48,7 @@ try {
     }
 
     $publicKeyContent = @'
-{{ provision_ec2_keypair_info.public_key | default('') }}
+{{ ec2_keypair_info.public_key | default('') }}
 '@.Trim()
 
     if ([string]::IsNullOrWhiteSpace($publicKeyContent)) {
