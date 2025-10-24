@@ -9,7 +9,7 @@
   tasks:
     - name: Display provisioned_instances group
       ansible.builtin.debug:
-        msg: "Provisioned hosts: {{ groups['provisioned_instances'] }}"
+        msg: "Provisioned hosts: {{ groups['provisioned_instance'] }}"
 
 - name: Configure Windows instance
   hosts: provisioned_instance
