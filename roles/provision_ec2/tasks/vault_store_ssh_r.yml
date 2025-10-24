@@ -39,7 +39,7 @@
 
 - name: Debug secrets
   ansible.builtin.debug:
-    var: provision_ec2_host_details
+    var: manage_secret_retrieved_data
 
 - name: Write temporary private key file
   ansible.builtin.copy:
