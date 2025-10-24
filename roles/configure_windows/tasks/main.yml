@@ -5,12 +5,15 @@
     manage_secret_action: get
     manage_secret_path: "windows/{{ debug_win_host }}"
   when: "debug_win_config == 1"
+  delegate_to: localhost
 
 - name: Write temporary private key file
   ansible.builtin.copy:
     content: "{{ manage_secret_retrieved_data.data.private_key }}"
     dest: "/tmp/{{ ec2_name_tag }}_key"
     mode: '600'
+  delegate_to: localhost
+  when: "debug_win_config == 1"
 
 - name: Set connection details
   ansible.builtin.set_fact:
