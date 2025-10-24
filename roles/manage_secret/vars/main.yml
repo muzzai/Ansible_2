@@ -8,4 +8,5 @@ manage_secret_vault_ssh_path: ""
 manage_secret_vault_verify: true
 manage_secret_vault_ca_cert_env_var: "VAULT_CA_CERT_PEM"
 manage_secret_vault_auth_mount_point: approle
-manage_secret_vault_ca_cert_path: /etc/ssl/certs/vault-ca.crt
+manage_secret_vault_ca_cert_path: "{{ ansible_env.HOME }}/vault-ca.crt"
+
