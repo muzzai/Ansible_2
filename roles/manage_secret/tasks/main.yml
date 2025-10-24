@@ -19,13 +19,14 @@
   ansible.builtin.tempfile:
     state: file
     suffix: .crt
+    path: "{{ manage_secret_vault_ca_cert_path }}"
   register: manage_secret_temp_ca_cert
   run_once: true
 
 - name: Write the CA certificate to the temporary file
   ansible.builtin.copy:
     content: "{{ manage_secret_vault_ca_cert_env_var }}"
-    dest: "{{ manage_secret_vault_ca_cert_path }}"
+    dest: "{{ manage_secret_temp_ca_cert.path }}"
     mode: "600"
   run_once: true
 
