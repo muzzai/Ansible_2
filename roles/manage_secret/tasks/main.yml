@@ -3,9 +3,8 @@
   ansible.builtin.assert:
     that:
       - manage_secret_action in ['write', 'get']
-      - manage_secret_action == 'write' and manage_secret_payload is defined
-      - manage_secret_action == 'write' and manage_secret_payload | length > 0
-
+      - manage_secret_action != 'write' or (manage_secret_payload is defined and manage_secret_payload | length > 0)
+      - manage_secret_action != 'get' or manage_secret_path is defined
     fail_msg: |
       {% if manage_secret_action not in ['write', 'get'] %}
       Action must be get or write
