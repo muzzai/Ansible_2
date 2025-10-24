@@ -7,6 +7,10 @@
     timeout: 300
   delegate_to: localhost
 
+- name: Debug hostvars
+  ansible.builtin.debug:
+    var: hostvars
+
 - name: Wait for user data script to complete (trying with cmd)
   vars:
     ansible_connection: ssh
