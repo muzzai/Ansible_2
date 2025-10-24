@@ -45,3 +45,16 @@
   retries: 10
   delay: 15
   when: configure_windows_provision_ec2_user_data_status_cmd is failed
+
+- name: Update host variables to use PowerShell after user data completes
+  ansible.builtin.add_host:
+    name: "{{ inventory_hostname }}"
+    ansible_host: "{{ ansible_host }}"
+    ansible_user: Administrator
+    ansible_connection: ssh
+    ansible_shell_type: powershell
+    ansible_shell_executable: pwsh.exe  # Use PowerShell 7 if that's what user data installs
+    ansible_remote_tmp: 'C:\Windows\Temp\ansible'
+    ansible_ssh_private_key_file: "{{ ansible_ssh_private_key_file }}"
+    ansible_ssh_common_args: "{{ ansible_ssh_common_args }}"
+    groups: "provisioned_instance"
