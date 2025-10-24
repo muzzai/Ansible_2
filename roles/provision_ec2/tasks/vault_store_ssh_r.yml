@@ -37,6 +37,10 @@
     manage_secret_path: "windows/{{ ec2_name_tag }}"
   register: provision_ec2_host_details
 
+- name: Debug secrets
+  ansible.builtin.debug:
+    var: provision_ec2_host_details
+
 - name: Write temporary private key file
   ansible.builtin.copy:
     content: "{{ provision_ec2_host_details.data.data.private_key }}"
