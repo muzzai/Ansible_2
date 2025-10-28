@@ -1,6 +1,15 @@
 ---
-- name: Configure pwoershell 7
+- name: Configure powershell 7
   hosts: aws_ec2
   gather_facts: false
+
+  pre_tasks:
+    - name: Get host connection details
+      delegate_to: localhost
+      block:
+        - name: Build connection details
+          ansible.builtin.include_role:
+            name: build_connection_details
+
   roles:
     - role: configure_windows
