@@ -12,6 +12,7 @@
     sql_s3_url_expiry: 3600
     sql_install_temp_dir: C:\temp
 
+
   pre_tasks:
     - name: Get host connection details
       delegate_to: localhost
@@ -40,6 +41,14 @@
       ansible.builtin.set_fact:
         sql_installer_url: "{{ sql_installer_url.url }}"
 
+    - name: Set PID based on edition only if not already defined
+      ansible.builtin.set_fact:
+        pid: "{{ {
+            'Evaluation': '00000-00000-00000-00000-00000',
+            'Express': '11111-00000-00000-00000-00000',
+            'Developer': '22222-00000-00000-00000-00000'}[edition] }}"
+      when: pid is not defined or pid | trim == ""
+
     - name: Debug url
       ansible.builtin.debug:
         var: sql_installer_url
@@ -55,9 +64,29 @@
         dest: "{{ sql_install_temp_dir }}\\{{ sql_s3_object }}"
       register: sql_download_result
 
-    - name: Set bootstrapper path fact
-      ansible.builtin.set_fact:
-        mssql_setup_path: "{{ sql_install_temp_dir }}\\{{ sql_s3_object }}"
+    - name: Unzip installer
+      community.windows.win_unzip:
+        src: "{{ sql_install_temp_dir }}\\{{ sql_s3_object }}"
+        dest: "{{ sql_install_temp_dir }}\\unzipped"
+        delete_archive: true
 
   roles:
     - role: trippsc2.mssql.install
+      vars:
+        mssql_version: "{{ sql_server_version | default('2022') }}"
+        mssql_database_edition: "{{ sql_server_edition | default('Express') }}"
+        mssql_port: "{{ sql_server_port | default(1433) }}"
+        mssql_security_mode: mixed
+        mssql_product_key: pid
+        mssql_setup_path: "{{ sql_install_temp_dir }}\\{{ sql_s3_object }}\\SETUP.exe }}"
+        mssql_update_enabled: false
+        mssql_update_from_microsoft_update: false
+        mssql_named_pipes_enabled: true
+        mssql_tcp_enabled: true
+        mssql_sql_server_service_username: LocalSystem
+        mssql_sql_server_service_startup_type: Automatic
+        mssql_install_database_engine: true
+        mssql_database_sysadmin_accounts:
+          - LocalSystem
+          - Administrator
+        mssql_install_full_text: true
