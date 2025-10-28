@@ -26,6 +26,7 @@
           {{ hostvars[inventory_hostname].placement.region }}
 
     - name: Generate installer presigned URL
+      delegate_to: localhost
       amazon.aws.s3_object:
         mode: geturl
         bucket: "{{ sql_s3_bucket }}"
@@ -41,7 +42,7 @@
 
     - name: Download SQL Server bootstrapper
       ansible.windows.win_get_url:
-        url: "{{ sql_installer_url.url }}"
+        url: "{{ hostvars['localhost']['sql_installer_url']['url'] }}"
         dest: "{{ sql_install_temp_dir }}\\{{ sql_s3_object }}"
       register: sql_download_result
 
