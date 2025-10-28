@@ -4,9 +4,46 @@
   gather_facts: false
 
   vars:
-    sql_version: "{{ sql_server_version | default('2022') }}"
-    sql_edition: "{{ sql_server_edition | default('Express') }}"
-    sql_port: "{{ sql_server_port | default(1433) }}"
+    mssql_version: "{{ sql_server_version | default('2022') }}"
+    mssql_database_edition: "{{ sql_server_edition | default('Express') }}"
+    mssql_port: "{{ sql_server_port | default(1433) }}"
+    sql_s3_bucket: "alloy-software-installers"
+    sql_s3_object: "SQL{{ mssql_version }}.zip"
+    sql_s3_url_expiry: 3600
+    sql_install_temp_dir: C:\temp
+
+  pre_tasks:
+    - name: Get host connection details
+      delegate_to: localhost
+      block:
+        - name: Build connection details
+          ansible.builtin.include_role:
+            name: build_connection_details
+
+    - name: Determine S3 region for installer
+      ansible.builtin.set_fact:
+        sql_s3_region_effective: >-
+          {{ hostvars[inventory_hostname].placement.region }}
+
+    - name: Generate installer presigned URL
+      amazon.aws.s3_object:
+        mode: geturl
+        bucket: "{{ sql_s3_bucket }}"
+        object: "{{ sql_s3_object }}"
+        expiry: "{{ sql_s3_url_expiry }}"
+        region: "{{ sql_s3_region_effective }}"
+      register: sql_installer_url
+      delegate_to: localhost
+
+    - name: Download SQL Server bootstrapper
+      ansible.windows.win_get_url:
+        url: "{{ sql_installer_url.url }}"
+        dest: "{{ sql_install_temp_dir }}\\{{ sql_s3_object }}"
+      register: sql_download_result
+
+    - name: Set bootstrapper path fact
+      ansible.builtin.set_fact:
+        mssql_setup_path: "{{ sql_install_temp_dir }}\\{{ sql_s3_object }}"
 
   roles:
-    - install_sql_server
+    - role: trippsc2.mssql.install
