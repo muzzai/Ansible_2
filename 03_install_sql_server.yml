@@ -35,6 +35,15 @@
         region: "{{ sql_s3_region_effective }}"
       register: sql_installer_url
 
+    - name: Share url
+      delegate_to: localhost
+      ansible.builtin.set_fact:
+        sql_installer_url: "{{ sql_installer_url.url }}"
+
+    - name: Debug url
+      ansible.builtin.debug:
+        var: sql_installer_url
+
     - name: Set shell type to pwsh.exe
       ansible.builtin.set_fact:
         ansible_shell_type: pwsh
