@@ -34,10 +34,10 @@
         region: "{{ sql_s3_region_effective }}"
       register: sql_installer_url
 
-    # - name: Set shell type to pwsh.exe
-    #   ansible.builtin.set_fact:
-    #     ansible_shell_type: pwsh
-    #     ansible_shell_executable: pwsh.exe
+    - name: Set shell type to pwsh.exe
+      ansible.builtin.set_fact:
+        ansible_shell_type: pwsh
+        ansible_shell_executable: pwsh.exe
 
     - name: Download SQL Server bootstrapper
       ansible.windows.win_get_url:
