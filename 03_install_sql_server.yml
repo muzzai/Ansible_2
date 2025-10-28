@@ -51,7 +51,7 @@
 
     - name: Download SQL Server bootstrapper
       ansible.windows.win_get_url:
-        url: "{{ hostvars['localhost']['sql_installer_url']['url'] }}"
+        url: "{{ sql_installer_url }}"
         dest: "{{ sql_install_temp_dir }}\\{{ sql_s3_object }}"
       register: sql_download_result
 
