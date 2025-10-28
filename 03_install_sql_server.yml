@@ -44,9 +44,9 @@
     - name: Set PID based on edition only if not already defined
       ansible.builtin.set_fact:
         pid: "{{ {
-            'Evaluation': '00000-00000-00000-00000-00000',
-            'Express': '11111-00000-00000-00000-00000',
-            'Developer': '22222-00000-00000-00000-00000'}[edition] }}"
+            'evaluation': '00000-00000-00000-00000-00000',
+            'express': '11111-00000-00000-00000-00000',
+            'developer': '22222-00000-00000-00000-00000'}[edition] }}"
       when: pid is not defined or pid | trim == ""
 
     - name: Debug url
