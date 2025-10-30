@@ -88,5 +88,4 @@
         mssql_tcp_enabled: true
         mssql_sql_server_service_startup_type: Automatic
         mssql_database_sysadmin_accounts:
-          - LocalSystem
           - Administrator
