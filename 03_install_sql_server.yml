@@ -67,7 +67,7 @@
     - name: Unzip installer
       community.windows.win_unzip:
         src: "{{ sql_install_temp_dir }}\\{{ sql_s3_object }}"
-        dest: "{{ sql_install_temp_dir }}\\{{ sql_s3_object }}"
+        dest: "{{ sql_install_temp_dir }}\\unzipped"
         delete_archive: true
 
   roles:
@@ -78,7 +78,7 @@
         mssql_port: "{{ sql_server_port | default(1433) }}"
         mssql_security_mode: mixed
         mssql_product_key: "{{ pid }}"
-        mssql_setup_path: "{{ sql_install_temp_dir }}\\un\\SETUP.exe }}"
+        mssql_setup_path: "{{ sql_install_temp_dir }}\\unzipped\\SETUP.exe }}"
         mssql_update_enabled: false
         mssql_update_from_microsoft_update: false
         mssql_named_pipes_enabled: true
