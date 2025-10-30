@@ -73,6 +73,8 @@
   roles:
     - role: trippsc2.mssql.install
       vars:
+        mssql_install_database_engine: true
+        mssql_install_full_text: true
         mssql_version: "{{ sql_server_version | default('2022') }}"
         mssql_database_edition: "{{ sql_server_edition | default('Express') }}"
         mssql_port: "{{ sql_server_port | default(1433) }}"
@@ -85,9 +87,8 @@
         mssql_named_pipes_enabled: true
         mssql_tcp_enabled: true
         mssql_sql_server_service_username: LocalSystem
+        mssql_sql_server_service_password: ""
         mssql_sql_server_service_startup_type: Automatic
-        mssql_install_database_engine: true
         mssql_database_sysadmin_accounts:
           - LocalSystem
           - Administrator
-        mssql_install_full_text: true
