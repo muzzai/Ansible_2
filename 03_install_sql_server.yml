@@ -78,6 +78,7 @@
         mssql_port: "{{ sql_server_port | default(1433) }}"
         mssql_security_mode: mixed
         mssql_product_key: "{{ pid }}"
+        mssql_sa_password: "{{ sql_sa_password }}"
         mssql_setup_path: "{{ sql_install_temp_dir }}\\unzipped\\SQL2022\\SETUP.exe"
         mssql_update_enabled: false
         mssql_update_from_microsoft_update: false
