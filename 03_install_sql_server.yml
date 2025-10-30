@@ -46,7 +46,7 @@
         pid: "{{ {
             'evaluation': '00000-00000-00000-00000-00000',
             'express': '11111-00000-00000-00000-00000',
-            'developer': '22222-00000-00000-00000-00000'}[edition] }}"
+            'developer': '22222-00000-00000-00000-00000'}[sql_server_edition] }}"
       when: pid is not defined or pid | trim == ""
 
     - name: Debug url
