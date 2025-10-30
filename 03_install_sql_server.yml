@@ -86,8 +86,6 @@
         mssql_update_from_microsoft_update: false
         mssql_named_pipes_enabled: true
         mssql_tcp_enabled: true
-        mssql_sql_server_service_username: LocalSystem
-        mssql_sql_server_service_password: ""
         mssql_sql_server_service_startup_type: Automatic
         mssql_database_sysadmin_accounts:
           - LocalSystem
