@@ -127,7 +127,7 @@
       amazon.aws.ec2_security_group_info:
         filters:
           group-id: "{{ sg_id }}"
-          vpc-id: "{{ hostvars['vpc_id'] }}"
+          vpc-id: "{{ vpc_id }}"
       register: sg_info
 
     - name: Combine existing inbound rules with new rule
