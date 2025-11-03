@@ -3,3 +3,9 @@
   hosts: localhost
   roles:
     - role: provision_ec2
+
+  post_tasks:
+    - name: Expose EC2 IP to workflow
+      ansible.builtin.set_stats:
+        data:
+          provisioned_host: "{{ ec2_name_tag }}"
