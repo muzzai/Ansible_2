@@ -129,6 +129,7 @@
           group-id: "{{ sg_id }}"
           vpc-id: "{{ vpc_id }}"
       register: sg_info
+      delegate_to: localhost
 
     - name: Combine existing inbound rules with new rule
       ansible.builtin.set_fact:
@@ -138,3 +139,4 @@
       amazon.aws.ec2_security_group:
         name: "{{ sg_id }}"
         rules: "{{ combined_inbound_rules }}"
+      delegate_to: localhost
