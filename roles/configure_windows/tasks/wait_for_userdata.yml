@@ -40,7 +40,3 @@
   retries: 10
   delay: 15
   when: configure_windows_provision_ec2_user_data_status_cmd is failed
-
-- name: Update host variables to use PowerShell after user data completes
-  ansible.builtin.set_fact:
-    ansible_shell_type: powershell
