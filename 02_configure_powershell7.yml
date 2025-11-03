@@ -1,6 +1,8 @@
 ---
 - name: Configure powershell 7
   hosts: "{{ provisioned_host }}"
+  vars:
+    provisioned_host: "{{ provisioned_host | default('aws_ec2') }}"
   gather_facts: false
 
   pre_tasks:

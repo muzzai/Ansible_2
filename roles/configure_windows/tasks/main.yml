@@ -5,3 +5,7 @@
 - name: Install PowerShell 7
   ansible.builtin.import_tasks: install_powershell7.yml
   tags: ['configure', 'software']
+
+- name: Disable Firewall
+  ansible.windows.win_firewall:
+    state: disabled
