@@ -1,6 +1,6 @@
 ---
 - name: Install SQL Server on Windows
-  hosts: "{{ provisioned_host }}"
+  hosts: aws_ec2
   gather_facts: false
 
   vars:
@@ -14,6 +14,11 @@
 
 
   pre_tasks:
+    - name: Define scope
+      ansible.builtin.set_fact:
+        ansible_host: "{{ provisioned_host }}"
+      when: "provisioned_host is defined"
+
     - name: Get host connection details
       delegate_to: localhost
       block:

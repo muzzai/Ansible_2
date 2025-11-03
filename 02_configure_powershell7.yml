@@ -4,6 +4,12 @@
   gather_facts: false
 
   pre_tasks:
+    - name: Define scope
+      ansible.builtin.set_fact:
+        ansible_host: "{{ provisioned_host }}"
+      when: "provisioned_host is defined"
+
+
     - name: Get host connection details
       delegate_to: localhost
       block:
