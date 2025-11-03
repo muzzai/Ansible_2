@@ -5,10 +5,6 @@
     manage_secret_action: get
     manage_secret_path: "windows/{{ inventory_hostname }}"
 
-- name: Debug secrets
-  ansible.builtin.debug:
-    var: manage_secret_retrieved_data
-
 - name: Create tempfile for host
   ansible.builtin.tempfile:
     state: file

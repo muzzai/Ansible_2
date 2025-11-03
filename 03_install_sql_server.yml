@@ -145,4 +145,3 @@
         name: "{{ sg_id }}"
         rules: "{{ combined_inbound_rules }}"
       delegate_to: localhost
-
