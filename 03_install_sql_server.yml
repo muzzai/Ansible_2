@@ -13,10 +13,10 @@
     sql_install_temp_dir: C:\temp
     host: "{{ configured_host | default('aws_ec2') }}"
     new_inbound_rule:
-      - proto: tcp
-        ports: ["{{ sql_server_port }}"]
-        cidr_ip: "0.0.0.0/0"
-        rule_desc: "RDP Access"
+      proto: tcp
+      ports: ["{{ sql_server_port }}"]
+      cidr_ip: "0.0.0.0/0"
+      rule_desc: "RDP Access"
 
   pre_tasks:
 
@@ -104,7 +104,7 @@
       ansible.windows.win_service:
         name: MSSQLSERVER
         state: stopped
-      ignore_errors: true
+      failed_when: false
 
     - name: Get SQL Server instance name
       ansible.windows.win_shell: |
@@ -132,7 +132,7 @@
 
     - name: Combine existing inbound rules with new rule
       ansible.builtin.set_fact:
-        combined_inbound_rules: "{{ sg_info.security_groups[0].ip_permissions | default([]) + new_inbound_rule }}"
+        combined_inbound_rules: "{{ (sg_info.security_groups[0].ip_permissions | default([])) | union(new_inbound_rule | default([])) }}"
 
     - name: Ensure security group for instance exists
       amazon.aws.ec2_security_group:
