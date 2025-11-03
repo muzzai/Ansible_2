@@ -26,4 +26,4 @@
     - name: Expose EC2 IP to workflow
       ansible.builtin.set_stats:
         data:
-          provisioned_host: "{{ provisioned_host }}"
+          configured_host: "{{ provisioned_host }}"

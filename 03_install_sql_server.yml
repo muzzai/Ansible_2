@@ -11,12 +11,12 @@
     sql_s3_object: "SQL{{ mssql_version }}.zip"
     sql_s3_url_expiry: 3600
     sql_install_temp_dir: C:\temp
-    provisioned_host: "{{ provisioned_host | default('aws_ec2') }}"
+    provisioned_host: "{{ configured_host | default('aws_ec2') }}"
     new_inbound_rule:
-        - proto: tcp
-          ports: ["{{ sql_server_port }}"]
-          cidr_ip: "0.0.0.0/0"
-          rule_desc: "RDP Access"
+      - proto: tcp
+        ports: ["{{ sql_server_port }}"]
+        cidr_ip: "0.0.0.0/0"
+        rule_desc: "RDP Access"
 
   pre_tasks:
 
@@ -101,13 +101,13 @@
 
   post_tasks:
     - name: Stop SQL Server service
-      ansible.builtin.win_service:
+      ansible.windows.win_service:
         name: MSSQLSERVER
         state: stopped
-      ignore_errors: yes
+      ignore_errors: true
 
     - name: Get SQL Server instance name
-      ansible.builtin.win_shell: |
+      ansible.windows.win_shell: |
         $regPath = "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server"
         Get-ChildItem $regPath |
         Where-Object {$_.PSChildName -like "MSSQL*.*"} |
@@ -115,7 +115,7 @@
       register: sql_instance
 
     - name: Change SQL Server port in registry
-      ansible.builtin.win_regedit:
+      ansible.windows.win_regedit:
         path: "HKLM:\\SOFTWARE\\Microsoft\\Microsoft SQL Server\\{{ sql_instance }}\\MSSQLServer\\SuperSocketNetLib\\Tcp\\IPAll"
         name: TcpPort
         data: "{{ sql_server_port }}"
