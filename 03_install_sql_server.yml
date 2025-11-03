@@ -6,7 +6,7 @@
   vars:
     mssql_version: "{{ sql_server_version | default('2022') }}"
     mssql_database_edition: "{{ sql_server_edition | default('Express') }}"
-    mssql_port: "{{ sql_server_port | default(1433) }}"
+
     sql_s3_bucket: "alloy-software-installers"
     sql_s3_object: "SQL{{ mssql_version }}.zip"
     sql_s3_url_expiry: 3600

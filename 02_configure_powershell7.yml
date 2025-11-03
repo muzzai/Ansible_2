@@ -13,3 +13,9 @@
 
   roles:
     - role: configure_windows
+
+  post_tasks:
+    - name: Expose EC2 IP to workflow
+      ansible.builtin.set_stats:
+        data:
+          provisioned_host: "{{ inventory_hostname }}"
