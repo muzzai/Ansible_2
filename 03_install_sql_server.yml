@@ -121,7 +121,7 @@
         data: "{{ sql_server_port }}"
         type: string
         state: present
-w
+
 
     - name: Get current security group info
       amazon.aws.ec2_security_group_info:
