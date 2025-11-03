@@ -122,6 +122,11 @@
         type: string
         state: present
 
+    - name: Start SQL Server service
+      ansible.windows.win_service:
+        name: MSSQLSERVER
+        state: started
+      failed_when: false
 
     - name: Get current security group info
       amazon.aws.ec2_security_group_info:
@@ -140,3 +145,4 @@
         name: "{{ sg_id }}"
         rules: "{{ combined_inbound_rules }}"
       delegate_to: localhost
+
