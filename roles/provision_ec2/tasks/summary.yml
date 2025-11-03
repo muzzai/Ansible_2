@@ -15,3 +15,7 @@
   ansible.builtin.fail:
     msg: "EC2 instance provisioning failed. Instance state is '{{ ec2_instance_info.state | default('unknown') }}'."
   when: ec2_instance_info is not defined or ec2_instance_info.state != 'running'
+
+- name: Add to workflow group when run from the wrokflow
+  ansible.builtin.set_stats:
+    provisioned_host: "{{ ec2_effective_name }}"
