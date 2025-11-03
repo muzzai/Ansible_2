@@ -1,6 +1,6 @@
 ---
 - name: Install SQL Server on Windows
-  hosts: aws_ec2
+  hosts: "{{ provisioned_host }}"
   gather_facts: false
 
   vars:
