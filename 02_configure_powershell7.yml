@@ -1,16 +1,12 @@
 ---
 - name: Configure powershell 7
-  hosts: "{{ provisioned_host }}"
+  hosts: "{{ host }}"
   vars:
-    provisioned_host: "{{ provisioned_host | default('aws_ec2') }}"
+    host: "{{ provisioned_host | default('aws_ec2') }}"
+    sg_id: provisioned_sg_id
   gather_facts: false
 
   pre_tasks:
-    - name: Define scope
-      ansible.builtin.set_fact:
-        ansible_host: "{{ provisioned_host }}"
-      when: "provisioned_host is defined"
-
 
     - name: Get host connection details
       delegate_to: localhost
@@ -27,3 +23,5 @@
       ansible.builtin.set_stats:
         data:
           configured_host: "{{ provisioned_host }}"
+          configured_sg_id: "{{ sg_id }}"
+      when: "provisioned_host is defined"

@@ -1,17 +1,17 @@
 ---
 - name: Install SQL Server on Windows
-  hosts: "{{ provisioned_host }}"
+  hosts: "{{ host }}"
   gather_facts: false
 
   vars:
     mssql_version: "{{ sql_server_version | default('2022') }}"
     mssql_database_edition: "{{ sql_server_edition | default('Express') }}"
-
+    sg_id: "{{ configured_sg_id | hostvars['security_groups'][0]['group_id']}}"
     sql_s3_bucket: "alloy-software-installers"
     sql_s3_object: "SQL{{ mssql_version }}.zip"
     sql_s3_url_expiry: 3600
     sql_install_temp_dir: C:\temp
-    provisioned_host: "{{ configured_host | default('aws_ec2') }}"
+    host: "{{ configured_host | default('aws_ec2') }}"
     new_inbound_rule:
       - proto: tcp
         ports: ["{{ sql_server_port }}"]
@@ -126,7 +126,7 @@
     - name: Get current security group info
       amazon.aws.ec2_security_group_info:
         filters:
-          group-id: "{{ hostvars['security_groups'][0]['group_id'] }}"
+          group-id: "{{ sg_id }}"
           vpc-id: "{{ hostvars[vpc_id] }}"
       register: sg_info
 
@@ -136,5 +136,5 @@
 
     - name: Ensure security group for instance exists
       amazon.aws.ec2_security_group:
-        name: "{{ hostvars['security_groups'][0]['group_id'] }}"
+        name: "{{ sg_id }}"
         rules: "{{ combined_inbound_rules }}"

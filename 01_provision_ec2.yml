@@ -9,3 +9,4 @@
       ansible.builtin.set_stats:
         data:
           provisioned_host: "{{ ec2_name_tag }}"
+          provisioned_sg_id: "{{ security_group_result.group_id  }}"
