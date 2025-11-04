@@ -14,15 +14,15 @@
   pre_tasks:
     - name: Debug 1
       ansible.builtin.debug:
-        var: hostvars
+        var: ansible_facts
 
     - name: Debug 2
       ansible.builtin.debug:
-        var: configured_sg_id
+        var: provisioned_sg_id
 
     - name: Share group ID
       ansible.builtin.set_fact:
-        security_group_id: "{{ configured_sg_id if configured_sg_id is defined else hostvars['security_groups'][0]['group_id'] }}"
+        security_group_id: "{{ provisioned_sg_id if provisioned_sg_id is defined else ansible_facts['security_groups'][0]['group_id'] }}"
 
     # - name: Get host connection details
     #   delegate_to: localhost
@@ -133,10 +133,6 @@
     #     state: started
     #   failed_when: false
 
-    - name: Share SG ID globally
-      ansible.builtin.set_stats:
-        data:
-          sec_group_id: "{{ security_group_id }}"
 
 - name: Open SQL Server Port
   hosts: localhost
@@ -150,4 +146,4 @@
             ports: ["{{ sql_server_port }}"]
             cidr_ip: "0.0.0.0/0"
             rule_desc: "SQL Server Access"
-        sg_id: "{{ sec_group_id }}"
+        sg_id: "{{ provisioned_sg_id }}"
