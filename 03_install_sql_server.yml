@@ -12,6 +12,14 @@
     host: "{{ provisioned_host | default('aws_ec2') }}"
 
   pre_tasks:
+    - name: Debug 1
+      ansible.builtin.debug:
+        var: hostvars
+
+    - name: Debug 2
+      ansible.builtin.debug:
+        var: configured_sg_id
+
     - name: Share group ID
       ansible.builtin.set_fact:
         security_group_id: "{{ configured_sg_id if configured_sg_id is defined else hostvars['security_groups'][0]['group_id'] }}"
