@@ -25,7 +25,7 @@
         filters:
           group-id: "{{ sg_id }}"
           vpc-id: "{{ vpc_id }}"
-          region: "{{ aws_region }}"
+        region: "{{ aws_region }}"
       register: sg_info
       delegate_to: localhost
 
