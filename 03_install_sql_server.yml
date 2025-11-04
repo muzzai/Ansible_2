@@ -15,8 +15,6 @@
     - name: Share group ID
       ansible.builtin.set_fact:
         sec_group_id: "{{ configured_sg_id if configured_sg_id is defined else hostvars['security_groups'][0]['group_id'] }}"
-      delegate_to: localhost
-      delegate_facts: true
 
     - name: Get host connection details
       delegate_to: localhost
@@ -75,28 +73,28 @@
         dest: "{{ sql_install_temp_dir }}\\unzipped"
         delete_archive: true
 
-  roles:
-    - role: trippsc2.mssql.install
-      vars:
-        mssql_install_database_engine: true
-        mssql_install_full_text: true
-        mssql_version: "{{ sql_server_version | default('2022') }}"
-        mssql_database_edition: "{{ sql_server_edition | default('Express') }}"
-        mssql_configure_firewall: false
-        mssql_install_agent: false
-        mssql_port: 51967
-        mssql_security_mode: mixed
-        mssql_product_key: "{{ pid }}"
-        mssql_sa_password: "{{ sql_sa_password }}"
-        mssql_setup_path: "{{ sql_install_temp_dir }}\\unzipped\\SQL2022"
-        mssql_update_enabled: false
-        mssql_update_from_microsoft_update: false
-        mssql_named_pipes_enabled: true
-        mssql_tcp_enabled: true
-        mssql_sql_server_service_startup_type: Automatic
-        mssql_install_sql_server_management_studio: false
-        mssql_database_sysadmin_accounts:
-          - Administrator
+  # roles:
+  #   - role: trippsc2.mssql.install
+  #     vars:
+  #       mssql_install_database_engine: true
+  #       mssql_install_full_text: true
+  #       mssql_version: "{{ sql_server_version | default('2022') }}"
+  #       mssql_database_edition: "{{ sql_server_edition | default('Express') }}"
+  #       mssql_configure_firewall: false
+  #       mssql_install_agent: false
+  #       mssql_port: 51967
+  #       mssql_security_mode: mixed
+  #       mssql_product_key: "{{ pid }}"
+  #       mssql_sa_password: "{{ sql_sa_password }}"
+  #       mssql_setup_path: "{{ sql_install_temp_dir }}\\unzipped\\SQL2022"
+  #       mssql_update_enabled: false
+  #       mssql_update_from_microsoft_update: false
+  #       mssql_named_pipes_enabled: true
+  #       mssql_tcp_enabled: true
+  #       mssql_sql_server_service_startup_type: Automatic
+  #       mssql_install_sql_server_management_studio: false
+  #       mssql_database_sysadmin_accounts:
+  #         - Administrator
 
   post_tasks:
     - name: Stop SQL Server service
@@ -126,6 +124,11 @@
         name: MSSQLSERVER
         state: started
       failed_when: false
+
+    - name: Share SG ID globally
+      ansible.builtin.set_stats:
+        data:
+          sec_group_id: "{{ sec_group_id }}"
 
 - name: Open SQL Server Port
   hosts: localhost
