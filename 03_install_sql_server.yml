@@ -49,7 +49,8 @@
 
     - name: Set PID based on edition only if not already defined
       ansible.builtin.set_fact:
-        pid: "{{ {
+        pid: "{{
+            {
             'evaluation': '00000-00000-00000-00000-00000',
             'express': '11111-00000-00000-00000-00000',
             'developer': '22222-00000-00000-00000-00000'}[sql_server_edition] }}"
@@ -133,6 +134,7 @@
         filters:
           group-id: "{{ sg_id }}"
           vpc-id: "{{ vpc_id }}"
+          region: "{{ aws_region }}"
       register: sg_info
       delegate_to: localhost
 
