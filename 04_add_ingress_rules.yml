@@ -37,10 +37,10 @@
       ansible.builtin.debug:
         var: sg_info
 
-
     - name: Ensure security group for instance exists
       amazon.aws.ec2_security_group:
         name: "{{ sg_id }}"
         region: "{{ aws_region }}"
         rules: "{{ combined_inbound_rules }}"
+        description: "{{ sg_info.security_groups[0].description }}"
       delegate_to: localhost
