@@ -124,20 +124,6 @@
 - name: Open SQL Server Port
   hosts: localhost
   gather_facts: false
-
-  pre_tasks:
-    - name: Validate required variables are defined and not empty
-      ansible.builtin.fail:
-        msg: |
-          One or more required variables are missing or empty:
-          {% if vpc_id is not defined or vpc_id | length == 0 %}vpc_id{% endif %}
-          {% if sg_id is not defined or sg_id | length == 0 %}sg_id{% endif %}
-          {% if aws_region is not defined or aws_region | length == 0 %}aws_region{% endif %}
-      when: >
-        vpc_id is not defined or vpc_id | length == 0 or
-        provisioned_sg_id is not defined or provisioned_sg_id | length == 0 or
-        aws_region is not defined or aws_region | length == 0
-
   roles:
     - role: add_ingress_rules
       vars:
