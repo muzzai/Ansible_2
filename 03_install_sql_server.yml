@@ -2,24 +2,16 @@
 - name: Install SQL Server on Windows
   hosts: "{{ host }}"
   gather_facts: false
-
   vars:
     mssql_version: "{{ sql_server_version | default('2022') }}"
     mssql_database_edition: "{{ sql_server_edition | default('Express') }}"
-    sg_id: "{{ configured_sg_id if configured_sg_id is defined else hostvars['security_groups'][0]['group_id'] }}"
     sql_s3_bucket: "alloy-software-installers"
     sql_s3_object: "SQL{{ mssql_version }}.zip"
     sql_s3_url_expiry: 3600
     sql_install_temp_dir: C:\temp
     host: "{{ configured_host | default('aws_ec2') }}"
-    new_inbound_rule:
-      proto: tcp
-      ports: ["{{ sql_server_port }}"]
-      cidr_ip: "0.0.0.0/0"
-      rule_desc: "RDP Access"
 
   pre_tasks:
-
     - name: Get host connection details
       delegate_to: localhost
       block:
@@ -129,21 +121,15 @@
         state: started
       failed_when: false
 
-    - name: Get current security group info
-      amazon.aws.ec2_security_group_info:
-        filters:
-          group-id: "{{ sg_id }}"
-          vpc-id: "{{ vpc_id }}"
-          region: "{{ aws_region }}"
-      register: sg_info
-      delegate_to: localhost
-
-    - name: Combine existing inbound rules with new rule
-      ansible.builtin.set_fact:
-        combined_inbound_rules: "{{ (sg_info.security_groups[0].ip_permissions | default([])) | union(new_inbound_rule | default([])) }}"
-
-    - name: Ensure security group for instance exists
-      amazon.aws.ec2_security_group:
-        name: "{{ sg_id }}"
-        rules: "{{ combined_inbound_rules }}"
-      delegate_to: localhost
+- name: Open SQL Server Port
+  hosts: localhost
+  gather_facts: false
+  roles:
+    - role: add_ingress_rules
+      vars:
+        new_inbound_rules:
+          - proto: tcp
+            ports: ["{{ sql_server_port }}"]
+            cidr_ip: "0.0.0.0/0"
+            rule_desc: "SQL Server Access"
+        sg_id: "{{ configured_sg_id if configured_sg_id is defined else hostvars['security_groups'][0]['group_id'] }}"
