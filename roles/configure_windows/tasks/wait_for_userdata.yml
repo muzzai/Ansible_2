@@ -40,3 +40,9 @@
   retries: 10
   delay: 15
   when: configure_windows_provision_ec2_user_data_status_cmd is failed
+
+- name: Switch to powershell
+  ansible.builtin.set_fact:
+    ansible_connection: ssh
+    ansible_user: Administrator
+    ansible_shell_type: powershell
