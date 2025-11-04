@@ -17,11 +17,3 @@
 
   roles:
     - role: configure_windows
-
-  post_tasks:
-    - name: Expose EC2 IP to workflow
-      ansible.builtin.set_stats:
-        data:
-          configured_host: "{{ provisioned_host }}"
-          configured_sg_id: "{{ sg_id }}"
-      when: "provisioned_host is defined"

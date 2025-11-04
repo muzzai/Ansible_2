@@ -10,3 +10,5 @@
         data:
           provisioned_host: "{{ ec2_name_tag }}"
           provisioned_sg_id: "{{ security_group_result.group_id  }}"
+          aws_region: "{{ aws_region }}"
+          vpc_id: "{{ aws_vpc_id }}"

@@ -9,7 +9,7 @@
     sql_s3_object: "SQL{{ mssql_version }}.zip"
     sql_s3_url_expiry: 3600
     sql_install_temp_dir: C:\temp
-    host: "{{ configured_host | default('aws_ec2') }}"
+    host: "{{ provisioned_host | default('aws_ec2') }}"
 
   pre_tasks:
     - name: Get host connection details
@@ -135,7 +135,7 @@
           {% if aws_region is not defined or aws_region | length == 0 %}aws_region{% endif %}
       when: >
         vpc_id is not defined or vpc_id | length == 0 or
-        sg_id is not defined or sg_id | length == 0 or
+        provisioned_sg_id is not defined or provisioned_sg_id | length == 0 or
         aws_region is not defined or aws_region | length == 0
 
   roles:
