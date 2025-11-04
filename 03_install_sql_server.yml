@@ -10,7 +10,7 @@
     sql_s3_url_expiry: 3600
     sql_install_temp_dir: C:\temp
     host: "{{ provisioned_host | default('aws_ec2') }}"
-    sg_id: "{{ configured_sg_id if configured_sg_id is defined else hostvars['security_groups'][0]['group_id'] }}"
+    sec_group_id: "{{ configured_sg_id if configured_sg_id is defined else hostvars['security_groups'][0]['group_id'] }}"
   pre_tasks:
     - name: Get host connection details
       delegate_to: localhost
@@ -133,4 +133,4 @@
             ports: ["{{ sql_server_port }}"]
             cidr_ip: "0.0.0.0/0"
             rule_desc: "SQL Server Access"
-        sg_id: "{{ sg_id }}"
+        sg_id: "{{ sec_group_id }}"
