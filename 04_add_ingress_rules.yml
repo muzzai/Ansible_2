@@ -33,6 +33,11 @@
       ansible.builtin.set_fact:
         combined_inbound_rules: "{{ sg_info.security_groups[0].ip_permissions + new_inbound_rules }}"
 
+    - name: Debug sg info
+      ansible.builtin.debug:
+        var: sg_info
+
+
     - name: Ensure security group for instance exists
       amazon.aws.ec2_security_group:
         name: "{{ sg_id }}"
