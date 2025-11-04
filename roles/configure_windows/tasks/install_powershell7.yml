@@ -1,7 +1,9 @@
 - name: Install PowerShell 7 and update SSH shell
   block:
-    - name: Update host variables to use PowerShell after user data completes
+    - name: Switch to powershell
       ansible.builtin.set_fact:
+        ansible_connection: ssh
+        ansible_user: Administrator
         ansible_shell_type: powershell
 
     - name: Create Temp directory if it does not exist
