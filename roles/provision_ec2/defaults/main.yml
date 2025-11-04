@@ -71,7 +71,7 @@ ec2_wait_timeout: 600
 ec2_instance_wait_retries: 20
 ec2_instance_wait_delay: 15
 
-# Security group rules (SSH, RDP, SQL Server access)
+
 security_group_rules:
   - proto: tcp
     ports: [22]
