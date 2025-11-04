@@ -47,5 +47,5 @@
         name: "{{ sg_info.security_groups[0].group_name }}"
         region: "{{ aws_region }}"
         rules: "{{ new_inbound_rules }}"
-        # description: "{{ sg_info.security_groups[0].description }}"
+        description: "{{ sg_info.security_groups[0].description }}"
       delegate_to: localhost
