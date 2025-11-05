@@ -2,7 +2,15 @@
   hosts: aws_ec2
   vars:
     sql_server_port: 51967
+
   tasks:
+    - name: Get host connection details
+      delegate_to: localhost
+      block:
+        - name: Build connection details
+          ansible.builtin.include_role:
+            name: build_connection_details
+
     - name: Stop SQL Server service
       ansible.windows.win_service:
         name: MSSQLSERVER
