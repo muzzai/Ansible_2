@@ -11,6 +11,10 @@
           ansible.builtin.include_role:
             name: build_connection_details
 
+    - name: Set shell type to pwsh.exe
+      ansible.builtin.set_fact:
+        ansible_shell_type: powershell
+
     - name: Stop SQL Server service
       ansible.windows.win_service:
         name: MSSQLSERVER
