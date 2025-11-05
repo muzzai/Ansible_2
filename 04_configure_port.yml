@@ -1,0 +1,32 @@
+- name: Configure port
+  hosts: aws_ec2
+  vars:
+    sql_server_port: 51967
+  tasks:
+    - name: Stop SQL Server service
+      ansible.windows.win_service:
+        name: MSSQLSERVER
+        state: stopped
+      failed_when: false
+
+    - name: Get SQL Server instance name
+      ansible.windows.win_shell: |
+        $regPath = "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server"
+        Get-ChildItem $regPath |
+        Where-Object {$_.PSChildName -like "MSSQL*.*"} |
+        Select-Object -ExpandProperty PSChildName
+      register: sql_instance
+
+    - name: Change SQL Server port in registry
+      ansible.windows.win_regedit:
+        path: "HKLM:\\SOFTWARE\\Microsoft\\Microsoft SQL Server\\{{ sql_instance }}\\MSSQLServer\\SuperSocketNetLib\\Tcp\\IPAll"
+        name: TcpPort
+        data: "{{ sql_server_port }}"
+        type: string
+        state: present
+
+    - name: Start SQL Server service
+      ansible.windows.win_service:
+        name: MSSQLSERVER
+        state: started
+      failed_when: false
