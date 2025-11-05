@@ -3,7 +3,11 @@
   vars:
     sql_server_port: 51967
 
-  tasks:
+  pre_tasks:
+    - name: Debug 1
+      ansible.builtin.debug:
+        var: ansible_facts
+
     - name: Get host connection details
       delegate_to: localhost
       block:
@@ -15,6 +19,7 @@
       ansible.builtin.set_fact:
         ansible_shell_type: powershell
 
+  tasks:
     - name: Stop SQL Server service
       ansible.windows.win_service:
         name: MSSQLSERVER
