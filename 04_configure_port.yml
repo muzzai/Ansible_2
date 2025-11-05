@@ -35,6 +35,10 @@
         Select-Object -ExpandProperty PSChildName
       register: sql_instance
 
+    - name: Debug sql_instance
+      ansible.builtin.debug:
+        var: sql_instance
+
     - name: Set registry path variable
       ansible.builtin.set_fact:
         reg_path_to_port: "HKLM:\\SOFTWARE\\Microsoft\\Microsoft SQL Server\\{{ sql_instance }}\\MSSQLServer\\SuperSocketNetLib\\Tcp\\IPAll"
