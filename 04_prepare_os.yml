@@ -1,0 +1,6 @@
+---
+- name: Install windows features
+  hosts: "{{ host }}"
+  gather_facts: false
+  vars:
+    host: "{{ provisioned_host | default('aws_ec2') }}"
