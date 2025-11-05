@@ -1,5 +1,6 @@
 - name: Configure port
   hosts: aws_ec2
+  gather_facts: false
   vars:
     sql_server_port: 51967
 
