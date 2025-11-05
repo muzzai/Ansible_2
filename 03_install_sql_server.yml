@@ -52,6 +52,10 @@
             'developer': '22222-00000-00000-00000-00000'}[sql_server_edition] }}"
       when: pid is not defined or pid | trim == ""
 
+    - name: Set shell type to pwsh.exe
+      ansible.builtin.set_fact:
+        ansible_shell_type: powershell
+
     - name: Download SQL Server bootstrapper
       ansible.windows.win_get_url:
         url: "{{ sql_installer_url }}"
