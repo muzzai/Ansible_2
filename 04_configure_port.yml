@@ -37,7 +37,7 @@
 
     - name: Extract Name
       ansible.builtin.set_fact:
-        sql_isntance_name: sql_instance.stdout_lines[0]
+        sql_isntance_name: "{{ sql_instance.stdout_lines[0] }}"
 
     - name: Set registry path variable
       ansible.builtin.set_fact:
