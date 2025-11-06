@@ -40,4 +40,4 @@
             name: build_connection_details
 
   roles:
-    - prepare_disk
+    - role: prepare_disk
