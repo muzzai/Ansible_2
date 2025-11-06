@@ -39,6 +39,6 @@
           ansible.builtin.include_role:
             name: build_connection_details
 
-        - name: Prepare Windows server disk
-          ansible.builtin.include_role:
-            name: prepare_disk
+    - name: Prepare Windows server disk
+      ansible.builtin.include_role:
+        name: prepare_disk
