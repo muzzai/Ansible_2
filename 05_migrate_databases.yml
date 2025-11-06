@@ -1,3 +1,4 @@
+---
 - name: Migrate databases
   hosts: localhost
   tasks:
@@ -29,7 +30,7 @@
 
 - name: Create backups
   gather_facts: false
-  hosts: source
+  hosts: "{{ source | default('skip') }}"
   tasks:
     - name: Get host connection details
       delegate_to: localhost
