@@ -31,7 +31,7 @@
 - name: Create backups
   gather_facts: false
   hosts: "{{ source | default('skip') }}"
-  tasks:
+  pre_tasks:
     - name: Get host connection details
       delegate_to: localhost
       block:
@@ -39,6 +39,5 @@
           ansible.builtin.include_role:
             name: build_connection_details
 
-    - name: Prepare Windows server disk
-      ansible.builtin.include_role:
-        name: prepare_disk
+  roles:
+    - prepare_disk
