@@ -1,9 +1,5 @@
 - name: Migrate databases
   hosts: localhost
-  vars:
-    source: ""
-    dest: ""
-    volume_size: 15
   tasks:
     - name: Fail if availability zones are different
       ansible.builtin.fail:
