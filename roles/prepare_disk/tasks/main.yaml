@@ -1,0 +1,20 @@
+---
+- name: Initialize the disk
+  community.windows.win_initialize_disk:
+    disk_number: "{{ disk_number }}"
+    style: "{{ disk_style }}"
+  register: init_disk_result
+
+- name: Create a partition on the disk
+  community.windows.win_partition:
+    disk_number: "{{ disk_number }}"
+    size: "{{ partition_size }}"
+    drive_letter: "{{ drive_letter }}"
+  register: partition_result
+
+- name: Format the partition
+  community.windows.win_volume:
+    drive_letter: "{{ drive_letter }}"
+    file_system: "{{ fs_type }}"
+    fs_label: "{{ fs_label }}"
+    force: true

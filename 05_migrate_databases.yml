@@ -24,3 +24,20 @@
         state: present
         volume_size: "{{ volume_size }}"
         volume_type: gp2
+        tags:
+          Name: temp_volume
+
+- name: Create backups
+  gather_facts: false
+  hosts: source
+  tasks:
+    - name: Get host connection details
+      delegate_to: localhost
+      block:
+        - name: Build connection details
+          ansible.builtin.include_role:
+            name: build_connection_details
+
+        - name: Prepare Windows server disk
+          ansible.builtin.include_role:
+            name: prepare_disk
