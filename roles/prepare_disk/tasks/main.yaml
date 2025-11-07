@@ -31,7 +31,7 @@
 - name: Create a partition on the disk
   community.windows.win_partition:
     disk_number: "{{ disk_number }}"
-    size: "{{ partition_size }}"
+    partition_size: "{{ partition_size }}"
     drive_letter: "{{ drive_letter }}"
   register: partition_result
 
