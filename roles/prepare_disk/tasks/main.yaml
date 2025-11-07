@@ -8,6 +8,7 @@
 - name: Wait for new disk to appear
   ansible.builtin.wait_for:
     timeout: 30
+  delegate_to: localhost
 
 - name: Get updated disk facts
   community.windows.win_disk_facts:
