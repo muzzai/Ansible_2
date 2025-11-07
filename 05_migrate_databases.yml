@@ -31,6 +31,7 @@
 - name: Create backups
   gather_facts: false
   hosts: "{{ source | default('skip') }}"
+  become: false
   pre_tasks:
     - name: Get host connection details
       delegate_to: localhost
