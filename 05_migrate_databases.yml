@@ -6,14 +6,15 @@
     - name: Show ansible version
       ansible.builtin.command: ansible --version
       register: ansible_version
+
     - ansible.builtin.debug:
-        var: ansible_version.stdout_lines
+        var: ansible_version
 
     - name: Show python version
       ansible.builtin.command: python --version
       register: python_version
     - ansible.builtin.debug:
-        var: python_version.stdout
+        var: python_version
 
 - name: Migrate databases
   hosts: localhost
