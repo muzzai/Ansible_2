@@ -1,32 +1,32 @@
-# ---
-# - name: Migrate databases
-#   hosts: localhost
-#   tasks:
-#     - name: Fail if availability zones are different
-#       ansible.builtin.fail:
-#         msg: AZs are different
-#       when: "hostvars[source]['placement']['availability_zone'] != hostvars[dest]['placement']['availability_zone']"
+---
+- name: Migrate databases
+  hosts: localhost
+  tasks:
+    - name: Fail if availability zones are different
+      ansible.builtin.fail:
+        msg: AZs are different
+      when: "hostvars[source]['placement']['availability_zone'] != hostvars[dest]['placement']['availability_zone']"
 
-#     - name: Share AWS region
-#       ansible.builtin.set_fact:
-#         aws_region: "{{ hostvars[source]['placement']['region'] }}"
+    - name: Share AWS region
+      ansible.builtin.set_fact:
+        aws_region: "{{ hostvars[source]['placement']['region'] }}"
 
-#     - name: Set device name
-#       ansible.builtin.set_fact:
-#         new_device_name: >-
-#           {{ hostvars[source]['block_device_mappings'][0]['device_name'][:-2] ~ 'g' }}
+    - name: Set device name
+      ansible.builtin.set_fact:
+        new_device_name: >-
+          {{ hostvars[source]['block_device_mappings'][0]['device_name'][:-2] ~ 'g' }}
 
-#     - name: Attach new volume to source
-#       amazon.aws.ec2_vol:
-#         device_name: "{{ new_device_name }}"
-#         instance: "{{ hostvars[source]['instance_id'] }}"
-#         region: "{{ aws_region }}"
-#         state: present
-#         volume_size: "{{ volume_size }}"
-#         volume_type: gp2
+    - name: Attach new volume to source
+      amazon.aws.ec2_vol:
+        device_name: "{{ new_device_name }}"
+        instance: "{{ hostvars[source]['instance_id'] }}"
+        region: "{{ aws_region }}"
+        state: present
+        volume_size: "{{ volume_size }}"
+        volume_type: gp2
 
-#         tags:
-#           Name: temp_volume
+        tags:
+          Name: temp_volume
 
 - name: Create backups
   gather_facts: false
