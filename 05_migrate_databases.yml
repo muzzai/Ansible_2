@@ -1,4 +1,20 @@
 ---
+- name: Check Ansible and Python version inside EE
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Show ansible version
+      ansible.builtin.command: ansible --version
+      register: ansible_version
+    - ansible.builtin.debug:
+        var: ansible_version.stdout_lines
+
+    - name: Show python version
+      ansible.builtin.command: python --version
+      register: python_version
+    - ansible.builtin.debug:
+        var: python_version.stdout
+
 - name: Migrate databases
   hosts: localhost
   tasks:
