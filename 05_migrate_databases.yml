@@ -1,37 +1,23 @@
----
-- name: Migrate databases
+- name: Create Bacups on a Volume
+  gather_facts: false
   hosts: localhost
   tasks:
-    - name: Fail if availability zones are different
-      ansible.builtin.fail:
-        msg: AZs are different
-      when: "hostvars[source]['placement']['availability_zone'] != hostvars[dest]['placement']['availability_zone']"
-
-    - name: Share AWS region
-      ansible.builtin.set_fact:
-        aws_region: "{{ hostvars[source]['placement']['region'] }}"
-
-    - name: Set device name
-      ansible.builtin.set_fact:
-        new_device_name: >-
-          {{ hostvars[source]['block_device_mappings'][0]['device_name'][:-2] ~ 'g' }}
-
     - name: Attach new volume to source
       amazon.aws.ec2_vol:
-        device_name: "{{ new_device_name }}"
+        device_name: /dev/sdg
         instance: "{{ hostvars[source]['instance_id'] }}"
-        region: "{{ aws_region }}"
+        region: "{{ az_group[:-1] }}"
         state: present
         volume_size: "{{ volume_size }}"
         volume_type: gp2
-
         tags:
           Name: temp_volume
+      register: volume_for_backups
 
-- name: Create backups
-  gather_facts: false
-  hosts: "{{ source | default('skip') }}"
-  pre_tasks:
+    - name: Debug volume
+      ansible.builtin.debug:
+        var: volume_for_backups
+
     - name: Get host connection details
       delegate_to: localhost
       block:
@@ -39,22 +25,26 @@
           ansible.builtin.include_role:
             name: build_connection_details
 
-    - name: Set tmp path
-      ansible.builtin.set_fact:
-        ansible_remote_tmp: C:\Temp
-        ansible_shell_type: powershell
-
     - name: Reboot to add a new disk
       ansible.windows.win_reboot:
 
-  roles:
-    - role: prepare_disk
 
-  post_tasks:
+- name: Create backups
+  hosts: "{{ az_group }}:&{{ source }}"
+  vars:
+    az_group: "{{ availability_zone_group | default('skip') }}"
+    source: "{{ source | default('skip') }}"
+
+  tasks:
+    - name: Add Disk
+      ansible.builtin.include_role:
+        name: prepare_disk
+
     - name: Create Migration folder
       ansible.windows.win_template:
         src: templates/Backup-Databases.ps1.j2
         dest: C:\Migration-script\Backup-Databases.ps1
+        force: true
 
     - name: Execute SQL backup script
       ansible.windows.win_shell: |
