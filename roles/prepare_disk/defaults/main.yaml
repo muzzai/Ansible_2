@@ -3,5 +3,5 @@ disk_number: 1        # second disk (0 = system disk)
 drive_letter: D       # drive letter to assign
 fs_label: Data        # volume label
 fs_type: NTFS         # filesystem type
-partition_size: 100%  # use entire disk
+partition_size: -1  # use entire disk
 disk_style: gpt       # partition style
