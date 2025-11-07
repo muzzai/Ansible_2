@@ -52,5 +52,6 @@
     - name: Set tmp path
       ansible.builtin.set_fact:
         ansible_remote_tmp: C:\Temp
+        ansible_shell_type: powershell
   roles:
     - role: prepare_disk
