@@ -40,13 +40,14 @@
           ansible.builtin.include_role:
             name: build_connection_details
 
-    - name: Reboot to add a new disk
-      ansible.windows.win_reboot:
-        test_command:
-
     - name: Set tmp path
       ansible.builtin.set_fact:
         ansible_remote_tmp: C:\Temp
         ansible_shell_type: powershell
+
+    - name: Reboot to add a new disk
+      ansible.windows.win_reboot:
+        test_command:
+
   roles:
     - role: prepare_disk
