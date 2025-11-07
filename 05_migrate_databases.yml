@@ -17,16 +17,16 @@
 #           {{ hostvars[source]['block_device_mappings'][0]['device_name'][:-1]
 #             ~ (hostvars[source]['block_device_mappings'][0]['device_name'][-1:] | int + 1) }}
 
-#     - name: Attach new volume to source
-#       amazon.aws.ec2_vol:
-#         device_name: "{{ new_device_name }}"
-#         instance: "{{ hostvars[source]['instance_id'] }}"
-#         region: "{{ aws_region }}"
-#         state: present
-#         volume_size: "{{ volume_size }}"
-#         volume_type: gp2
-#         tags:
-#           Name: temp_volume
+    # - name: Attach new volume to source
+    #   amazon.aws.ec2_vol:
+    #     device_name: "{{ new_device_name }}"
+    #     instance: "{{ hostvars[source]['instance_id'] }}"
+    #     region: "{{ aws_region }}"
+    #     state: present
+    #     volume_size: "{{ volume_size }}"
+    #     volume_type: gp2
+    #     tags:
+    #       Name: temp_volume
 
 - name: Create backups
   gather_facts: false

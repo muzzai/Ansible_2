@@ -1,6 +1,21 @@
 ---
-- name: Get disk facts
+- name: Rescan disks on Windows
+  ansible.windows.win_shell: |
+    Get-Disk | Out-Null
+    Update-HostStorageCache
+  ignore_errors: true
+
+- name: Wait for new disk to appear
+  ansible.builtin.wait_for:
+    timeout: 30
+
+- name: Get updated disk facts
   community.windows.win_disk_facts:
+
+
+- name: Debug disks
+  ansible.builtin.debug:
+    var: ansible_facts.disks
 
 - name: Output first disk size
   ansible.builtin.debug:
