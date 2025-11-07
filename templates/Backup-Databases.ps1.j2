@@ -1,0 +1,36 @@
+$ConnectionString = "Server={{ ServerInstance }};User ID={{ SaUserName }};Password={{ SaPassword }};Encrypt=True;TrustServerCertificate=True;Database=master"
+$Engine = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query "select serverproperty('EngineEdition') as [Edition]"
+Write-Output "SQL server edition: $($Engine.Edition)"
+
+if ($Engine.Edition -ne 4) {
+    $CompressionOption = "On"
+}
+else {
+    $CompressionOption = "Default"
+}
+Write-Output "Compression Option: $CompressionOption"
+
+$SecurePassword = ConvertTo-SecureString {{ SaPassword | quote }} -AsPlainText -Force
+$Credentials = New-Object System.Management.Automation.PSCredential ({{ SaUserName | quote }}, $SecurePassword)
+
+$TempFolder = {{ TempFolder | quote }}
+Remove-Item $TempFolder -Recurse -Force -ErrorAction SilentlyContinue
+New-Item -Path $TempFolder -ItemType Directory | Out-Null
+
+function BackupDatabase($Database) {
+    Write-Output "Set single user $Database"
+    Invoke-Sqlcmd  -ConnectionString $ConnectionString -Query "ALTER DATABASE [$Database] SET ONLINE" # Debug
+    Start-Process pwsh -ArgumentList "-Command `"Invoke-Sqlcmd -ConnectionString $ConnectionString -Query `"ALTER DATABASE [$Database] SET SINGLE_USER WITH ROLLBACK IMMEDIATE`"" -Wait
+    Write-Output "Making backup $Database"
+    Backup-SqlDatabase -ServerInstance {{ ServerInstance | quote }} -Database $Database -BackupFile "$TempFolder\Database.bak" -Credential $Credentials -CompressionOption $CompressionOption
+    Move-Item -Path "$TempFolder\Database.bak" -Destination "{{ VolumeFolder }}\$($Database).bak"
+    Write-Output "Set offline $Database"
+    Invoke-Sqlcmd  -ConnectionString $ConnectionString -Query "ALTER DATABASE [$Database] SET OFFLINE WITH ROLLBACK IMMEDIATE"
+}
+
+BackupDatabase {{ AN_Database | quote }}
+{% if not ADC_NetworkInventory %}
+BackupDatabase {{ AD_Database | quote }}
+{% endif %}
+
+Remove-Item $TempFolder -Recurse -Force
