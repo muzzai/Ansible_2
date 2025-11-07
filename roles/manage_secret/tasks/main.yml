@@ -12,7 +12,10 @@
       manage_secret_payload must be defined when action is write
       {% elif manage_secret_action == 'write' and manage_secret_payload | length == 0 %}
       manage_secret_payload dictionary must not be empty when action is write
+      {% else %}
+      Validation failed
       {% endif %}
+
 
 - name: Create a temporary file for the CA certificate
   ansible.builtin.tempfile:
