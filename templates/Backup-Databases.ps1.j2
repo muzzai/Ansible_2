@@ -5,7 +5,7 @@ Write-Output "################################################################"
 
 $ServerInstance = "localhost,51967"
 
-Invoke-Command -ArgumentList ($ServerInstance, "{{ AN_Database }}", "{{ AD_Database }}", "{{ SaUserName }}", "{{ SaPassword }}", {{ ADC_NetworkInventory | lower }}, "{{ VolumeFolder }}") -Session $Session {
+Invoke-Command -ArgumentList ($ServerInstance, "{{ AN_Database }}", "{{ AD_Database }}", "{{ SaUserName }}", "{{ SaPassword }}", {{ ADC_NetworkInventory | lower }}, "{{ VolumeFolder }}") {
     param ($ServerInstance, $AN_Database, $AD_Database, $SaUserName, $SaPassword, $ADC_NetworkInventory, $VolumeFolder)
 
     Write-Output "Detecting SQL server edition"
