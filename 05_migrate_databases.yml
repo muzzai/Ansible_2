@@ -1,3 +1,4 @@
+---
 - name: Create Bacups on a Volume
   gather_facts: false
   hosts: localhost
@@ -25,10 +26,6 @@
           ansible.builtin.include_role:
             name: build_connection_details
 
-    - name: Reboot to add a new disk
-      ansible.windows.win_reboot:
-
-
 - name: Create backups
   hosts: "{{ az_group }}:&{{ source }}"
   vars:
@@ -36,6 +33,9 @@
     source: "{{ source | default('skip') }}"
 
   tasks:
+    - name: Reboot to add a new disk
+      ansible.windows.win_reboot:
+
     - name: Add Disk
       ansible.builtin.include_role:
         name: prepare_disk
