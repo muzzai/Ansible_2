@@ -33,12 +33,12 @@
             name: build_connection_details
       delegate_to: localhost
 
-    - name: Reboot to add a new disk
-      ansible.windows.win_reboot:
+    # - name: Reboot to add a new disk
+    #   ansible.windows.win_reboot:
 
-    - name: Add Disk
-      ansible.builtin.include_role:
-        name: prepare_disk
+    # - name: Add Disk
+    #   ansible.builtin.include_role:
+    #     name: prepare_disk
 
     - name: Create Migration folder
       ansible.windows.win_template:
