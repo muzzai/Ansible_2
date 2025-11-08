@@ -34,7 +34,7 @@ Invoke-Command -ArgumentList ($ServerInstance, "{{ AN_Database }}", "{{ AD_Datab
         Start-Process pwsh -ArgumentList "-Command `"Invoke-Sqlcmd -ConnectionString $ConnectionString -Query `"ALTER DATABASE [$Database] SET SINGLE_USER WITH ROLLBACK IMMEDIATE`"" -Wait
         Write-Output "Making backup $Database"
         Backup-SqlDatabase -ServerInstance $ServerInstance -Database $Database -BackupFile "$TempFolder\Database.bak" -Credential $Credentials -CompressionOption $CompressionOption
-        Move-Item -Path "$TempFolder\Database.bak" -Destination "$VolumeFolder\$($Database).bak"
+        # Move-Item -Path "$TempFolder\Database.bak" -Destination "$VolumeFolder\$($Database).bak"
         Write-Output "Set offline $Database"
         Invoke-Sqlcmd -ConnectionString $ConnectionString -Query "ALTER DATABASE [$Database] SET OFFLINE WITH ROLLBACK IMMEDIATE"
     }
