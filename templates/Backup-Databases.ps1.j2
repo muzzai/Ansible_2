@@ -3,7 +3,7 @@ Write-Output "################################################################"
 Write-Output "# Backing up databases from the source server                 #"
 Write-Output "################################################################"
 
-$ServerInstance = "{{ InstanceAddress }},51967"
+$ServerInstance = "localhost,51967"
 
 Invoke-Command -ArgumentList ($ServerInstance, "{{ AN_Database }}", "{{ AD_Database }}", "{{ SaUserName }}", "{{ SaPassword }}", {{ ADC_NetworkInventory | lower }}, "{{ VolumeFolder }}") -Session $Session {
     param ($ServerInstance, $AN_Database, $AD_Database, $SaUserName, $SaPassword, $ADC_NetworkInventory, $VolumeFolder)
