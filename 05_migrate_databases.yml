@@ -19,17 +19,20 @@
       ansible.builtin.debug:
         var: volume_for_backups
 
-    - name: Build connection details
-      ansible.builtin.include_role:
-        name: build_connection_details
 
 - name: Create backups
   hosts: "{{ az_group }}:&{{ source }}"
   vars:
     az_group: "{{ availability_zone_group | default('skip') }}"
     source: "{{ source | default('skip') }}"
-
   tasks:
+    - name: Build connection details
+      block:
+        - name: Build connection details
+          ansible.builtin.include_role:
+            name: build_connection_details
+      delegate_to: localhost
+
     - name: Reboot to add a new disk
       ansible.windows.win_reboot:
 
@@ -43,8 +46,8 @@
         dest: C:\Migration-script\Backup-Databases.ps1
         force: true
 
-    # - name: Execute SQL backup script
-    #   ansible.windows.win_shell: |
-    #     powershell.exe -ExecutionPolicy Bypass -File C:\Migration\backup_sql.ps1
-    #   args:
-    #     executable: powershell.exe
+    - name: Execute SQL backup script
+      ansible.windows.win_shell: |
+        powershell.exe -ExecutionPolicy Bypass -File C:\Migration\backup_sql.ps1
+      args:
+        executable: powershell.exe
