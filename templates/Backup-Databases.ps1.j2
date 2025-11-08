@@ -18,14 +18,21 @@ Remove-Item $TempFolder -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -Path $TempFolder -ItemType Directory | Out-Null
 
 function BackupDatabase($Database) {
-    Write-Output "Set single user $Database"
-    Invoke-Sqlcmd -ConnectionString $ConnectionString -Query "ALTER DATABASE [$Database] SET ONLINE" # Debug
-    Invoke-Sqlcmd -ConnectionString $ConnectionString -Query "ALTER DATABASE [$Database] SET SINGLE_USER WITH ROLLBACK IMMEDIATE"
-    Write-Output "Making backup $Database"
-    Backup-SqlDatabase -ServerInstance {{ ServerInstance | quote }} -Database $Database -BackupFile "$TempFolder\Database.bak" -Credential $Credentials -CompressionOption $CompressionOption
-    Move-Item -Path "$TempFolder\Database.bak" -Destination "{{ VolumeFolder }}\$($Database).bak"
-    Write-Output "Set offline $Database"
-    Invoke-Sqlcmd  -ConnectionString $ConnectionString -Query "ALTER DATABASE [$Database] SET OFFLINE WITH ROLLBACK IMMEDIATE"
+    $BackupTemp = Join-Path $TempFolder "$Database.bak"
+    $BackupFinal = "D:\Backups\$Database.bak"
+
+    $query = @"
+ALTER DATABASE [$Database] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+BACKUP DATABASE [$Database] TO DISK = N'$BackupTemp' WITH COMPRESSION, INIT;
+ALTER DATABASE [$Database] SET MULTI_USER;
+"@
+
+    # Backup and move
+    Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $query
+    Move-Item -Path $BackupTemp -Destination $BackupFinal -Force
+
+    # Take DB offline
+    Invoke-Sqlcmd -ConnectionString $ConnectionString -Query "ALTER DATABASE [$Database] SET OFFLINE WITH ROLLBACK IMMEDIATE"
 }
 
 BackupDatabase {{ AN_Database | quote }}
