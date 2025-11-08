@@ -33,10 +33,6 @@
             name: build_connection_details
       delegate_to: localhost
 
-    - name: Debug hostvars
-      ansible.builtin.debug:
-        var: hostvars[inventory_hostname]
-
     - name: Reboot to add a new disk
       ansible.windows.win_reboot:
 
