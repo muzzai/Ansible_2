@@ -21,18 +21,28 @@ function BackupDatabase($Database) {
     $BackupTemp = Join-Path $TempFolder "$Database.bak"
     $BackupFinal = "D:\Backups\$Database.bak"
 
+    # Build SQL query for backup only (single session)
     $query = @"
 ALTER DATABASE [$Database] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 BACKUP DATABASE [$Database] TO DISK = N'$BackupTemp' WITH COMPRESSION, INIT;
 ALTER DATABASE [$Database] SET MULTI_USER;
 "@
 
-    # Backup and move
+    Write-Output "Starting backup of $Database..."
     Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $query
-    Move-Item -Path $BackupTemp -Destination $BackupFinal -Force
 
-    # Take DB offline
+    # Wait until backup file exists
+    while (-not (Test-Path $BackupTemp)) {
+        Start-Sleep -Seconds 1
+    }
+
+    # Move backup to final destination
+    Move-Item -Path $BackupTemp -Destination $BackupFinal -Force
+    Write-Output "Backup moved to $BackupFinal"
+
+    # Optional: set database offline
     Invoke-Sqlcmd -ConnectionString $ConnectionString -Query "ALTER DATABASE [$Database] SET OFFLINE WITH ROLLBACK IMMEDIATE"
+    Write-Output "$Database is now offline"
 }
 
 BackupDatabase {{ AN_Database | quote }}
