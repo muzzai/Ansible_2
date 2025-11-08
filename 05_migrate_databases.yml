@@ -19,8 +19,8 @@
       ansible.builtin.debug:
         var: volume_for_backups
 
-
 - name: Create backups
+  gather_facts: false
   hosts: "{{ az_group }}:&{{ source }}"
   vars:
     az_group: "{{ availability_zone_group | default('skip') }}"
