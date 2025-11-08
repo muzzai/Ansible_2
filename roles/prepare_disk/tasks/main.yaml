@@ -16,5 +16,4 @@
   community.windows.win_format:
     drive_letter: "{{ drive_letter }}"
     file_system: "{{ fs_type }}"
-    label: "{{ fs_label }}"
     force: true
