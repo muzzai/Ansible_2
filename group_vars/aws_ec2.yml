@@ -1,4 +1,5 @@
 ansible_user: Administrator
 ansible_connection: ssh
 ansible_shell_type: powershell
-ssh_transfer_method: piped
+ansible_ssh_transfer_method: scp
+ansible_scp_extra_args: "-O"
