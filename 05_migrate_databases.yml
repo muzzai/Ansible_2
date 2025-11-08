@@ -41,6 +41,11 @@
     #     name: prepare_disk
 
     - name: Create Migration folder
+      ansible.windows.win_file:
+        path: C:\Migration-script
+        state: directory
+
+    - name: Generate script
       ansible.windows.win_template:
         src: templates/Backup-Databases.ps1.j2
         dest: C:\Migration-script\Backup-Databases.ps1
