@@ -19,8 +19,8 @@ New-Item -Path $TempFolder -ItemType Directory | Out-Null
 
 function BackupDatabase($Database) {
     Write-Output "Set single user $Database"
-    Invoke-Sqlcmd  -ConnectionString $ConnectionString -Query "ALTER DATABASE [$Database] SET ONLINE" # Debug
-    Start-Process pwsh -ArgumentList "-Command `"Invoke-Sqlcmd -ConnectionString $ConnectionString -Query `"ALTER DATABASE [$Database] SET SINGLE_USER WITH ROLLBACK IMMEDIATE`"" -Wait
+    Invoke-Sqlcmd -ConnectionString $ConnectionString -Query "ALTER DATABASE [$Database] SET ONLINE" # Debug
+    Invoke-Sqlcmd -ConnectionString $ConnectionString -Query "ALTER DATABASE [$Database] SET SINGLE_USER WITH ROLLBACK IMMEDIATE"
     Write-Output "Making backup $Database"
     Backup-SqlDatabase -ServerInstance {{ ServerInstance | quote }} -Database $Database -BackupFile "$TempFolder\Database.bak" -Credential $Credentials -CompressionOption $CompressionOption
     Move-Item -Path "$TempFolder\Database.bak" -Destination "{{ VolumeFolder }}\$($Database).bak"

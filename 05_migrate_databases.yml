@@ -40,9 +40,14 @@
     #   ansible.builtin.include_role:
     #     name: prepare_disk
 
-    - name: Create Migration folder
+    - name: Create Migration-script folder
       ansible.windows.win_file:
         path: C:\Migration-script
+        state: directory
+
+    - name: Create Migration folder
+      ansible.windows.win_file:
+        path: C:\Migration
         state: directory
 
     - name: Generate script
