@@ -10,8 +10,8 @@ else {
 }
 Write-Output "Compression Option: $CompressionOption"
 
-$SecurePassword = ConvertTo-SecureString {{ SaPassword | quote }} -AsPlainText -Force
-$Credentials = New-Object System.Management.Automation.PSCredential ({{ SaUserName | quote }}, $SecurePassword)
+$SecurePassword = ConvertTo-SecureString '{{ SaPassword }}' -AsPlainText -Force
+$Credentials = New-Object System.Management.Automation.PSCredential ('{{ SaUserName }}', $SecurePassword)
 
 $TempFolder = {{ TempFolder | quote }}
 Remove-Item $TempFolder -Recurse -Force -ErrorAction SilentlyContinue
