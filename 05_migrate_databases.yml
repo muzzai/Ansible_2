@@ -86,7 +86,6 @@
       args:
         executable: powershell.exe
 
-
 - name: Restore backups
   gather_facts: false
   hosts: "{{ az_group }}:&{{ dest }}"
@@ -94,7 +93,6 @@
     az_group: "{{ availability_zone_group | default('skip') }}"
     source: "{{ dest | default('skip') }}"
   tasks:
-
     - name: Build connection details
       block:
         - name: Build connection details
