@@ -87,12 +87,12 @@
         executable: powershell.exe
 
 
-- name: Create backups
+- name: Restore backups
   gather_facts: false
-  hosts: "{{ az_group }}:&{{ source }}"
+  hosts: "{{ az_group }}:&{{ dest }}"
   vars:
     az_group: "{{ availability_zone_group | default('skip') }}"
-    source: "{{ source | default('skip') }}"
+    source: "{{ dest | default('skip') }}"
   tasks:
 
     - name: Build connection details
@@ -104,12 +104,13 @@
 
     - name: Attach new volume to dest
       amazon.aws.ec2_vol:
-        device_name: "{{ new_volume_device_name }}"
-        id: "{{ volume_for_backups['volume']['id'] }}"
+        device_name: "{{ hostvars['localhost']['new_volume_device_name'] }}"
+        id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
         instance: "{{ hostvars[dest]['instance_id'] }}"
         region: "{{ hostvars[dest]['placement']['region'] }}"
         volume_size: "{{ volume_size }}"
         volume_type: gp2
-        tags:
-          Name: temp_volume
-      register: volume_for_backups
+      delegate_to: localhost
+
+    - name: Reboot to add a new disk
+      ansible.windows.win_reboot:
