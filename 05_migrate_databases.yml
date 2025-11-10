@@ -116,7 +116,7 @@
           - volume-id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
           - status: "available"
       register: result
-      until: result | lenght > 0
+      until: result | length > 0
       retries: 5
       delay: 10
 
