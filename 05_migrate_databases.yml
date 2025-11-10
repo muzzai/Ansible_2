@@ -3,9 +3,24 @@
   gather_facts: false
   hosts: localhost
   tasks:
+    - name: Get device name
+      ansible.builtin.set_fact:
+        new_volume_device_name: >-
+          {{
+            (
+              range(102, 123)                         # letters f..z
+              | map('chr')
+              | map('regex_replace', '(.)', '/dev/sd\\1')
+              | difference(hostvars[dest]['block_device_mappings'])
+            )[0]
+          }}
+
+    - ansible.builtin.debug:
+        msg: "Next device: {{ new_volume_device_name }}"
+
     - name: Attach new volume to source
       amazon.aws.ec2_vol:
-        device_name: /dev/sdg
+        device_name: "{{ new_volume_device_name }}"
         instance: "{{ hostvars[source]['instance_id'] }}"
         region: "{{ hostvars[source]['placement']['region'] }}"
         state: present
@@ -13,6 +28,7 @@
         volume_type: gp2
         tags:
           Name: temp_volume
+          DeviceName: "{{ new_volume_device_name }}"
       register: volume_for_backups
 
     - name: Debug volume
@@ -50,6 +66,11 @@
         path: C:\Migration
         state: directory
 
+    - name: Create Migration folder
+      ansible.windows.win_file:
+        path: D:\Backups
+        state: directory
+
     - name: Generate script
       ansible.windows.win_template:
         src: templates/Backup-Databases.ps1.j2
@@ -61,3 +82,32 @@
         powershell.exe -ExecutionPolicy Bypass -File C:\Migration-script\Backup-Databases.ps1
       args:
         executable: powershell.exe
+
+
+- name: Create backups
+  gather_facts: false
+  hosts: "{{ az_group }}:&{{ source }}"
+  vars:
+    az_group: "{{ availability_zone_group | default('skip') }}"
+    source: "{{ source | default('skip') }}"
+  tasks:
+
+    - name: Build connection details
+      block:
+        - name: Build connection details
+          ansible.builtin.include_role:
+            name: build_connection_details
+      delegate_to: localhost
+
+    - name: Attach new volume to dest
+      amazon.aws.ec2_vol:
+        device_name: "{{ new_volume_device_name }}"
+        id: "{{ volume_for_backups['volume']['id'] }}"
+        instance: "{{ hostvars[dest]['instance_id'] }}"
+        region: "{{ hostvars[dest]['placement']['region'] }}"
+        volume_size: "{{ volume_size }}"
+        volume_type: gp2
+        tags:
+          Name: temp_volume
+          DeviceName: "{{ new_volume_device_name }}"
+      register: volume_for_backups
