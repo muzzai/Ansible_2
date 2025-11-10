@@ -7,14 +7,18 @@
       ansible.builtin.set_fact:
           new_volume_device_name: >-
             {{
-              (
-                range(102, 123)
-                | map('chr')
-                | map('regex_replace', '(.)', '/dev/sd\1')
-                | list
-                | difference(hostvars[inventory_hostname].block_device_mappings)
+            (
+              ['f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+              | map('regex_replace', '(.)', '/dev/sd\\1')
+              | list
+              | difference(
+                  hostvars[inventory_hostname].block_device_mappings
+                    | map(attribute='device_name')
+                    | list
+                )
               )[0]
             }}
+
 
 
     - ansible.builtin.debug:
