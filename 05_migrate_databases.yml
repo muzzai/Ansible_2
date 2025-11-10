@@ -19,8 +19,6 @@
               )[0]
             }}
 
-
-
     - ansible.builtin.debug:
         msg: "Next device: {{ new_volume_device_name }}"
 
@@ -34,7 +32,7 @@
         volume_type: gp2
         tags:
           Name: temp_volume
-          DeviceName: "{{ new_volume_device_name }}"
+          NewDevName: "{{ new_volume_device_name }}"
       register: volume_for_backups
 
     - name: Debug volume
