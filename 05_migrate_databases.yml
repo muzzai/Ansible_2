@@ -110,6 +110,7 @@
         region: "{{ hostvars[dest]['placement']['region'] }}"
         volume_size: "{{ volume_size }}"
         volume_type: gp2
+        modify_volume: true
       delegate_to: localhost
 
     - name: Reboot to add a new disk
