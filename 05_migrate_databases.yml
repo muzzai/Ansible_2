@@ -5,15 +5,17 @@
   tasks:
     - name: Get device name
       ansible.builtin.set_fact:
-        new_volume_device_name: >-
-          {{
-            (
-              range(102, 123
-              | map('chr')
-              | map('regex_replace', '(.)', '/dev/sd\\1')
-              | difference(hostvars[dest]['block_device_mappings'])
-            )[0]
-          }}
+          new_volume_device_name: >-
+            {{
+              (
+                range(102, 123)
+                | map('chr')
+                | map('regex_replace', '(.)', '/dev/sd\1')
+                | list
+                | difference(hostvars[inventory_hostname].block_device_mappings)
+              )[0]
+            }}
+
 
     - ansible.builtin.debug:
         msg: "Next device: {{ new_volume_device_name }}"
