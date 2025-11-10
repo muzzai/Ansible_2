@@ -32,7 +32,6 @@
         volume_type: gp2
         tags:
           Name: temp_volume
-          NewDevName: "{{ new_volume_device_name }}"
       register: volume_for_backups
 
     - name: Debug volume
@@ -113,5 +112,4 @@
         volume_type: gp2
         tags:
           Name: temp_volume
-          DeviceName: "{{ new_volume_device_name }}"
       register: volume_for_backups
