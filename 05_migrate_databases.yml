@@ -12,7 +12,7 @@
               | map('regex_replace', '(.)', '/dev/sd\\1')
               | list
               | difference(
-                  hostvars[inventory_hostname].block_device_mappings
+                  hostvars[dest].block_device_mappings
                     | map(attribute='device_name')
                     | list
                 )
