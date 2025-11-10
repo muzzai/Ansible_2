@@ -113,8 +113,8 @@
     - name: Wait for volume to be available
       amazon.aws.ec2_vol_info:
         filters:
-          - volume-id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
-          - status: "available"
+          volume-id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+          status: "available"
       register: result
 
     - name: Debug result
