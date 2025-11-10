@@ -102,16 +102,32 @@
             name: build_connection_details
       delegate_to: localhost
 
-    - name: Attach new volume to dest
+    - name: Detach volume from the source
       amazon.aws.ec2_vol:
-        device_name: "{{ hostvars['localhost']['new_volume_device_name'] }}"
         id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
-        instance: "{{ hostvars[dest]['instance_id'] }}"
+        instance: "None"
         region: "{{ hostvars[dest]['placement']['region'] }}"
-        volume_size: "{{ volume_size }}"
-        volume_type: gp2
         modify_volume: true
       delegate_to: localhost
+
+    - name: Wait for volume to be available
+      amazon.aws.ec2_vol_info:
+        filters:
+          - volume-id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+          - status: "available"
+      register: result
+      until: result | lenght > 0
+      retries: 5
+      delay: 10
+
+    - name: Attach new volume to source
+      amazon.aws.ec2_vol:
+        id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+        device_name: "{{ hostvars['localhost']['new_volume_device_name'] }}"
+        instance: "{{ hostvars[dest]['instance_id'] }}"
+        region: "{{ hostvars[dest]['placement']['region'] }}"
+        state: present
+      register: attachment_result
 
     - name: Reboot to add a new disk
       ansible.windows.win_reboot:
