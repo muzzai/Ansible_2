@@ -8,7 +8,7 @@
         new_volume_device_name: >-
           {{
             (
-              range(102, 123)                         # letters f..z
+              range(102, 123
               | map('chr')
               | map('regex_replace', '(.)', '/dev/sd\\1')
               | difference(hostvars[dest]['block_device_mappings'])

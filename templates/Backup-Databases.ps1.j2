@@ -3,10 +3,13 @@ Write-Output "################################################################"
 Write-Output "# Backing up databases from the source server                 #"
 Write-Output "################################################################"
 
-$ServerInstance = "localhost,51967"
-
-Invoke-Command -ArgumentList ($ServerInstance, "{{ AN_Database }}", "{{ AD_Database }}", "{{ SaUserName }}", "{{ SaPassword }}", {{ ADC_NetworkInventory | lower }}, "{{ VolumeFolder }}") {
-    param ($ServerInstance, $AN_Database, $AD_Database, $SaUserName, $SaPassword, $ADC_NetworkInventory, $VolumeFolder)
+$ServerInstance = "localhost"
+$AN_Database = "{{ AN_Database }}"
+$AD_Database = "{{ AD_Database }}"
+$SaUserName = "{{ SaUserName }}"
+$SaPassword = "{{ SaPassword }}"
+$ADC_NetworkInventory = "{{ VolumeFolder }}"
+$VolumeFolder = 'D:\Backups'
 
     Write-Output "Detecting SQL server edition"
     $ConnectionString = "Server=$ServerInstance;User ID=$SaUserName;Password=$SaPassword;Encrypt=True;TrustServerCertificate=True;Database=master"
@@ -45,7 +48,7 @@ Invoke-Command -ArgumentList ($ServerInstance, "{{ AN_Database }}", "{{ AD_Datab
     {% endif %}
 
     Remove-Item $TempFolder -Recurse -Force
-}
+
 
 Start-Sleep -Seconds 15 # Wait for flush
 #endregion
