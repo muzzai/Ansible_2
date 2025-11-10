@@ -114,6 +114,7 @@
           volume-id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
           status: "available"
       register: result
+      delegate_to: localhost
 
     - name: Debug result
       ansible.builtin.debug:
@@ -127,10 +128,12 @@
           volume-id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
           status: "available"
       register: result2
+      delegate_to: localhost
 
     - name: Debug result
       ansible.builtin.debug:
         var: result2
+      delegate_to: localhost
 
     - name: Attach new volume to source
       amazon.aws.ec2_vol:
