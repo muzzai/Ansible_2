@@ -4,7 +4,7 @@ Write-Output "# Restoring databases to the destination server               #"
 Write-Output "################################################################"
 
 $InstanceName = "{{ prefix }}"
-$SQLServerInstance = "localhost"
+$SQLServerInstance = "{{ dest_ip }},51967"
 $AN_Database = "{{ AN_Database }}"
 $AD_Database = "{{ AD_Database }}"
 $AN_SQLDatabase = "$InstanceName-{{ AN_Database }}"
