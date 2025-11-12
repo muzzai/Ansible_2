@@ -3,7 +3,7 @@ Write-Output "################################################################"
 Write-Output "# Backing up databases from the source server                 #"
 Write-Output "################################################################"
 
-$ServerInstance = "{{ source_ip }},51967"
+$ServerInstance = "{{ ansible_host }},51967"
 $AN_Database = "{{ AN_Database }}"
 $AD_Database = "{{ AD_Database }}"
 $SaUserName = "{{ SaUserName }}"
