@@ -124,11 +124,12 @@
       retries: 5
       delay: 10
 
-    - name: Attach new volume to source
+    - name: Attach new volume to dest
       amazon.aws.ec2_vol:
         # id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
         id: "{{ volume_id }}"
-        device_name: "{{ hostvars['localhost']['new_volume_device_name'] }}"
+        # device_name: "{{ hostvars['localhost']['new_volume_device_name'] }}"
+        device_name: /dev/sdf
         instance: "{{ hostvars[dest]['instance_id'] }}"
         region: "{{ hostvars[dest]['placement']['region'] }}"
         state: present
