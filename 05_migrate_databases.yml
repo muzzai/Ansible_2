@@ -113,27 +113,26 @@
         filters:
           volume-id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
           status: "available"
+          region: "{{ hostvars[source]['placement']['region'] }}"
       register: result
       delegate_to: localhost
+      until: result | length > 0
+      retries: 5
+      delay: 10
 
-    - name: Debug result
-      ansible.builtin.debug:
-        var: result
-      # until: result | length > 0
-      # retries: 5
-      # delay: 10
-    - name: Wait for volume to be available 2
-      amazon.aws.ec2_vol_info:
-        filters:
-          volume-id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
-          status: "available"
-      register: result2
-      delegate_to: localhost
 
-    - name: Debug result
-      ansible.builtin.debug:
-        var: result2
-      delegate_to: localhost
+    # - name: Wait for volume to be available 2
+    #   amazon.aws.ec2_vol_info:
+    #     filters:
+    #       volume-id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+    #       status: "available"
+    #   register: result2
+    #   delegate_to: localhost
+
+    # - name: Debug result
+    #   ansible.builtin.debug:
+    #     var: result2
+    #   delegate_to: localhost
 
     - name: Attach new volume to source
       amazon.aws.ec2_vol:
