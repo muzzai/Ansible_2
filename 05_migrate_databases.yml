@@ -86,64 +86,64 @@
       args:
         executable: powershell.exe
 
-- name: Restore backups
-  gather_facts: false
-  hosts: "{{ az_group }}:&{{ dest }}"
-  vars:
-    az_group: "{{ availability_zone_group | default('skip') }}"
-    source: "{{ dest | default('skip') }}"
-    prefix: migrated
-  tasks:
-    - name: Build connection details
-      block:
-        - name: Build connection details
-          ansible.builtin.include_role:
-            name: build_connection_details
-      delegate_to: localhost
+# - name: Restore backups
+#   gather_facts: false
+#   hosts: "{{ az_group }}:&{{ dest }}"
+#   vars:
+#     az_group: "{{ availability_zone_group | default('skip') }}"
+#     source: "{{ dest | default('skip') }}"
+#     prefix: migrated
+#   tasks:
+#     - name: Build connection details
+#       block:
+#         - name: Build connection details
+#           ansible.builtin.include_role:
+#             name: build_connection_details
+#       delegate_to: localhost
 
-    - name: Detach volume from the source
-      amazon.aws.ec2_vol:
-        id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
-        instance: "None"
-        region: "{{ hostvars[dest]['placement']['region'] }}"
-        modify_volume: true
-      delegate_to: localhost
+#     - name: Detach volume from the source
+#       amazon.aws.ec2_vol:
+#         id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+#         instance: "None"
+#         region: "{{ hostvars[dest]['placement']['region'] }}"
+#         modify_volume: true
+#       delegate_to: localhost
 
-    - name: Wait for volume to be available
-      amazon.aws.ec2_vol_info:
-        filters:
-          volume-id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
-          status: "available"
-        region: "{{ hostvars[dest]['placement']['region'] }}"
-      register: result
-      delegate_to: localhost
-      until: result | length > 0
-      retries: 5
-      delay: 10
+#     - name: Wait for volume to be available
+#       amazon.aws.ec2_vol_info:
+#         filters:
+#           volume-id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+#           status: "available"
+#         region: "{{ hostvars[dest]['placement']['region'] }}"
+#       register: result
+#       delegate_to: localhost
+#       until: result | length > 0
+#       retries: 5
+#       delay: 10
 
-    - name: Attach new volume to source
-      amazon.aws.ec2_vol:
-        id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
-        device_name: "{{ hostvars['localhost']['new_volume_device_name'] }}"
-        instance: "{{ hostvars[dest]['instance_id'] }}"
-        region: "{{ hostvars[dest]['placement']['region'] }}"
-        state: present
-      register: attachment_result
-      delegate_to: localhost
+#     - name: Attach new volume to source
+#       amazon.aws.ec2_vol:
+#         id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+#         device_name: "{{ hostvars['localhost']['new_volume_device_name'] }}"
+#         instance: "{{ hostvars[dest]['instance_id'] }}"
+#         region: "{{ hostvars[dest]['placement']['region'] }}"
+#         state: present
+#       register: attachment_result
+#       delegate_to: localhost
 
-    - name: Create Migration-script folder
-      ansible.windows.win_file:
-        path: C:\Migration-script
-        state: directory
+#     - name: Create Migration-script folder
+#       ansible.windows.win_file:
+#         path: C:\Migration-script
+#         state: directory
 
-    - name: Generate script
-      ansible.windows.win_template:
-        src: templates/Restore-Databases.ps1.j2
-        dest: C:\Migration-script\Restore-Databases.ps1
-        force: true
+#     - name: Generate script
+#       ansible.windows.win_template:
+#         src: templates/Restore-Databases.ps1.j2
+#         dest: C:\Migration-script\Restore-Databases.ps1
+#         force: true
 
-    - name: Execute SQL backup script
-      ansible.windows.win_shell: |
-        powershell.exe -ExecutionPolicy Bypass -File C:\Migration-script\Restore-Databases.ps1
-      args:
-        executable: powershell.exe
+#     - name: Execute SQL backup script
+#       ansible.windows.win_shell: |
+#         powershell.exe -ExecutionPolicy Bypass -File C:\Migration-script\Restore-Databases.ps1
+#       args:
+#         executable: powershell.exe
