@@ -113,7 +113,7 @@
         filters:
           volume-id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
           status: "available"
-          region: "{{ hostvars[source]['placement']['region'] }}"
+        region: "{{ hostvars[dest]['placement']['region'] }}"
       register: result
       delegate_to: localhost
       until: result | length > 0
