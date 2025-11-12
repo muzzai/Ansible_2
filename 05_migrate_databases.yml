@@ -136,6 +136,9 @@
       register: attachment_result
       delegate_to: localhost
 
+    - name: Reboot to add a new disk
+      ansible.windows.win_reboot:
+
     - name: Gather disk facts
       community.windows.win_disk_facts:
 
