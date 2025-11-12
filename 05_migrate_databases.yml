@@ -139,41 +139,41 @@
     - name: Reboot to add a new disk
       ansible.windows.win_reboot:
 
-    - name: Gather disk facts
-      community.windows.win_disk_facts:
+    # - name: Gather disk facts
+    #   community.windows.win_disk_facts:
 
-    - name: Select last disk (the newly attached one)
-      ansible.builtin.set_fact:
-        last_disk: "{{ ansible_facts.disks | sort(attribute='number') | last }}"
-        last_disk_number: "{{ ansible_facts.disks | map(attribute='number') | max }}"
+    # - name: Select last disk (the newly attached one)
+    #   ansible.builtin.set_fact:
+    #     last_disk: "{{ ansible_facts.disks | sort(attribute='number') | last }}"
+    #     last_disk_number: "{{ ansible_facts.disks | map(attribute='number') | max }}"
 
-    - name: Get used drive letters
-      ansible.builtin.set_fact:
-        used_letters: >-
-          {{ ansible_facts.disks
-            | map(attribute='volumes')
-            | flatten
-            | selectattr('drive_letter', 'defined')
-            | map(attribute='drive_letter')
-            | map('upper')
-            | list }}
+    # - name: Get used drive letters
+    #   ansible.builtin.set_fact:
+    #     used_letters: >-
+    #       {{ ansible_facts.disks
+    #         | map(attribute='volumes')
+    #         | flatten
+    #         | selectattr('drive_letter', 'defined')
+    #         | map(attribute='drive_letter')
+    #         | map('upper')
+    #         | list }}
 
-    - name: Determine first available drive letter
-      ansible.builtin.set_fact:
-        available_drive_letter: >-
-          {{ (range(67, 91)
-              | map('chr')
-              | difference(used_letters)
-              | list)[0] }}
+    # - name: Determine first available drive letter
+    #   ansible.builtin.set_fact:
+    #     available_drive_letter: >-
+    #       {{ (range(67, 91)
+    #           | map('chr')
+    #           | difference(used_letters)
+    #           | list)[0] }}
 
-    - name: Assign drive letter to the last disks first partition
-      community.windows.win_partition:
-        disk_number: "{{ last_disk_number }}"
-        partition_number: 1
-        drive_letter: "{{ available_drive_letter }}"
-      when:
-        - last_disk.partitions | length > 0
-        - last_disk.partitions[0].drive_letter is not defined
+    # - name: Assign drive letter to the last disks first partition
+    #   community.windows.win_partition:
+    #     disk_number: "{{ last_disk_number }}"
+    #     partition_number: 1
+    #     drive_letter: "{{ available_drive_letter }}"
+    #   when:
+    #     - last_disk.partitions | length > 0
+    #     - last_disk.partitions[0].drive_letter is not defined
 
     - name: Create Migration-script folder
       ansible.windows.win_file:
