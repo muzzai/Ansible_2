@@ -2,7 +2,20 @@
 - name: Prepare volume
   gather_facts: false
   hosts: localhost
+  vars:
+    AN_Database: "AlloyNavigator"
+    AD_Database: "AlloyDiscovery"
+    AN_RegistryName: "Alloy Navigator"
+    AN_ProductName: "Alloy Navigator"
   tasks:
+    - name: Set databases names
+      ansible.builtin.set_fact:
+        AN_Database: "AlloyNavigatorExpress"
+        AD_Database: "AlloyNavigatorExpress.ad"
+        AN_RegistryName: "Alloy Navigator Express"
+        AN_ProductName: "Alloy Navigator Express"
+      when: ProductIsExpress
+
     - name: Get device name
       ansible.builtin.set_fact:
           new_volume_device_name: >-
@@ -38,21 +51,7 @@
       ansible.builtin.debug:
         var: volume_for_backups
 
-    - name: Set databases names for Express edition
-      ansible.builtin.set_fact:
-        AN_Database: "AlloyNavigatorExpress"
-        AD_Database: "AlloyNavigatorExpress.ad"
-        AN_RegistryName: "Alloy Navigator Express"
-        AN_ProductName: "Alloy Navigator Express"
-      when: ProductIsExpress
 
-    - name: Set databases names for regular edition
-      ansible.builtin.set_fact:
-        AN_Database: "AlloyNavigator"
-        AD_Database: "AlloyDiscovery"
-        AN_RegistryName: "Alloy Navigator"
-        AN_ProductName: "Alloy Navigator"
-      when: not ProductIsExpress
 
 - name: Create backups
   gather_facts: false
@@ -119,8 +118,8 @@
 
     - name: Detach volume from the source
       amazon.aws.ec2_vol:
-        # id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
-        id: "{{ volume_id }}"
+        id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+        # id: "{{ volume_id }}"
         instance: "None"
         region: "{{ hostvars[dest]['placement']['region'] }}"
         modify_volume: true
@@ -129,8 +128,8 @@
     - name: Wait for volume to be available
       amazon.aws.ec2_vol_info:
         filters:
-          volume-id: "{{ volume_id }}"
-          # volume-id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+          # volume-id: "{{ volume_id }}"
+          volume-id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
           status: "available"
         region: "{{ hostvars[dest]['placement']['region'] }}"
       register: result
@@ -141,10 +140,10 @@
 
     - name: Attach new volume to dest
       amazon.aws.ec2_vol:
-        # id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
-        id: "{{ volume_id }}"
-        # device_name: "{{ hostvars['localhost']['new_volume_device_name'] }}"
-        device_name: /dev/sdg
+        id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+        # id: "{{ volume_id }}"
+        device_name: "{{ hostvars['localhost']['new_volume_device_name'] }}"
+        # device_name: /dev/sdg
         instance: "{{ hostvars[dest]['instance_id'] }}"
         region: "{{ hostvars[dest]['placement']['region'] }}"
         state: present
