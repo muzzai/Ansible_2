@@ -45,12 +45,12 @@
     az_group: "{{ availability_zone_group | default('skip') }}"
     source: "{{ source | default('skip') }}"
   tasks:
-#     - name: Build connection details
-#       block:
-#         - name: Build connection details
-#           ansible.builtin.include_role:
-#             name: build_connection_details
-#       delegate_to: localhost
+    - name: Build connection details
+      block:
+        - name: Build connection details
+          ansible.builtin.include_role:
+            name: build_connection_details
+      delegate_to: localhost
 
 #     - name: Reboot to add a new disk
 #       ansible.windows.win_reboot:
