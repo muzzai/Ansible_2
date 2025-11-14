@@ -1,9 +1,9 @@
-#region Database Backup
+Set-ExecutionPolicy RemoteSigned
 Write-Output "################################################################"
 Write-Output "# Backing up databases from the source server                 #"
 Write-Output "################################################################"
 
-$ServerInstance = "{{ ansible_host }},51967"
+$ServerInstance = "{{ hostvars[inventory_hostname][private_ip_address] }},51967"
 $AN_Database = "{{ AN_Database }}"
 $AD_Database = "{{ AD_Database }}"
 $SaUserName = "{{ SaUserName }}"
@@ -49,6 +49,5 @@ BackupDatabase $AD_Database
 
 Remove-Item $TempFolder -Recurse -Force
 
-
 Start-Sleep -Seconds 15 # Wait for flush
-#endregion
+
