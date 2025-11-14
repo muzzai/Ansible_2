@@ -2,11 +2,6 @@
 - name: Prepare volume
   gather_facts: false
   hosts: localhost
-  vars:
-    AN_Database: "AlloyNavigator"
-    AD_Database: "AlloyDiscovery"
-    AN_RegistryName: "Alloy Navigator"
-    AN_ProductName: "Alloy Navigator"
   tasks:
     - name: Set databases names
       ansible.builtin.set_fact:

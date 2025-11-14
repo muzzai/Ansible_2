@@ -3,3 +3,7 @@ ansible_connection: ssh
 ansible_shell_type: powershell
 ansible_ssh_transfer_method: scp
 ansible_scp_extra_args: "-O"
+AN_Database: "AlloyNavigator"
+AD_Database: "AlloyDiscovery"
+AN_RegistryName: "Alloy Navigator"
+AN_ProductName: "Alloy Navigator"
