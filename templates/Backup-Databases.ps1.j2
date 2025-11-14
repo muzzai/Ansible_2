@@ -5,10 +5,10 @@ Write-Output "################################################################"
 $ServerInstance = "{{ ansible_host }},51967"
 $AN_Database = "{{ AN_Database }}"
 $AD_Database = "{{ AD_Database }}"
-$SaUserName = "{{ SaUserName }}"
-$SaPassword = "{{ SaPassword }}"
+$SaUserName = "{{ source_SaUserName }}"
+$SaPassword = "{{ source_SaPassword }}"
 $ADC_NetworkInventory = "{{ VolumeFolder }}"
-$VolumeFolder = 'D:\Backups'
+$VolumeFolder = "{{ VolumeFolder }}"
 
 Write-Output "Detecting SQL server edition"
 $ConnectionString = "Server=$ServerInstance;User ID=$SaUserName;Password=$SaPassword;Encrypt=True;TrustServerCertificate=True;Database=master"

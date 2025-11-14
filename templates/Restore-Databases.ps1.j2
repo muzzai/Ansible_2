@@ -1,4 +1,3 @@
-#region Database Restore
 Write-Output "################################################################"
 Write-Output "# Restoring databases to the destination server               #"
 Write-Output "################################################################"
@@ -9,10 +8,10 @@ $AN_Database = "{{ AN_Database }}"
 $AD_Database = "{{ AD_Database }}"
 $AN_SQLDatabase = "$InstanceName-{{ AN_Database }}"
 $AD_SQLDatabase = "$InstanceName-{{ AD_Database }}"
-$SQLSaUserName = "{{ SaUserName }}"
-$SQLSaPassword = "{{ SaPassword }}"
+$SQLSaUserName = "{{ dest_SaUserName }}"
+$SQLSaPassword = "{{ dest_SaPassword }}"
 $ADC_NetworkInventory = $false
-$VolumeFolder = "D:\Backups"
+$VolumeFolder = "{{ VolumeFolder }}"
 
 Write-Output "Initializing Tools for SQL Server"
 Import-Module SqlServer
@@ -43,5 +42,3 @@ RestoreDatabase $AN_Database $AN_SQLDatabase
 #if (-not $ADC_NetworkInventory) {
 #    RestoreDatabase $AD_Database $AD_SQLDatabase
 #}
-
-#endregion
