@@ -4,7 +4,7 @@ Write-Output "# Restoring databases to the destination server               #"
 Write-Output "################################################################"
 
 $InstanceName = "{{ prefix }}"
-$SQLServerInstance = "{{ ansible_host }},51967"
+$SQLServerInstance = "{{ hostvars[inventory_hostname][private_ip_address] }},51967"
 $AN_Database = "{{ AN_Database }}"
 $AD_Database = "{{ AD_Database }}"
 $AN_SQLDatabase = "$InstanceName-{{ AN_Database }}"

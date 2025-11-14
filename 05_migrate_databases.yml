@@ -44,7 +44,6 @@
   vars:
     az_group: "{{ availability_zone_group | default('skip') }}"
     source: "{{ source | default('skip') }}"
-    source_ip: "{{ hostvars[source][ansible_host] }}"
   tasks:
     - name: Build connection details
       block:
@@ -82,114 +81,115 @@
         force: true
 
     - name: Execute SQL backup script
-      ansible.windows.win_shell: |
+      ansible.windows.win_command: |
         & C:\Migration-script\Backup-Databases.ps1
       args:
         executable: powershell.exe
 
-- name: Restore backups
-  gather_facts: false
-  hosts: "{{ az_group }}:&{{ dest }}"
-  vars:
-    az_group: "{{ availability_zone_group | default('skip') }}"
-    dest: "{{ dest | default('skip') }}"
-    prefix: migrated
-    volume_id: vol-013bf312a4cf12bac
+# - name: Restore backups
+#   gather_facts: false
+#   hosts: "{{ az_group }}:&{{ dest }}"
+#   vars:
+#     az_group: "{{ availability_zone_group | default('skip') }}"
+#     dest: "{{ dest | default('skip') }}"
+#     prefix: migrated
+#     volume_id: vol-013bf312a4cf12bac
 
-  tasks:
-    - name: Build connection details
-      block:
-        - name: Build connection details
-          ansible.builtin.include_role:
-            name: build_connection_details
-      delegate_to: localhost
+#   tasks:
+#     - name: Build connection details
+#       block:
+#         - name: Build connection details
+#           ansible.builtin.include_role:
+#             name: build_connection_details
+#       delegate_to: localhost
 
-    - name: Detach volume from the source
-      amazon.aws.ec2_vol:
-        id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
-        # id: "{{ volume_id }}"
-        instance: "None"
-        region: "{{ hostvars[dest]['placement']['region'] }}"
-        modify_volume: true
-      delegate_to: localhost
+#     - name: Detach volume from the source
+#       amazon.aws.ec2_vol:
+#         id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+#         # id: "{{ volume_id }}"
+#         instance: "None"
+#         region: "{{ hostvars[dest]['placement']['region'] }}"
+#         modify_volume: true
+#       delegate_to: localhost
 
-    - name: Wait for volume to be available
-      amazon.aws.ec2_vol_info:
-        filters:
-          # volume-id: "{{ volume_id }}"
-          volume-id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
-          status: "available"
-        region: "{{ hostvars[dest]['placement']['region'] }}"
-      register: result
-      delegate_to: localhost
-      until: result | length > 0
-      retries: 5
-      delay: 10
+#     - name: Wait for volume to be available
+#       amazon.aws.ec2_vol_info:
+#         filters:
+#           # volume-id: "{{ volume_id }}"
+#           volume-id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+#           status: "available"
+#         region: "{{ hostvars[dest]['placement']['region'] }}"
+#       register: result
+#       delegate_to: localhost
+#       until: result | length > 0
+#       retries: 5
+#       delay: 10
 
-    - name: Attach new volume to dest
-      amazon.aws.ec2_vol:
-        id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
-        # id: "{{ volume_id }}"
-        device_name: "{{ hostvars['localhost']['new_volume_device_name'] }}"
-        # device_name: /dev/sdf
-        instance: "{{ hostvars[dest]['instance_id'] }}"
-        region: "{{ hostvars[dest]['placement']['region'] }}"
-        state: present
-      register: attachment_result
-      delegate_to: localhost
+#     - name: Attach new volume to dest
+#       amazon.aws.ec2_vol:
+#         id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+#         # id: "{{ volume_id }}"
+#         device_name: "{{ hostvars['localhost']['new_volume_device_name'] }}"
+#         # device_name: /dev/sdf
+#         instance: "{{ hostvars[dest]['instance_id'] }}"
+#         region: "{{ hostvars[dest]['placement']['region'] }}"
+#         state: present
 
-    - name: Reboot to add a new disk
-      ansible.windows.win_reboot:
+#       register: attachment_result
+#       delegate_to: localhost
 
-    # - name: Gather disk facts
-    #   community.windows.win_disk_facts:
+#     - name: Reboot to add a new disk
+#       ansible.windows.win_reboot:
 
-    # - name: Select last disk (the newly attached one)
-    #   ansible.builtin.set_fact:
-    #     last_disk: "{{ ansible_facts.disks | sort(attribute='number') | last }}"
-    #     last_disk_number: "{{ ansible_facts.disks | map(attribute='number') | max }}"
+#     # - name: Gather disk facts
+#     #   community.windows.win_disk_facts:
 
-    # - name: Get used drive letters
-    #   ansible.builtin.set_fact:
-    #     used_letters: >-
-    #       {{ ansible_facts.disks
-    #         | map(attribute='volumes')
-    #         | flatten
-    #         | selectattr('drive_letter', 'defined')
-    #         | map(attribute='drive_letter')
-    #         | map('upper')
-    #         | list }}
+#     # - name: Select last disk (the newly attached one)
+#     #   ansible.builtin.set_fact:
+#     #     last_disk: "{{ ansible_facts.disks | sort(attribute='number') | last }}"
+#     #     last_disk_number: "{{ ansible_facts.disks | map(attribute='number') | max }}"
 
-    # - name: Determine first available drive letter
-    #   ansible.builtin.set_fact:
-    #     available_drive_letter: >-
-    #       {{ (range(67, 91)
-    #           | map('chr')
-    #           | difference(used_letters)
-    #           | list)[0] }}
+#     # - name: Get used drive letters
+#     #   ansible.builtin.set_fact:
+#     #     used_letters: >-
+#     #       {{ ansible_facts.disks
+#     #         | map(attribute='volumes')
+#     #         | flatten
+#     #         | selectattr('drive_letter', 'defined')
+#     #         | map(attribute='drive_letter')
+#     #         | map('upper')
+#     #         | list }}
 
-    # - name: Assign drive letter to the last disks first partition
-    #   community.windows.win_partition:
-    #     disk_number: "{{ last_disk_number }}"
-    #     partition_number: 1
-    #     drive_letter: "{{ available_drive_letter }}"
-    #   when:
-    #     - last_disk.partitions | length > 0
-    #     - last_disk.partitions[0].drive_letter is not defined
+#     # - name: Determine first available drive letter
+#     #   ansible.builtin.set_fact:
+#     #     available_drive_letter: >-
+#     #       {{ (range(67, 91)
+#     #           | map('chr')
+#     #           | difference(used_letters)
+#     #           | list)[0] }}
 
-    - name: Create Migration-script folder
-      ansible.windows.win_file:
-        path: C:\Migration-script
-        state: directory
+#     # - name: Assign drive letter to the last disks first partition
+#     #   community.windows.win_partition:
+#     #     disk_number: "{{ last_disk_number }}"
+#     #     partition_number: 1
+#     #     drive_letter: "{{ available_drive_letter }}"
+#     #   when:
+#     #     - last_disk.partitions | length > 0
+#     #     - last_disk.partitions[0].drive_letter is not defined
 
-    - name: Generate script
-      ansible.windows.win_template:
-        src: templates/Restore-Databases.ps1.j2
-        dest: C:\Migration-script\Restore-Databases.ps1
-        force: true
+#     - name: Create Migration-script folder
+#       ansible.windows.win_file:
+#         path: C:\Migration-script
+#         state: directory
 
-    - name: Execute SQL restore script
-      ansible.windows.win_shell: |
-        & C:\Migration-script\Restore-Databases.ps1
-      args:
-        executable: powershell.exe
+#     - name: Generate script
+#       ansible.windows.win_template:
+#         src: templates/Restore-Databases.ps1.j2
+#         dest: C:\Migration-script\Restore-Databases.ps1
+#         force: true
+
+#     - name: Execute SQL restore script
+#       ansible.windows.win_shell: |
+#         & C:\Migration-script\Restore-Databases.ps1
+#       args:
+#         executable: powershell.exe
