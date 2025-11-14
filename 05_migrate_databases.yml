@@ -91,8 +91,10 @@
         force: true
 
     - name: Execute SQL backup script
-      ansible.windows.win_command: |
-        powershell.exe C:\Migration-script\Backup-Databases.ps1
+      ansible.windows.win_shell: |
+        & C:\Migration-script\Backup-Databases.ps1
+      args:
+        executable: powershell.exe
 
 - name: Restore backups
   gather_facts: false
