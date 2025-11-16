@@ -186,27 +186,20 @@
       ansible.builtin.set_fact:
         existing_partitions: "{{ ansible_facts.disks | map(attribute='partitions', default=[]) | flatten | selectattr('drive_letter', 'defined') | map(attribute='drive_letter') | select | unique | sort | list }}"
 
-    - name: Debug partitions
+    - name: Get partitions
+      ansible.builtin.set_fact:
+        next_drive_letter: "{{ all_drive_letters | community.general.lists_difference(existing_partitions) | first }}"
+
+    - name: Debug next drive letter
       ansible.builtin.debug:
-        var: existing_partitions
+        var: next_drive_letter
 
-
-
-
-
-
-
-
-
-
-
-
-
-    # - name: Create a partition on the disk
-    #   community.windows.win_partition:
-    #     disk_number: "{{ physical_disk_number }}"
-    #     partition_number: 1
-    #   register: partition_result
+    - name: Create a partition on the disk
+      community.windows.win_partition:
+        disk_number: "{{ physical_disk_number }}"
+        partition_number: 1
+        drive_letter: "{{ next_drive_letter }}"
+      register: partition_result
 
 
     # - name: Debug init disk result
