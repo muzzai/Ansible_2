@@ -201,9 +201,14 @@
         partition_number: 1
         drive_letter: "{{ next_drive_letter }}"
         hidden: false
-        offline: false
+        # offline: false
         # state: present
       register: partition_result
+      ignore_errors: true
+
+    - name: Debug partition result
+      ansible.builtin.debug:
+        var: partition_result
 
     - name: Gather destination disk facts
       community.windows.win_disk_facts:
