@@ -181,6 +181,13 @@
         style: gpt
       register: init_disk_result
 
+    - name: Create a partition on the disk
+      community.windows.win_partition:
+        disk_number: "{{ physical_disk_number }}"
+        partition_number: 1
+      register: partition_result
+
+
     - name: Debug init disk result
       ansible.builtin.debug:
         var: init_disk_result
