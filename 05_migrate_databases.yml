@@ -1,122 +1,122 @@
 ---
-# - name: Prepare volume
-#   gather_facts: false
-#   hosts: localhost
-#   tasks:
-#     - name: Set databases names
-#       ansible.builtin.set_fact:
-#         AN_Database: "AlloyNavigatorExpress"
-#         AD_Database: "AlloyNavigatorExpress.ad"
-#         AN_RegistryName: "Alloy Navigator Express"
-#         AN_ProductName: "Alloy Navigator Express"
-#       when: ProductIsExpress
+- name: Prepare volume
+  gather_facts: false
+  hosts: localhost
+  tasks:
+    - name: Set databases names
+      ansible.builtin.set_fact:
+        AN_Database: "AlloyNavigatorExpress"
+        AD_Database: "AlloyNavigatorExpress.ad"
+        AN_RegistryName: "Alloy Navigator Express"
+        AN_ProductName: "Alloy Navigator Express"
+      when: ProductIsExpress
 
-#     - name: Get device name
-#       ansible.builtin.set_fact:
-#           new_volume_device_name: >-
-#             {{
-#             (
-#               ['f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
-#               | map('regex_replace', '(.)', '/dev/sd\1')
-#               | list
-#               | difference(
-#                   hostvars[dest].block_device_mappings
-#                     | map(attribute='device_name')
-#                     | list
-#                 )
-#               )[0]
-#             }}
+    - name: Get device name
+      ansible.builtin.set_fact:
+          new_volume_device_name: >-
+            {{
+            (
+              ['f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+              | map('regex_replace', '(.)', '/dev/sd\1')
+              | list
+              | difference(
+                  hostvars[dest].block_device_mappings
+                    | map(attribute='device_name')
+                    | list
+                )
+              )[0]
+            }}
 
-#     - ansible.builtin.debug:
-#         msg: "Next device: {{ new_volume_device_name }}"
+    - ansible.builtin.debug:
+        msg: "Next device: {{ new_volume_device_name }}"
 
-#     - name: Attach new volume to source
-#       amazon.aws.ec2_vol:
-#         device_name: "{{ new_volume_device_name }}"
-#         instance: "{{ hostvars[source]['instance_id'] }}"
-#         region: "{{ hostvars[source]['placement']['region'] }}"
-#         state: present
-#         volume_size: "{{ volume_size }}"
-#         volume_type: gp2
-#         tags:
-#           Name: temp_volume
-#       register: volume_for_backups
+    - name: Attach new volume to source
+      amazon.aws.ec2_vol:
+        device_name: "{{ new_volume_device_name }}"
+        instance: "{{ hostvars[source]['instance_id'] }}"
+        region: "{{ hostvars[source]['placement']['region'] }}"
+        state: present
+        volume_size: "{{ volume_size }}"
+        volume_type: gp2
+        tags:
+          Name: temp_volume
+      register: volume_for_backups
 
-#     - name: Debug volume
-#       ansible.builtin.debug:
-#         var: volume_for_backups
+    - name: Debug volume
+      ansible.builtin.debug:
+        var: volume_for_backups
 
-# - name: Create backups
-#   gather_facts: false
-#   hosts: "{{ az_group }}:&{{ source }}"
-#   vars:
-#     az_group: "{{ availability_zone_group | default('skip') }}"
-#     source: "{{ source | default('skip') }}"
-#     mssql_backup_path: D:\Backups
+- name: Create backups
+  gather_facts: false
+  hosts: "{{ az_group }}:&{{ source }}"
+  vars:
+    az_group: "{{ availability_zone_group | default('skip') }}"
+    source: "{{ source | default('skip') }}"
+    mssql_backup_path: D:\Backups
 
-#     database_list:
-#       - "{{ AN_Database }}"
-#       # - "{{ AD_Database }}"
-#   tasks:
-#     - name: Build connection details
-#       block:
-#         - name: Build connection details
-#           ansible.builtin.include_role:
-#             name: build_connection_details
-#       delegate_to: localhost
-#       no_log: true
+    database_list:
+      - "{{ AN_Database }}"
+      # - "{{ AD_Database }}"
+  tasks:
+    - name: Build connection details
+      block:
+        - name: Build connection details
+          ansible.builtin.include_role:
+            name: build_connection_details
+      delegate_to: localhost
+      no_log: true
 
-#     - name: Try creating a backup and Cleanup
-#       block:
-#         - name: Add Disk
-#           ansible.builtin.include_role:
-#             name: prepare_disk
+    - name: Try creating a backup and Cleanup
+      block:
+        - name: Add Disk
+          ansible.builtin.include_role:
+            name: prepare_disk
 
-#         - name: Create Migration folder
-#           ansible.windows.win_file:
-#             path: "{{ mssql_backup_path }}"
-#             state: directory
+        - name: Create Migration folder
+          ansible.windows.win_file:
+            path: "{{ mssql_backup_path }}"
+            state: directory
 
-#         - name: Create database backups on Windows
-#           community.general.mssql_script:
-#             login_host: "{{ hostvars[source]['ansible_host'] }}"
-#             login_user: "{{ source_SaUserName }}"
-#             login_password: "{{ source_SaPassword }}"
-#             login_port: 51967
-#             name: master
-#             script: |
-#               ALTER DATABASE [{{ item }}] SET ONLINE;
-#               ALTER DATABASE [{{ item }}]
-#               SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+        - name: Create database backups on Windows
+          community.general.mssql_script:
+            login_host: "{{ hostvars[source]['ansible_host'] }}"
+            login_user: "{{ source_SaUserName }}"
+            login_password: "{{ source_SaPassword }}"
+            login_port: 51967
+            name: master
+            script: |
+              ALTER DATABASE [{{ item }}] SET ONLINE;
+              ALTER DATABASE [{{ item }}]
+              SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 
-#               DECLARE @BackupPath NVARCHAR(500) = N'{{ mssql_backup_path }}\{{ item }}.bak'
+              DECLARE @BackupPath NVARCHAR(500) = N'{{ mssql_backup_path }}\{{ item }}.bak'
 
-#               BACKUP DATABASE [{{ item }}]
-#               TO DISK = @BackupPath
-#               WITH FORMAT,
-#                     MEDIANAME = '{{ item }}_Backup',
-#                     NAME = 'Full Backup of {{ item }}';
+              BACKUP DATABASE [{{ item }}]
+              TO DISK = @BackupPath
+              WITH FORMAT,
+                    MEDIANAME = '{{ item }}_Backup',
+                    NAME = 'Full Backup of {{ item }}';
 
-#               PRINT 'Backup created successfully: ' + @BackupPath
+              PRINT 'Backup created successfully: ' + @BackupPath
 
-#               ALTER DATABASE [{{ item }}] SET OFFLINE;
-#           loop: "{{ database_list }}"
-#           delegate_to: localhost
-#           register: backup_result
+              ALTER DATABASE [{{ item }}] SET OFFLINE;
+          loop: "{{ database_list }}"
+          delegate_to: localhost
+          register: backup_result
 
-#         - name: Show backup results
-#           ansible.builtin.debug:
-#             var: backup_result.results
+        - name: Show backup results
+          ansible.builtin.debug:
+            var: backup_result.results
 
-#       rescue:
-#         - name: Delete volume.
-#           amazon.aws.ec2_vol:
-#             id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
-#           # id: "{{ volume_id }}"
-#             region: "{{ hostvars[dest]['placement']['region'] }}"
-#             modify_volume: true
-#             state: absent
-#           delegate_to: localhost
+      rescue:
+        - name: Delete volume.
+          amazon.aws.ec2_vol:
+            id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+          # id: "{{ volume_id }}"
+            region: "{{ hostvars[dest]['placement']['region'] }}"
+            modify_volume: true
+            state: absent
+          delegate_to: localhost
 
 - name: Restore backups
   gather_facts: false
@@ -136,8 +136,8 @@
 
         - name: Detach volume from the source
           amazon.aws.ec2_vol:
-            # id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
-            id: "{{ volume_id }}"
+            id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+            # id: "{{ volume_id }}"
             instance: "None"
             region: "{{ hostvars[dest]['placement']['region'] }}"
             modify_volume: true
@@ -145,8 +145,8 @@
         - name: Wait for volume to be available
           amazon.aws.ec2_vol_info:
             filters:
-              volume-id: "{{ volume_id }}"
-              # volume-id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+              # volume-id: "{{ volume_id }}"
+              volume-id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
               status: "available"
             region: "{{ hostvars[dest]['placement']['region'] }}"
           register: result
@@ -156,10 +156,10 @@
 
         - name: Attach new volume to dest
           amazon.aws.ec2_vol:
-            # id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
-            id: "{{ volume_id }}"
-            # device_name: "{{ hostvars['localhost']['new_volume_device_name'] }}"
-            device_name: /dev/sdg
+            id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+            # id: "{{ volume_id }}"
+            device_name: "{{ hostvars['localhost']['new_volume_device_name'] }}"
+            # device_name: /dev/sdg
             instance: "{{ hostvars[dest]['instance_id'] }}"
             region: "{{ hostvars[dest]['placement']['region'] }}"
             state: present
@@ -173,11 +173,11 @@
       ansible.builtin.set_fact:
         physical_disk_number: "{{ ansible_facts.disks | map(attribute='number') | max }}"
 
-    - name: Initialize the disk
-      community.windows.win_initialize_disk:
-        disk_number: "{{ physical_disk_number }}"
-        style: gpt
-      register: init_disk_result
+    # - name: Initialize the disk
+    #   community.windows.win_initialize_disk:
+    #     disk_number: "{{ physical_disk_number }}"
+    #     style: gpt
+    #   register: init_disk_result
 
     - name: Get partitions
       ansible.builtin.set_fact:
@@ -200,7 +200,7 @@
         disk_number: "{{ physical_disk_number }}"
         partition_number: 1
         drive_letter: "{{ next_drive_letter }}"
-        hidden: false
+        # hidden: false
         # offline: false
         # state: present
       register: partition_result
