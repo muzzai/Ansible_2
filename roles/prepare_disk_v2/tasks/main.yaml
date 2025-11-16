@@ -2,7 +2,6 @@
 - name: Gather disk facts
   community.windows.win_disk_facts:
 
-
 - name: Find the target disk to prepare
   ansible.builtin.set_fact:
     target_disk: >

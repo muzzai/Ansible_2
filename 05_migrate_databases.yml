@@ -70,7 +70,7 @@
       block:
         - name: Add Disk
           ansible.builtin.include_role:
-            name: prepare_disk_v2
+            name: prepare_disk
 
         - name: Create Migration folder
           ansible.windows.win_file:
@@ -168,7 +168,7 @@
 
     - name: Add Disk 2
       ansible.builtin.include_role:
-        name: prepare_disk_v2
+        name: prepare_disk
 
     # - name: Initialize the disk
     #   community.windows.win_initialize_disk:

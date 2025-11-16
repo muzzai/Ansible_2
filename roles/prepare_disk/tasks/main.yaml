@@ -6,7 +6,7 @@
   ansible.builtin.debug:
     var: ansible_facts.disks
 
-- name: Get disk number
+- name: Get max disk number
   ansible.builtin.set_fact:
     physical_disk_number: >
       {{ ansible_facts.disks
@@ -40,7 +40,7 @@
         disk_number: "{{ physical_disk_number }}"
         partition_size: "{{ partition_size }}"
         drive_letter: "{{ next_drive_letter }}"
-      register: partition_result
+
 
     - name: Format the partition
       community.windows.win_format:
@@ -51,3 +51,10 @@
     - name: Set fact initialized
       ansible.builtin.set_fact:
         is_initialized: true
+
+- name: Discover existing partition
+  community.windows.win_partition:
+    disk_number: "{{ physical_disk_number }}"
+    partition_size: "{{ partition_size }}"
+    drive_letter: "{{ next_drive_letter }}"
+  when: is_initialized
