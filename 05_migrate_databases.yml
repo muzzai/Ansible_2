@@ -64,6 +64,24 @@
 
     - name: Reboot to add a new disk
       ansible.windows.win_reboot:
+        reboot_timeout: 300
+      register: reboot_result
+
+    - name: Cleanup on reboot hang
+      block:
+        - name: Delete volume.
+          amazon.aws.ec2_vol:
+            id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+          # id: "{{ volume_id }}"
+            region: "{{ hostvars[dest]['placement']['region'] }}"
+            modify_volume: true
+            state: absent
+          delegate_to: localhost
+
+        - name: Fail
+          ansible.builtin.fail:
+            msg: Failed as requested from task
+      when: not reboot_result.rebooted
 
     - name: Add Disk
       ansible.builtin.include_role:
@@ -97,6 +115,8 @@
     - name: Show backup results
       debug:
         var: backup_result.results
+
+
 
 
 #     - name: Create Migration-script folder
