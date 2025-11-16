@@ -55,7 +55,7 @@
     mssql_backup_path: D:\Backups
     database_list:
       - "{{ AN_Database }}"
-      - "{{ AD_Database }}"
+      # - "{{ AD_Database }}"
   tasks:
     - name: Build connection details
       block:
@@ -106,7 +106,7 @@
             login_port: 51967
             name: "{{ item }}"
             script: |
-              DECLARE @BackupPath NVARCHAR(500) = N'{{ mssql_backup_path }}{{ item }}_{{ ansible_date_time.iso8601 | replace(':', '') | replace('-', '') }}.bak'
+              DECLARE @BackupPath NVARCHAR(500) = N'{{ mssql_backup_path }}\{{ item }}.bak'
 
               BACKUP DATABASE [{{ item }}]
               TO DISK = @BackupPath
