@@ -65,10 +65,10 @@
       delegate_to: localhost
       no_log: true
 
-    - name: Reboot to add a new disk
-      ansible.windows.win_reboot:
-        reboot_timeout: 300
-      register: reboot_result
+    # - name: Reboot to add a new disk
+    #   ansible.windows.win_reboot:
+    #     reboot_timeout: 300
+    #   register: reboot_result
 
     - name: Cleanup on reboot hang
       block:
