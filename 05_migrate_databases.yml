@@ -53,6 +53,9 @@
     az_group: "{{ availability_zone_group | default('skip') }}"
     source: "{{ source | default('skip') }}"
     mssql_backup_path: D:\Backups
+    database_list:
+      - "{{ AN_Database }}"
+      - "{{ AD_Database }}"
   tasks:
     - name: Build connection details
       block:
@@ -83,40 +86,51 @@
             msg: Failed as requested from task
       when: not reboot_result.rebooted
 
-    - name: Add Disk
-      ansible.builtin.include_role:
-        name: prepare_disk
 
-    - name: Create Migration folder
-      ansible.windows.win_file:
-        path: "{{ mssql_backup_path }}"
-        state: directory
+    - name: Try creating a backup and Cleanup
+      block:
+        - name: Add Disk
+          ansible.builtin.include_role:
+            name: prepare_disk
 
-    - name: Create database backups on Windows
-      community.general.mssql_script:
-        login_host: "{{ ansible_host }}"
-        login_user: "{{ source_SaUserName }}"
-        login_password: "{{ source_SaPassword }}"
-        login_port: 51967
-        name: "{{ item }}"
-        script: |
-          DECLARE @BackupPath NVARCHAR(500) = N'{{ mssql_backup_path }}{{ item }}_{{ ansible_date_time.iso8601 | replace(':', '') | replace('-', '') }}.bak'
+        - name: Create Migration folder
+          ansible.windows.win_file:
+            path: "{{ mssql_backup_path }}"
+            state: directory
 
-          BACKUP DATABASE [{{ item }}]
-          TO DISK = @BackupPath
-          WITH COMPRESSION, FORMAT,
-                MEDIANAME = '{{ item }}_Backup',
-                NAME = 'Full Backup of {{ item }}';
+        - name: Create database backups on Windows
+          community.general.mssql_script:
+            login_host: "{{ ansible_host }}"
+            login_user: "{{ source_SaUserName }}"
+            login_password: "{{ source_SaPassword }}"
+            login_port: 51967
+            name: "{{ item }}"
+            script: |
+              DECLARE @BackupPath NVARCHAR(500) = N'{{ mssql_backup_path }}{{ item }}_{{ ansible_date_time.iso8601 | replace(':', '') | replace('-', '') }}.bak'
 
-          PRINT 'Backup created successfully: ' + @BackupPath
-      loop: "{{ database_list }}"
-      register: backup_result
+              BACKUP DATABASE [{{ item }}]
+              TO DISK = @BackupPath
+              WITH COMPRESSION, FORMAT,
+                    MEDIANAME = '{{ item }}_Backup',
+                    NAME = 'Full Backup of {{ item }}';
 
-    - name: Show backup results
-      debug:
-        var: backup_result.results
+              PRINT 'Backup created successfully: ' + @BackupPath
+          loop: "{{ database_list }}"
+          register: backup_result
 
+        - name: Show backup results
+          ansible.builtin.debug:
+            var: backup_result.results
 
+      rescue:
+        - name: Delete volume.
+          amazon.aws.ec2_vol:
+            id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+          # id: "{{ volume_id }}"
+            region: "{{ hostvars[dest]['placement']['region'] }}"
+            modify_volume: true
+            state: absent
+          delegate_to: localhost
 
 
 #     - name: Create Migration-script folder
