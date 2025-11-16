@@ -184,7 +184,7 @@
 
     - name: Get partitions
       ansible.builtin.set_fact:
-        existing_partitions: "{{ ansible_facts.disks | map(attribute='partitions', default='none') | flatten(2) | selectattr('drive_letter', 'defined') | map(attribute='drive_letter') | sort | list }}"
+        existing_partitions: "{{ ansible_facts.disks | map(attribute='partitions', default=[]) | flatten | selectattr('drive_letter', 'defined') | map(attribute='drive_letter') | select | unique | sort | list }}"
 
     - name: Debug partitions
       ansible.builtin.debug:
