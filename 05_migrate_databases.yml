@@ -53,6 +53,7 @@
     az_group: "{{ availability_zone_group | default('skip') }}"
     source: "{{ source | default('skip') }}"
     mssql_backup_path: D:\Backups
+
     database_list:
       - "{{ AN_Database }}"
       # - "{{ AD_Database }}"
@@ -100,7 +101,7 @@
 
         - name: Create database backups on Windows
           community.general.mssql_script:
-            login_host: "{{ ansible_host }}"
+            login_host: "{{ hostvars[source]['ansible_host'] }}"
             login_user: "{{ source_SaUserName }}"
             login_password: "{{ source_SaPassword }}"
             login_port: 51967
