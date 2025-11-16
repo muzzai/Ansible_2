@@ -70,7 +70,7 @@
       block:
         - name: Add Disk
           ansible.builtin.include_role:
-            name: prepare_disk
+            name: prepare_disk_v2
 
         - name: Create Migration folder
           ansible.windows.win_file:
@@ -166,56 +166,15 @@
           register: attachment_result
       delegate_to: localhost
 
-    - name: Gather destination disk facts
-      community.windows.win_disk_facts:
-
-    - name: Get disk number
-      ansible.builtin.set_fact:
-        physical_disk_number: "{{ ansible_facts.disks | map(attribute='number') | max }}"
+    - name: Add Disk 2
+      ansible.builtin.include_role:
+        name: prepare_disk_v2
 
     # - name: Initialize the disk
     #   community.windows.win_initialize_disk:
     #     disk_number: "{{ physical_disk_number }}"
     #     style: gpt
     #   register: init_disk_result
-
-    - name: Get partitions
-      ansible.builtin.set_fact:
-        existing_partitions: "{{ ansible_facts.disks | map(attribute='partitions', default=[]) | flatten | selectattr('drive_letter', 'defined') | map(attribute='drive_letter') | select | unique | sort | list }}"
-
-    - name: Get partitions
-      ansible.builtin.set_fact:
-        next_drive_letter: "{{ all_drive_letters | community.general.lists_difference(existing_partitions) | first }}"
-
-    - name: Debug next drive letter
-      ansible.builtin.debug:
-        var: next_drive_letter
-
-    - name: Debug disks 1
-      ansible.builtin.debug:
-        var: ansible_facts.disks
-
-    - name: Create a partition on the disk
-      community.windows.win_partition:
-        disk_number: "{{ physical_disk_number }}"
-        partition_number: 1
-        drive_letter: "{{ next_drive_letter }}"
-        # hidden: false
-        # offline: false
-      register: partition_result
-      ignore_errors: true
-
-    - name: Debug partition result
-      ansible.builtin.debug:
-        var: partition_result
-
-    - name: Gather destination disk facts
-      community.windows.win_disk_facts:
-
-
-    - name: Debug disks 2
-      ansible.builtin.debug:
-        var: ansible_facts.disks
 
 
     # - name: Debug init disk result

@@ -8,11 +8,11 @@
 
 - name: Get disk number
   ansible.builtin.set_fact:
-    physical_disk_number: |
-     "{{ ansible_facts.disks
-     | rejectattr('partition_style', 'GPT')
-     | map(attribute='number', default=0)
-     | max }}"
+    physical_disk_number: >
+      {{ ansible_facts.disks
+         | selectattr('partition_style', 'eq', 'GPT')
+         | map(attribute='number')
+         | max }}
 
 - name: Get partitions
   ansible.builtin.set_fact:
@@ -39,7 +39,7 @@
       community.windows.win_partition:
         disk_number: "{{ physical_disk_number }}"
         partition_size: "{{ partition_size }}"
-        drive_letter: "{{ drive_letter }}"
+        drive_letter: "{{ next_drive_letter }}"
       register: partition_result
 
     - name: Format the partition
