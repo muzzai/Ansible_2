@@ -173,10 +173,13 @@
     - name: Debug result
       ansible.builtin.set_fact:
         disk_number: "{{ ansible_facts.disks | map(attribute='number') | max | int +1 }}"
+        last_drive_letter: "{{ ansible_facts.disks | sum(attribute='partitions'), start[] }}"
 
     - name: Debug disk number
       ansible.builtin.debug:
-        var: disk_number
+        var:
+          - disk_number
+          - last_drive_letter
 
 
 
