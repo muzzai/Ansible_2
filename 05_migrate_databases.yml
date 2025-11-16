@@ -169,11 +169,11 @@
     - name: Get new drive letter
       community.windows.win_disk_facts:
         filter: ["physical_disk"]
-      register: result
+
 
     - name: Debug result
       ansible.builtin.debug:
-        var: result
+        var: ansible_facts.disks
 
 
 
