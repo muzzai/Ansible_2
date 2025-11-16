@@ -170,6 +170,7 @@
       community.windows.win_disk_facts:
         filter:
           - physical_disk
+          - partitions
 
     - name: Get disk number
       ansible.builtin.set_fact:
