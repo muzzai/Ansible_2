@@ -1,4 +1,4 @@
-# ---
+---
 # - name: Prepare volume
 #   gather_facts: false
 #   hosts: localhost
@@ -181,25 +181,45 @@
         style: gpt
       register: init_disk_result
 
-    - name: Create a partition on the disk
-      community.windows.win_partition:
-        disk_number: "{{ physical_disk_number }}"
-        partition_number: 1
-      register: partition_result
+    - name: Get partitions
+      ansible.builtin.set_fact:
+        existing_partitions: "{{ ansible_facts.disks | map(attribute='partitions') | flatten(2) | rejectattr('drive_letter', 'none') | getattr('drive_letter') | sort | list }}"
 
-
-    - name: Debug init disk result
+    - name: Debug partitions
       ansible.builtin.debug:
-        var: init_disk_result
+        var: existing_partitions
 
-    - name: Gather destination disk facts
-      community.windows.win_disk_facts:
-        filter:
-          - partitions
 
-    - name: Debug disk number
-      ansible.builtin.debug:
-        var: ansible_facts.disks
+
+
+
+
+
+
+
+
+
+
+
+    # - name: Create a partition on the disk
+    #   community.windows.win_partition:
+    #     disk_number: "{{ physical_disk_number }}"
+    #     partition_number: 1
+    #   register: partition_result
+
+
+    # - name: Debug init disk result
+    #   ansible.builtin.debug:
+    #     var: init_disk_result
+
+    # - name: Gather destination disk facts
+    #   community.windows.win_disk_facts:
+    #     filter:
+    #       - partitions
+
+    # - name: Debug disk number
+    #   ansible.builtin.debug:
+    #     var: ansible_facts.disks
 
 
 
