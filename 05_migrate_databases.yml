@@ -164,7 +164,7 @@
       #       region: "{{ hostvars[dest]['placement']['region'] }}"
       #       state: present
       #     register: attachment_result
-      # delegate_to: localhost
+      delegate_to: localhost
 
     - name: Get new drive letter
       community.windows.win_disk_facts:
