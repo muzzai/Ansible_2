@@ -116,6 +116,7 @@
 
               PRINT 'Backup created successfully: ' + @BackupPath
           loop: "{{ database_list }}"
+          delegate_to: localhost
           register: backup_result
 
         - name: Show backup results
