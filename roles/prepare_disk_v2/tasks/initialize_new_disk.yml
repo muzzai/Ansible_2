@@ -1,0 +1,29 @@
+---
+- name: Set next available drive letter
+  ansible.builtin.set_fact:
+    next_drive_letter: >
+      {{ all_drive_letters
+      | community.general.lists_difference(existing_partitions)
+      | first }}
+
+- name: Fail if no drive letter is available
+  ansible.builtin.fail:
+    msg: "No available drive letters found to assign to the new disk."
+  when: not next_drive_letter
+
+- name: Initialize disk
+  community.windows.win_initialize_disk:
+    disk_number: "{{ target_disk.number }}"
+    style: "{{ disk_style }}"
+
+- name: Create partition and notify handler
+  community.windows.win_partition:
+    disk_number: "{{ target_disk.number }}"
+    partition_size: "{{ partition_size }}"
+    drive_letter: "{{ next_drive_letter }}"
+  register: partition_result
+  notify: Format new partition
+
+- name: Set data drive letter fact for new disk
+  ansible.builtin.set_fact:
+    data_drive_letter: "{{ partition_result.drive_letter }}"

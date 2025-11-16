@@ -5,3 +5,4 @@ fs_label: Data        # volume label
 fs_type: NTFS         # filesystem type
 partition_size: -1  # use entire disk
 disk_style: mbr       # partition style
+is_initialized: false

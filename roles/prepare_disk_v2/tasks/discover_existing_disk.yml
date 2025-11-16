@@ -1,0 +1,15 @@
+---
+- name: Find drive letter from existing partition
+  ansible.builtin.set_fact:
+    discovered_drive_letter: >
+      {{ (target_disk.partitions | selectattr('drive_letter', 'defined')
+        | map(attribute='drive_letter') | first) | upper }}
+
+- name: Fail if no drive letter is found on existing disk
+  ansible.builtin.fail:
+    msg: "Disk {{ target_disk.number }} has partitions, but none have a drive letter assigned."
+  when: not discovered_drive_letter
+
+- name: Set data drive letter fact for existing disk
+  ansible.builtin.set_fact:
+    data_drive_letter: "{{ discovered_drive_letter }}"

@@ -6,21 +6,48 @@
   ansible.builtin.debug:
     var: ansible_facts.disks
 
-- name: Initialize the disk
-  community.windows.win_initialize_disk:
-    disk_number: "{{ disk_number }}"
-    style: "{{ disk_style }}"
-  register: init_disk_result
+- name: Get disk number
+  ansible.builtin.set_fact:
+    physical_disk_number: |
+     "{{ ansible_facts.disks
+     | rejectattr('partition_style', 'GPT')
+     | map(attribute='number', default=0)
+     | max }}"
 
-- name: Create a partition on the disk
-  community.windows.win_partition:
-    disk_number: "{{ disk_number }}"
-    partition_size: "{{ partition_size }}"
-    drive_letter: "{{ drive_letter }}"
-  register: partition_result
+- name: Get partitions
+  ansible.builtin.set_fact:
+    existing_partitions: |
+     "{{ ansible_facts.disks
+      | map(attribute='partitions', default=[])
+      | flatten
+      | selectattr('drive_letter', 'defined')
+      | map(attribute='drive_letter') | select | unique | sort | list }}"
 
-- name: Format the partition
-  community.windows.win_format:
-    drive_letter: "{{ drive_letter }}"
-    file_system: "{{ fs_type }}"
-    force: true
+- name: Get next drive letter
+  ansible.builtin.set_fact:
+    next_drive_letter: "{{ all_drive_letters | community.general.lists_difference(existing_partitions) | first }}"
+
+- name: Initialize disk
+  when: not is_initialized
+  block:
+    - name: Initialize the disk
+      community.windows.win_initialize_disk:
+        disk_number: "{{ physical_disk_number }}"
+        style: "{{ disk_style }}"
+
+    - name: Create a partition on the disk
+      community.windows.win_partition:
+        disk_number: "{{ physical_disk_number }}"
+        partition_size: "{{ partition_size }}"
+        drive_letter: "{{ drive_letter }}"
+      register: partition_result
+
+    - name: Format the partition
+      community.windows.win_format:
+        drive_letter: "{{ next_drive_letter }}"
+        file_system: "{{ fs_type }}"
+        force: true
+
+    - name: Set fact initialized
+      ansible.builtin.set_fact:
+        is_initialized: true
