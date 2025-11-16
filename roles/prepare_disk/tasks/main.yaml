@@ -1,4 +1,11 @@
 ---
+- name: Gather disk facts
+  community.windows.win_disk_facts:
+
+- name: Debug disk facts
+  ansible.builtin.debug:
+    var: ansible_facts.disks
+
 - name: Initialize the disk
   community.windows.win_initialize_disk:
     disk_number: "{{ disk_number }}"
