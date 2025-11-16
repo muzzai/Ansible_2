@@ -202,7 +202,6 @@
         drive_letter: "{{ next_drive_letter }}"
         # hidden: false
         # offline: false
-        state: present
       register: partition_result
       ignore_errors: true
 
