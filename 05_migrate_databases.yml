@@ -46,14 +46,13 @@
       ansible.builtin.debug:
         var: volume_for_backups
 
-
-
 - name: Create backups
   gather_facts: false
   hosts: "{{ az_group }}:&{{ source }}"
   vars:
     az_group: "{{ availability_zone_group | default('skip') }}"
     source: "{{ source | default('skip') }}"
+    mssql_backup_path: D:\Backups
   tasks:
     - name: Build connection details
       block:
@@ -61,6 +60,7 @@
           ansible.builtin.include_role:
             name: build_connection_details
       delegate_to: localhost
+      no_log: true
 
     - name: Reboot to add a new disk
       ansible.windows.win_reboot:
@@ -69,49 +69,60 @@
       ansible.builtin.include_role:
         name: prepare_disk
 
-    - name: Create Migration-script folder
-      ansible.windows.win_file:
-        path: C:\Migration-script
-        state: directory
-
     - name: Create Migration folder
       ansible.windows.win_file:
-        path: C:\Migration
+        path: "{{ mssql_backup_path }}"
         state: directory
 
-    - name: Create Migration folder
-      ansible.windows.win_file:
-        path: D:\Backups
-        state: directory
+    - name: Create database backups on Windows
+      community.general.mssql_script:
+        login_host: "{{ ansible_host }}"
+        login_user: "{{ source_SaUserName }}"
+        login_password: "{{ source_SaPassword }}"
+        login_port: 51967
+        name: "{{ item }}"
+        script: |
+          DECLARE @BackupPath NVARCHAR(500) = N'{{ mssql_backup_path }}{{ item }}_{{ ansible_date_time.iso8601 | replace(':', '') | replace('-', '') }}.bak'
 
-    - name: Generate script
-      ansible.windows.win_template:
-        src: templates/Backup-Databases.ps1.j2
-        dest: C:\Migration-script\Backup-Databases.ps1
-        force: true
+          BACKUP DATABASE [{{ item }}]
+          TO DISK = @BackupPath
+          WITH COMPRESSION, FORMAT,
+                MEDIANAME = '{{ item }}_Backup',
+                NAME = 'Full Backup of {{ item }}';
 
-    - name: Execute SQL backup script
-      ansible.windows.win_shell: |
-        & C:\Migration-script\Backup-Databases.ps1
-      args:
-        executable: powershell.exe
+          PRINT 'Backup created successfully: ' + @BackupPath
+      loop: "{{ database_list }}"
+      register: backup_result
 
-# - name: Restore backups
-#   gather_facts: false
-#   hosts: "{{ az_group }}:&{{ dest }}"
-#   vars:
-#     az_group: "{{ availability_zone_group | default('skip') }}"
-#     dest: "{{ dest | default('skip') }}"
-#     prefix: migrated
-#     volume_id: vol-006d4057fac43208b
+    - name: Show backup results
+      debug:
+        var: backup_result.results
 
-#   tasks:
-#     - name: Build connection details
-#       block:
-#         - name: Build connection details
-#           ansible.builtin.include_role:
-#             name: build_connection_details
-#       delegate_to: localhost
+
+#     - name: Create Migration-script folder
+#       ansible.windows.win_file:
+#         path: C:\Migration-script
+#         state: directory
+
+#     - name: Create Migration folder
+#       ansible.windows.win_file:
+#         path: C:\Migration
+#         state: directory
+
+#
+
+#     - name: Generate script
+#       ansible.windows.win_template:
+#         src: templates/Backup-Databases.ps1.j2
+#         dest: C:\Migration-script\Backup-Databases.ps1
+#         force: true
+
+#     - name: Execute SQL backup script
+#       ansible.windows.win_shell: |
+#         & C:\Migration-script\Backup-Databases.ps1
+#       args:
+#         executable: powershell.exe
+
 
 #     - name: Detach volume from the source
 #       amazon.aws.ec2_vol:
@@ -134,6 +145,29 @@
 #       until: result | length > 0
 #       retries: 5
 #       delay: 10
+
+
+
+
+
+# - name: Restore backups
+#   gather_facts: false
+#   hosts: "{{ az_group }}:&{{ dest }}"
+#   vars:
+#     az_group: "{{ availability_zone_group | default('skip') }}"
+#     dest: "{{ dest | default('skip') }}"
+#     prefix: migrated
+#     volume_id: vol-006d4057fac43208b
+
+#   tasks:
+#     - name: Build connection details
+#       block:
+#         - name: Build connection details
+#           ansible.builtin.include_role:
+#             name: build_connection_details
+#       delegate_to: localhost
+
+
 
 #     - name: Attach new volume to dest
 #       amazon.aws.ec2_vol:
