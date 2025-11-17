@@ -11,8 +11,7 @@
     physical_disk_number: |
       "{{ ansible_facts.disks
          | map(attribute='number')
-         | max
-         | int }}"
+         | max }}"
 
 - name: Get partitions
   ansible.builtin.set_fact:
@@ -32,7 +31,7 @@
   block:
     - name: Initialize the disk
       community.windows.win_initialize_disk:
-        disk_number: "{{ physical_disk_number }}"
+        disk_number: "{{ physical_disk_number | int }}"
         style: "{{ disk_style }}"
 
     - name: Create a partition on the disk
