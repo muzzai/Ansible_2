@@ -39,7 +39,7 @@
         volume_size: "{{ volume_size }}"
         volume_type: gp2
         tags:
-          Name: "prefix-{{ temp_volume }}"
+          Name: "{{ prefix }}-temp_volume"
       register: volume_for_backups
 
     - name: Debug volume
