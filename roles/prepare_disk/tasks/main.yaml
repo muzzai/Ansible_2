@@ -31,7 +31,7 @@
   block:
     - name: Initialize the disk
       community.windows.win_initialize_disk:
-        disk_number: "{{ physical_disk_number | int }}"
+        disk_number: "{{ physical_disk_number | trim | int }}"
         style: "{{ disk_style }}"
 
     - name: Create a partition on the disk
