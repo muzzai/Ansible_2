@@ -10,7 +10,6 @@
   ansible.builtin.set_fact:
     physical_disk_number: |
       "{{ ansible_facts.disks
-         | selectattr('partition_style', 'eq', disk_style )
          | map(attribute='number')
          | max
          | int }}"
