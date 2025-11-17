@@ -8,18 +8,19 @@
 
 - name: Get max disk number
   ansible.builtin.set_fact:
-    physical_disk_number: >
-      {{ ansible_facts.disks
-         | selectattr('partition_style', 'eq', 'GPT')
+    physical_disk_number: |
+      "{{ ansible_facts.disks
+         | selectattr('partition_style', 'eq', disk_style )
          | map(attribute='number')
-         | max }}
+         | max
+         | int }}"
 
 - name: Get partitions
   ansible.builtin.set_fact:
     existing_partitions: |
      "{{ ansible_facts.disks
       | map(attribute='partitions', default=[])
-      | flatten
+      | flatten(2)
       | selectattr('drive_letter', 'defined')
       | map(attribute='drive_letter') | select | unique | sort | list }}"
 
