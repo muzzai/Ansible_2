@@ -1,3 +1,33 @@
+################################################################
+#                  CONFIGURATION SECTION                       #
+################################################################
+
+# --- Product / Registry info ---
+$AN_ProductName      = "Alloy Navigator Enterprise"
+$AN_RegistryName     = "Alloy Navigator"
+$AN_Database         = "{{ AN_Database }}"
+$AN_SQLDatabase      = "{{ prefix }}-{{ AN_Database }}"
+
+$AD_Database         = "{{ AD_Database }}"
+$AD_SQLDatabase      = "{{ prefix }}-{{ AD_Database }}"
+
+$ProductIsExpress    = $false
+$ADC_NetworkInventory = $false
+
+# --- SQL Server settings ---
+$SQLInstanceAddress  = "{{ hostvars[dest]['ansible_host'] }}"
+$SQLServerInstance   = "{{ hostvars[source]['ansible_host'] }}"
+$SQLSaUserName       = "{{ dest_SaUserName }}"
+$SQLSaPassword       = "{{ dest_SaPassword }}"
+
+# --- Misc variables ---
+$RegistryName        = $AN_RegistryName
+$ProductName         = $AN_ProductName
+
+################################################################
+#                      MAIN SCRIPT                             #
+################################################################
+
 Write-Output "################################################################"
 Write-Output "# Reconfiguring the source server to use the new database     #"
 Write-Output "################################################################"
@@ -41,7 +71,8 @@ $AccessKeyFile
 }
 
 
-function MakeAccessKey("{{ AN_ProductName }}", "{{ AN_RegistryName }}", "{{ AN_Database }}", $SQLDatabase, [ref]$AccessKeyNameResult) {
+function MakeAccessKey($ProductName, $RegistryName, $Database, $SQLDatabase, [ref]$AccessKeyNameResult) {
+
   Write-Output "Getting current $ProductName connection"
   $OldAccessKeyID, $OldAccessKeyName, $ProductVersion = Invoke-Command -ArgumentList($RegistryName)  {
       param($RegistryName)
@@ -54,13 +85,14 @@ function MakeAccessKey("{{ AN_ProductName }}", "{{ AN_RegistryName }}", "{{ AN_D
       $Connection.GetValue("KeyName")
       (Get-Item "HKLM:\SOFTWARE\Alloy Software\Access Keys\$($Connection.GetValue("KeyName"))").GetValue("Version")
   }
+
   Write-Output "Generating $ProductName access key"
   $AccessKeyID = "{$([guid]::NewGuid().ToString().ToUpper())}"
-  $AccessKeyName, $AccessKeyDate, $AccessKey = GenerateAccessKey $AccessKeyID $SQLInstanceAddress $ProductName $ProductVersion $SQLServerInstance $SQLDatabase $SQLSaUserName $SQLSaPassword
-  $AccessKeyNameResult.Value = $AccessKeyName
+  $AccessKeyName, $AccessKeyDate, $AccessKey = GenerateAccessKey `
+      $AccessKeyID $SQLInstanceAddress $ProductName $ProductVersion `
+      $SQLServerInstance $SQLDatabase $SQLSaUserName $SQLSaPassword
 
-  # Write-Output "Uploading helper"
-  # Copy-Item -Path "$PSScriptRoot/ScriptHelper.exe" -Destination "C:\Install\ScriptHelper.exe" -ToSession $Session -Force
+  $AccessKeyNameResult.Value = $AccessKeyName
 
   Write-Output "Setting new $ProductName connection"
   Invoke-Command -ArgumentList ($AccessKeyID, $OldAccessKeyID, $AccessKeyName, $OldAccessKeyName, $AccessKeyDate, $AccessKey, $ProductName, $ProductVersion, $RegistryName)  {
@@ -77,7 +109,6 @@ function MakeAccessKey("{{ AN_ProductName }}", "{{ AN_RegistryName }}", "{{ AN_D
       }
 
       Set-ItemProperty -Path "HKCU:\Software\Alloy Software\$RegistryName\Connections\$AccessKeyID" -Name "KeyName" -Value $AccessKeyName
-
       Set-ItemProperty -Path "HKLM:\SOFTWARE\Alloy Software\$RegistryName\Service Connection" -Name "KeyName" -Value $AccessKeyName
 
       if ($AccessKeyName -ine $OldAccessKeyName) {
@@ -91,7 +122,10 @@ function MakeAccessKey("{{ AN_ProductName }}", "{{ AN_RegistryName }}", "{{ AN_D
   $AccessKeyEncrypted = Invoke-Command  { $AccessKeyEncrypted }
 
   Write-Output "Sharing $Database access key"
-  $AccessKeyFile = FormatAccessKeyFile $AccessKeyID $AccessKeyName $AccessKeyDate $AccessKeyEncrypted $ProductName $ProductVersion $RegistryName
+  $AccessKeyFile = FormatAccessKeyFile `
+      $AccessKeyID $AccessKeyName $AccessKeyDate $AccessKeyEncrypted `
+      $ProductName $ProductVersion $RegistryName
+
   Invoke-Command -ArgumentList ($AccessKeyFile, $Database)  {
       param($AccessKeyFile, $Database)
       $AccessKeyFile | Out-File "C:\Install\$($Database)Key.reg" -Encoding Unicode
@@ -99,8 +133,11 @@ function MakeAccessKey("{{ AN_ProductName }}", "{{ AN_RegistryName }}", "{{ AN_D
   }
 }
 
+# Run AN Access Key creation
 $AN_AccessKeyName = ""
 MakeAccessKey $AN_ProductName $AN_RegistryName $AN_Database $AN_SQLDatabase ([ref]$AN_AccessKeyName)
+
+# Run AD Access Key creation if needed
 if ((-not $ProductIsExpress) -and (-not $ADC_NetworkInventory)) {
   $AD_AccessKeyName = ""
   MakeAccessKey 'Alloy Discovery' 'Alloy Discovery' $AD_Database $AD_SQLDatabase ([ref]$AD_AccessKeyName)
@@ -127,18 +164,26 @@ Invoke-Command -ArgumentList ($AN_AccessKeyName, $SQLServerInstance, $AN_SQLData
       $json | ConvertTo-Json -Depth 10 | Set-Content -Path $FileName -Encoding UTF8
   }
 
-  $DefaultsID = @(`
-      '{E850F970-051E-4B64-82CC-A1BF5324C370}', `
-      '{1766B1CF-887E-46C7-A9A0-4E204BEBC4F3}', `
-      '{031C27A5-6012-41B6-9EE0-459CF920A3DF}', `
-      '{C685B83D-C7C5-48F2-A509-CB4B048E7F1D}', `
-      '{85FFA55B-C1CE-454C-B111-F83EFAE376FE}', `
+  $DefaultsID = @(
+      '{E850F970-051E-4B64-82CC-A1BF5324C370}',
+      '{1766B1CF-887E-46C7-A9A0-4E204BEBC4F3}',
+      '{031C27A5-6012-41B6-9EE0-459CF920A3DF}',
+      '{C685B83D-C7C5-48F2-A509-CB4B048E7F1D}',
+      '{85FFA55B-C1CE-454C-B111-F83EFAE376FE}',
       '{DD41C119-1E29-4814-9024-AB5B0D3AD00C}')
 
   Write-Output "Configuring web-portal SSP"
-  Get-ChildItem "HKLM:\SOFTWARE\Alloy Software\Web Config" | Where-Object { $DefaultsID -notcontains $_.PSChildName } | ForEach-Object { UpdateAppSettings $_.GetValue("InstallPath") }
+  Get-ChildItem "HKLM:\SOFTWARE\Alloy Software\Web Config" |
+      Where-Object { $DefaultsID -notcontains $_.PSChildName } |
+      ForEach-Object { UpdateAppSettings $_.GetValue("InstallPath") }
+
   Write-Output "Configuring web-portal API"
-  Get-ChildItem "HKLM:\SOFTWARE\Alloy Software\Web Config API" | Where-Object { $DefaultsID -notcontains $_.PSChildName } | ForEach-Object { UpdateWebConfig $_.GetValue("InstallPath") }
+  Get-ChildItem "HKLM:\SOFTWARE\Alloy Software\Web Config API" |
+      Where-Object { $DefaultsID -notcontains $_.PSChildName } |
+      ForEach-Object { UpdateWebConfig $_.GetValue("InstallPath") }
+
   Write-Output "Configuring web-portal TP"
-  Get-ChildItem "HKLM:\SOFTWARE\Alloy Software\Web Config Tech" | Where-Object { $DefaultsID -notcontains $_.PSChildName } | ForEach-Object { UpdateWebConfig $_.GetValue("InstallPath") }
+  Get-ChildItem "HKLM:\SOFTWARE\Alloy Software\Web Config Tech" |
+      Where-Object { $DefaultsID -notcontains $_.PSChildName } |
+      ForEach-Object { UpdateWebConfig $_.GetValue("InstallPath") }
 }
