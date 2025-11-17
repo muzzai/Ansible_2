@@ -16,13 +16,13 @@ $ADC_NetworkInventory = $false
 
 # --- SQL Server settings ---
 $SQLInstanceAddress  = "{{ hostvars[dest]['ansible_host'] }}"
-$SQLServerInstance = "$SQLInstanceAddress,51967"
+$SQLServerInstance   = "$SQLInstanceAddress,51967"
 $SQLSaUserName       = "{{ dest_SaUserName }}"
 $SQLSaPassword       = "{{ dest_SaPassword }}"
 
 # --- Misc variables ---
-$RegistryName        = $AN_RegistryName
-$ProductName         = $AN_ProductName
+$RegistryName        = "{{ AN_RegistryName }}"
+$ProductName         = "{{ AN_ProductName }}"
 
 ################################################################
 #                      MAIN SCRIPT                             #
@@ -74,6 +74,7 @@ $AccessKeyFile
 function MakeAccessKey($ProductName, $RegistryName, $Database, $SQLDatabase, [ref]$AccessKeyNameResult) {
 
   Write-Output "Getting current $ProductName connection"
+
   $OldAccessKeyID, $OldAccessKeyName, $ProductVersion = Invoke-Command -ArgumentList($RegistryName)  {
       param($RegistryName)
       $Connection = Get-ChildItem "HKCU:\Software\Alloy Software\$RegistryName\Connections"
