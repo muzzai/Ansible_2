@@ -42,7 +42,6 @@
         partition_size: "{{ partition_size }}"
         drive_letter: "{{ next_drive_letter }}"
 
-
     - name: Format the partition
       community.windows.win_format:
         drive_letter: "{{ next_drive_letter }}"
@@ -53,9 +52,12 @@
       ansible.builtin.set_fact:
         is_initialized: true
 
-- name: Discover existing partition
-  community.windows.win_partition:
-    disk_number: "{{ physical_disk_number }}"
-    partition_size: "{{ partition_size }}"
-    drive_letter: "{{ next_drive_letter }}"
+- name: Get existing partition number
+  ansible.builtin.set_fact:
+    existing_partition_number: >-
+      {{
+        (ansible_facts.disks
+         | selectattr('number', 'equalto', physical_disk_number)
+         | first).partitions[0].number
+      }}
   when: is_initialized
