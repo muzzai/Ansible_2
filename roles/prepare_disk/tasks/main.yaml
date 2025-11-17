@@ -8,21 +8,21 @@
 
 - name: Get max disk number
   ansible.builtin.set_fact:
-    physical_disk_number: |
+    physical_disk_number:
       "{{ ansible_facts.disks
-         | map(attribute='number')
-         | max
-         | trim
-         | int }}"
+        | map(attribute='number')
+        | max
+        | trim
+        | int }}"
 
 - name: Get partitions
   ansible.builtin.set_fact:
-    existing_partitions: |
-     "{{ ansible_facts.disks
-      | map(attribute='partitions', default=[])
-      | flatten(2)
-      | selectattr('drive_letter', 'defined')
-      | map(attribute='drive_letter') | select | unique | sort | list }}"
+    existing_partitions:
+      "{{ ansible_facts.disks
+        | map(attribute='partitions', default=[])
+        | flatten(2)
+        | selectattr('drive_letter', 'defined')
+        | map(attribute='drive_letter') | select | unique | sort | list }}"
 
 - name: Get next drive letter
   ansible.builtin.set_fact:
