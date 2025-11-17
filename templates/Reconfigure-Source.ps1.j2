@@ -16,7 +16,7 @@ $ADC_NetworkInventory = $false
 
 # --- SQL Server settings ---
 $SQLInstanceAddress  = "{{ hostvars[dest]['ansible_host'] }}"
-$SQLServerInstance   = "{{ hostvars[source]['ansible_host'] }}"
+$SQLServerInstance = "$SQLInstanceAddress,51967"
 $SQLSaUserName       = "{{ dest_SaUserName }}"
 $SQLSaPassword       = "{{ dest_SaPassword }}"
 
