@@ -52,8 +52,8 @@
   vars:
     az_group: "{{ availability_zone_group | default('skip') }}"
     source: "{{ source | default('skip') }}"
-    mssql_backup_path: D:\Backups
-
+    mssql_backup_path: :\Backups
+    is_initialized: false
     database_list:
       - "{{ AN_Database }}"
       # - "{{ AD_Database }}"
@@ -68,13 +68,18 @@
 
     - name: Try creating a backup and Cleanup
       block:
+
         - name: Add Disk
           ansible.builtin.include_role:
             name: prepare_disk
 
+        - name: Set backup path
+          ansible.builtin.set_fact:
+            source_mssql_backup_path: "{{ next_drive_letter }}{{ mssql_backup_path }}"
+
         - name: Create Migration folder
           ansible.windows.win_file:
-            path: "{{ mssql_backup_path }}"
+            path: "{{ source_mssql_backup_path }}"
             state: directory
 
         - name: Create database backups on Windows
@@ -89,7 +94,7 @@
               ALTER DATABASE [{{ item }}]
               SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 
-              DECLARE @BackupPath NVARCHAR(500) = N'{{ mssql_backup_path }}\{{ item }}.bak'
+              DECLARE @BackupPath NVARCHAR(500) = N'{{ source_mssql_backup_path }}\{{ item }}.bak'
 
               BACKUP DATABASE [{{ item }}]
               TO DISK = @BackupPath
@@ -126,6 +131,7 @@
     dest: "{{ dest | default('skip') }}"
     prefix: sql-migrated
     volume_id: vol-01dde0a878cd44fb6
+    is_initialized: true
 
   tasks:
     - name: Build connection details
@@ -170,6 +176,13 @@
       ansible.builtin.include_role:
         name: prepare_disk
 
+    - name: Set backup path
+      ansible.builtin.set_fact:
+        target_mssql_backup_path: "{{ next_drive_letter }}{{ mssql_backup_path }}"
+
+    - name: Ensure backup file
+      ansible.windows.win_stat:
+        path: "{{ target_mssql_backup_path }}"
     # - name: Initialize the disk
     #   community.windows.win_initialize_disk:
     #     disk_number: "{{ physical_disk_number }}"
