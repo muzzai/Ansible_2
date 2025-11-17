@@ -24,13 +24,17 @@
         | selectattr('drive_letter', 'defined')
         | map(attribute='drive_letter') | select | unique | sort | list }}"
 
-- name: Get next drive letter
+- name: Get existing partition name
   ansible.builtin.set_fact:
-    next_drive_letter: "{{ all_drive_letters | community.general.lists_difference(existing_partitions) | first }}"
+    current_drive: "{{ existing_partitions | last }}"
 
 - name: Initialize disk
   when: not is_initialized
   block:
+    - name: Get next drive letter
+      ansible.builtin.set_fact:
+        next_drive_letter: "{{ all_drive_letters | community.general.lists_difference(existing_partitions) | first }}"
+
     - name: Initialize the disk
       community.windows.win_initialize_disk:
         disk_number: "{{ physical_disk_number }}"
