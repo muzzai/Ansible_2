@@ -52,11 +52,8 @@
   vars:
     az_group: "{{ availability_zone_group | default('skip') }}"
     source: "{{ source | default('skip') }}"
-    mssql_backup_path: :\Backups
     is_initialized: false
-    database_list:
-      - "{{ AN_Database }}"
-      # - "{{ AD_Database }}"
+
   tasks:
     - name: Build connection details
       block:
@@ -133,6 +130,7 @@
     volume_id: vol-01dde0a878cd44fb6
     is_initialized: true
 
+
   tasks:
     - name: Build connection details
       block:
@@ -182,7 +180,13 @@
 
     - name: Ensure backup file
       ansible.windows.win_stat:
-        path: "{{ target_mssql_backup_path }}"
+        path: "{{ target_mssql_backup_path }}\\{{ item }}.bak"
+      loop: "{{ database_list }}"
+      register: files
+
+    - name: Debug files
+      ansible.builtin.debug:
+        var: files
 
     - name: Create database backups on Windows
       community.general.mssql_script:
