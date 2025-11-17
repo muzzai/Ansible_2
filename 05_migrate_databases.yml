@@ -183,6 +183,27 @@
     - name: Ensure backup file
       ansible.windows.win_stat:
         path: "{{ target_mssql_backup_path }}"
+
+    - name: Create database backups on Windows
+      community.general.mssql_script:
+        login_host: "{{ hostvars[dest]['ansible_host'] }}"
+        login_user: "{{ dest_SaUserName }}"
+        login_password: "{{ dest_SaPassword }}"
+        login_port: 51967
+        name: master
+        script: |
+
+          RESTORE DATABASE [{{ prefix }}-{{ item }}]
+          FROM DISK = '{{ target_mssql_backup_path }}\{{ item }}.bak'
+          WITH
+              MOVE '{{ item }}'     TO '{{ target_mssql_backup_path }}\{{ prefix }}-{{ item }}.mdf',
+              MOVE '{{ item }}_log' TO '{{ target_mssql_backup_path }}\{{ prefix }}-{{ item }}_log.ldf',
+              REPLACE,
+              STATS = 5;
+          GO
+      loop: "{{ database_list }}"
+      delegate_to: localhost
+      register: backup_result
     # - name: Initialize the disk
     #   community.windows.win_initialize_disk:
     #     disk_number: "{{ physical_disk_number }}"
