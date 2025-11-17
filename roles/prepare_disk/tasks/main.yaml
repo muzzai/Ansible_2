@@ -51,13 +51,3 @@
     - name: Set fact initialized
       ansible.builtin.set_fact:
         is_initialized: true
-
-- name: Get existing partition number
-  ansible.builtin.set_fact:
-    existing_partition_number: >-
-      {{
-        (ansible_facts.disks
-         | selectattr('number', 'equalto', physical_disk_number)
-         | first).partitions[0].number
-      }}
-  when: is_initialized
