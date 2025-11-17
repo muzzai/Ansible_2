@@ -226,6 +226,7 @@
         - name: Build connection details
           ansible.builtin.include_role:
             name: build_connection_details
+      delegate_to: localhost
 
     - name: Generate installer presigned URL
       delegate_to: localhost
