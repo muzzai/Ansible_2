@@ -71,6 +71,8 @@
   roles:
     - role: trippsc2.mssql.install
       vars:
+        mssql_sqm_reporting: false
+        mssql_error_reporting: false
         mssql_install_database_engine: true
         mssql_install_full_text: true
         mssql_version: "{{ sql_server_version | default('2022') }}"
@@ -90,6 +92,7 @@
         mssql_install_sql_server_management_studio: false
         mssql_database_sysadmin_accounts:
           - Administrator
+
 
   post_tasks:
     - name: Stop SQL Server service
