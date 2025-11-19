@@ -12,9 +12,6 @@
     host: "{{ provisioned_host | default('aws_ec2') }}"
 
   pre_tasks:
-    - name: Share group ID
-      ansible.builtin.set_fact:
-        security_group_id: "{{ provisioned_sg_id if provisioned_sg_id is defined else hostvars[host]['security_groups'][0]['group_id'] }}"
 
     - name: Get host connection details
       delegate_to: localhost
@@ -22,6 +19,13 @@
         - name: Build connection details
           ansible.builtin.include_role:
             name: build_connection_details
+
+    - name: Gather facts
+      ansible.builtin.gather_facts:
+
+    - name: Share group ID
+      ansible.builtin.set_fact:
+        security_group_id: "{{ provisioned_sg_id if provisioned_sg_id is defined else hostvars[host]['security_groups'][0]['group_id'] }}"
 
     - name: Determine S3 region for installer
       ansible.builtin.set_fact:
