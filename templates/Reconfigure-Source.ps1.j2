@@ -11,6 +11,12 @@ $AN_SQLDatabase      = "{{ prefix }}-{{ AN_Database }}"
 $AD_Database         = "{{ AD_Database }}"
 $AD_SQLDatabase      = "{{ prefix }}-{{ AD_Database }}"
 
+$AD_Access_user      = "{{ prefix }}-{{ AD_Database }}Access"
+$AD_User_pass        = "{{ passwords[AD_Database] }}"
+
+$AN_Access_user      = "{{ prefix }}-{{ AN_Database }}Access"
+$AN_User_pass        = "{{ passwords[AN_Database] }}"
+
 $ProductIsExpress    = $false
 $ADC_NetworkInventory = $false
 
@@ -85,6 +91,14 @@ function MakeAccessKey($ProductName, $RegistryName, $Database, $SQLDatabase, [re
       $Connection.PSChildName
       $Connection.GetValue("KeyName")
       (Get-Item "HKLM:\SOFTWARE\Alloy Software\Access Keys\$($Connection.GetValue("KeyName"))").GetValue("Version")
+  }
+
+  if ($ProductName -contains "Navigator") {
+    $SQLSaUserName = $AN_Access_user
+    $SQLSaPassword = $AN_User_pass
+  } else {
+    $SQLSaUserName = $AD_Access_user
+    $SQLSaPassword = $AD_User_pass
   }
 
   Write-Output "Generating $ProductName access key"

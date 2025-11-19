@@ -129,7 +129,6 @@
     db_reader_password: "some_pass"
     volume_id: vol-01dde0a878cd44fb6
     is_initialized: true
-
   tasks:
     - name: Build connection details
       block:
@@ -187,7 +186,7 @@
       block:
         - name: Initialize password dictionary
           ansible.builtin.set_fact:
-            passwords: {}
+
 
         - name: Generate unique passwords for each database
           ansible.builtin.set_fact:
@@ -233,11 +232,8 @@
             script: |
               IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'{{ prefix }}-{{ item }}Access')
                 CREATE USER [{{ prefix }}-{{ item }}Access] FOR LOGIN [{{ prefix }}-{{ item }}Access];
-                GRANT CONNECT ON DATABASE TO [{{ prefix }}-{{ item }}Access];
               IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'{{ prefix }}-dbreader')
                 CREATE USER [{{ prefix }}-dbreader] FOR LOGIN [{{ prefix }}-dbreader];
-              GRANT CONNECT ON DATABASE TO [{{ prefix }}-dbreader];
-
               ALTER AUTHORIZATION ON DATABASE::[{{ prefix }}-{{ item }}] TO [{{ prefix }}-{{ item }}Access];
               ALTER ROLE [db_owner] ADD MEMBER [{{ prefix }}-{{ item }}Access];
               ALTER ROLE [db_datareader] ADD MEMBER [{{ prefix }}-dbreader];

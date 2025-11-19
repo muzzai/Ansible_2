@@ -13,3 +13,4 @@ database_list:
       - "{{ AN_Database }}"
       - "{{ AD_Database }}"
 prefix: sql-migrated
+passwords: {}
