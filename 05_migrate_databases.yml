@@ -194,7 +194,7 @@
             passwords: "{{ passwords | combine({ item: lookup('password', '/dev/null', chars='ascii_letters,digits,hexdigits', length=20) }) }}"
           loop: "{{ database_list }}"
 
-        - name: Create database backups on Windows
+        - name: Restore databases
           community.general.mssql_script:
             login_host: "{{ hostvars[dest]['ansible_host'] }}"
             login_user: "{{ dest_SaUserName }}"
@@ -223,7 +223,30 @@
               GRANT CONNECT ON DATABASE TO [{{ prefix }}-{{ item }}Access];
               ALTER ROLE [db_owner] ADD MEMBER [{{ prefix }}-{{ item }}Access];
 
-              USE [{{ prefix }}-{{ item }}];
+  # USE [{{ prefix }}-{{ item }}];
+  # IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'{{ prefix }}-{{ item }}Access')
+  #   CREATE USER [{{ prefix }}-{{ item }}Access] FOR LOGIN [{{ prefix }}-{{ item }}Access];
+  # IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'{{ prefix }}-dbreader')
+  #   CREATE USER [{{ prefix }}-dbreader] FOR LOGIN [{{ prefix }}-dbreader];
+  # GRANT CONNECT ON DATABASE TO [{{ prefix }}-dbreader];
+
+  # ALTER AUTHORIZATION ON DATABASE::[{{ prefix }}-{{ item }}] TO [{{ prefix }}-{{ item }}Access];
+  # ALTER ROLE [db_owner] ADD MEMBER [{{ prefix }}-{{ item }}Access];
+  # ALTER ROLE [db_datareader] ADD MEMBER [{{ prefix }}-dbreader];
+  # USE master;
+  # DENY INSERT, UPDATE, DELETE ON DATABASE::[{{ prefix }}-{{ item }}] TO [{{ prefix }}-dbreader];
+
+          loop: "{{ database_list }}"
+          register: backup_result
+
+        - name: Create users
+          community.general.mssql_script:
+            login_host: "{{ hostvars[dest]['ansible_host'] }}"
+            login_user: "{{ dest_SaUserName }}"
+            login_password: "{{ dest_SaPassword }}"
+            login_port: 51967
+            name: "{{ prefix }}-{{ item }}"
+            script: |
               IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'{{ prefix }}-{{ item }}Access')
                 CREATE USER [{{ prefix }}-{{ item }}Access] FOR LOGIN [{{ prefix }}-{{ item }}Access];
               IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'{{ prefix }}-dbreader')
@@ -235,10 +258,8 @@
               ALTER ROLE [db_datareader] ADD MEMBER [{{ prefix }}-dbreader];
               USE master;
               DENY INSERT, UPDATE, DELETE ON DATABASE::[{{ prefix }}-{{ item }}] TO [{{ prefix }}-dbreader];
-
           loop: "{{ database_list }}"
           register: backup_result
-
       delegate_to: localhost
 
 - name: Reconfigure source
