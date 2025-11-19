@@ -279,6 +279,12 @@
     sql_s3_url_expiry: 3600
     sql_s3_region_effective: "{{ hostvars[source]['placement']['region'] }}"
   tasks:
+
+
+    - name: Debug localhost
+      ansible.builtin.debug:
+        var: hostvars['localhost']
+
     - name: Build connection details
       block:
         - name: Build connection details
