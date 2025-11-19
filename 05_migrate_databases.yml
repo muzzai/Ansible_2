@@ -126,10 +126,9 @@
   vars:
     az_group: "{{ availability_zone_group | default('skip') }}"
     dest: "{{ dest | default('skip') }}"
-
+    db_reader_password: "some_pass"
     volume_id: vol-01dde0a878cd44fb6
     is_initialized: true
-
 
   tasks:
     - name: Build connection details
@@ -184,31 +183,63 @@
       loop: "{{ database_list }}"
       register: files
 
-    - name: Debug files
-      ansible.builtin.debug:
-        var: files
+    - name: Restore databases and create users
+      block:
+        - name: Initialize password dictionary
+          ansible.builtin.set_fact:
+            passwords: {}
 
-    - name: Create database backups on Windows
-      community.general.mssql_script:
-        login_host: "{{ hostvars[dest]['ansible_host'] }}"
-        login_user: "{{ dest_SaUserName }}"
-        login_password: "{{ dest_SaPassword }}"
-        login_port: 51967
-        name: master
-        script: |
+        - name: Generate unique passwords for each database
+          ansible.builtin.set_fact:
+            passwords: "{{ passwords | combine({ item: lookup('password', '/dev/null', chars='ascii_letters,digits,hexdigits', length=20) }) }}"
+          loop: "{{ database_list }}"
 
-          RESTORE DATABASE [{{ prefix }}-{{ item }}]
-          FROM DISK = '{{ target_mssql_backup_path }}\{{ item }}.bak'
-          WITH
-              MOVE '{{ item }}'     TO '{{ target_mssql_backup_path }}\{{ prefix }}-{{ item }}.mdf',
-              MOVE '{{ item }}_log' TO '{{ target_mssql_backup_path }}\{{ prefix }}-{{ item }}_log.ldf',
-              REPLACE,
-              STATS = 5;
-          ALTER DATABASE [{{ prefix }}-{{ item }}] SET ONLINE;
-          ALTER DATABASE [{{ prefix }}-{{ item }}] SET MULTI_USER WITH ROLLBACK IMMEDIATE;
-      loop: "{{ database_list }}"
+        - name: Create database backups on Windows
+          community.general.mssql_script:
+            login_host: "{{ hostvars[dest]['ansible_host'] }}"
+            login_user: "{{ dest_SaUserName }}"
+            login_password: "{{ dest_SaPassword }}"
+            login_port: 51967
+            name: master
+            script: |
+              RESTORE DATABASE [{{ prefix }}-{{ item }}]
+              FROM DISK = '{{ target_mssql_backup_path }}\{{ item }}.bak'
+              WITH
+                  MOVE '{{ item }}'     TO '{{ target_mssql_backup_path }}\{{ prefix }}-{{ item }}.mdf',
+                  MOVE '{{ item }}_log' TO '{{ target_mssql_backup_path }}\{{ prefix }}-{{ item }}_log.ldf',
+                  REPLACE,
+                  STATS = 5;
+              ALTER DATABASE [{{ prefix }}-{{ item }}] SET ONLINE;
+              ALTER DATABASE [{{ prefix }}-{{ item }}] SET MULTI_USER WITH ROLLBACK IMMEDIATE;
+
+              IF NOT EXISTS (select 1 from sys.sql_logins where name = '{{ prefix }}-dbreader')
+                CREATE LOGIN [{{ prefix }}-dbreader] WITH PASSWORD = '{{ db_reader_password }}', CHECK_POLICY = OFF;
+                GRANT CONNECT SQL TO [{{ prefix }}-dbreader];
+
+              CREATE LOGIN [{{ prefix }}-{{ item }}Access] WITH PASSWORD = '{{ hostvars['localhost']['passwords'][item] }}', CHECK_POLICY = OFF;
+              GRANT CONNECT SQL TO [{{ prefix }}-{{ item }}Access];
+              GRANT VIEW ANY DEFINITION TO [{{ prefix }}-{{ item }}Access];
+              GRANT VIEW SERVER STATE TO [{{ prefix }}-{{ item }}Access];
+              GRANT CONNECT ON DATABASE TO [{{ prefix }}-{{ item }}Access];
+              ALTER ROLE [db_owner] ADD MEMBER [{{ prefix }}-{{ item }}Access];
+
+              USE [{{ prefix }}-{{ item }}];
+              IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'{{ prefix }}-{{ item }}Access')
+                CREATE USER [{{ prefix }}-{{ item }}Access] FOR LOGIN [{{ prefix }}-{{ item }}Access];
+              IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'{{ prefix }}-dbreader')
+                CREATE USER [{{ prefix }}-dbreader] FOR LOGIN [{{ prefix }}-dbreader];
+              GRANT CONNECT ON DATABASE TO [{{ prefix }}-dbreader];
+
+              ALTER AUTHORIZATION ON DATABASE::[{{ prefix }}-{{ item }}] TO [{{ prefix }}-{{ item }}Access];
+              ALTER ROLE [db_owner] ADD MEMBER [{{ prefix }}-{{ item }}Access];
+              ALTER ROLE [db_datareader] ADD MEMBER [{{ prefix }}-dbreader];
+              USE master;
+              DENY INSERT, UPDATE, DELETE ON DATABASE::[{{ prefix }}-{{ item }}] TO [{{ prefix }}-dbreader];
+
+          loop: "{{ database_list }}"
+          register: backup_result
+
       delegate_to: localhost
-      register: backup_result
 
 - name: Reconfigure source
   gather_facts: false
@@ -264,3 +295,8 @@
         & C:\Migration-script\Reconfigure-Source.ps1
       args:
         executable: powershell.exe
+
+    - name: Restart IIS
+      ansible.windows.win_service:
+        name: W3SVC
+        state: restarted
