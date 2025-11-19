@@ -12,10 +12,10 @@ $AD_Database         = "{{ AD_Database }}"
 $AD_SQLDatabase      = "{{ prefix }}-{{ AD_Database }}"
 
 $AD_Access_user      = "{{ prefix }}-{{ AD_Database }}Access"
-$AD_User_pass        = "{{ passwords[AD_Database] }}"
+$AD_User_pass        = "{{ {{ hostvars['localhost'].passwords[AN_Database] }}"
 
 $AN_Access_user      = "{{ prefix }}-{{ AN_Database }}Access"
-$AN_User_pass        = "{{ passwords[AN_Database] }}"
+$AN_User_pass        = "{{ hostvars['localhost'].passwords[AN_Database] }}"
 
 $ProductIsExpress    = $false
 $ADC_NetworkInventory = $false

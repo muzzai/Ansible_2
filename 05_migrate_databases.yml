@@ -199,6 +199,7 @@
           ansible.builtin.set_fact:
             passwords: "{{ passwords | combine({ item: lookup('password', '/dev/null', chars='ascii_letters,digits,hexdigits', length=20) }) }}"
           loop: "{{ database_list }}"
+          run_once: true
 
         - name: Restore databases
           community.general.mssql_script:
