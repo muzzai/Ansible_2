@@ -184,10 +184,6 @@
 
     - name: Restore databases and create users
       block:
-        - name: Initialize password dictionary
-          ansible.builtin.set_fact:
-
-
         - name: Generate unique passwords for each database
           ansible.builtin.set_fact:
             passwords: "{{ passwords | combine({ item: lookup('password', '/dev/null', chars='ascii_letters,digits,hexdigits', length=20) }) }}"
