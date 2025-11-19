@@ -14,7 +14,7 @@
   pre_tasks:
     - name: Share group ID
       ansible.builtin.set_fact:
-        security_group_id: "{{ provisioned_sg_id if provisioned_sg_id is defined else ansible_facts['security_groups'][0]['group_id'] }}"
+        security_group_id: "{{ provisioned_sg_id if provisioned_sg_id is defined else hostvars[host]['security_groups'][0]['group_id'] }}"
 
     - name: Get host connection details
       delegate_to: localhost
