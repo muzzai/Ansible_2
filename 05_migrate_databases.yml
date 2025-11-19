@@ -216,7 +216,7 @@
                 CREATE LOGIN [{{ prefix }}-dbreader] WITH PASSWORD = '{{ db_reader_password }}', CHECK_POLICY = OFF;
                 GRANT CONNECT SQL TO [{{ prefix }}-dbreader];
 
-              CREATE LOGIN [{{ prefix }}-{{ item }}Access] WITH PASSWORD = '{{ hostvars['localhost']['passwords'][item] }}', CHECK_POLICY = OFF;
+              CREATE LOGIN [{{ prefix }}-{{ item }}Access] WITH PASSWORD = '{{ passwords[item] }}', CHECK_POLICY = OFF;
               GRANT CONNECT SQL TO [{{ prefix }}-{{ item }}Access];
               GRANT VIEW ANY DEFINITION TO [{{ prefix }}-{{ item }}Access];
               GRANT VIEW SERVER STATE TO [{{ prefix }}-{{ item }}Access];
