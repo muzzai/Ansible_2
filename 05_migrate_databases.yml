@@ -232,8 +232,8 @@
                 CREATE USER [{{ prefix }}-dbreader] FOR LOGIN [{{ prefix }}-dbreader];
               ALTER ROLE [db_owner] ADD MEMBER [{{ prefix }}-{{ item }}Access];
               ALTER ROLE [db_datareader] ADD MEMBER [{{ prefix }}-dbreader];
-              USE master;
-              DENY INSERT, UPDATE, DELETE ON DATABASE::[{{ prefix }}-{{ item }}] TO [{{ prefix }}-dbreader];
+              DENY INSERT, UPDATE, DELETE  TO [{{ prefix }}-dbreader];
+
           loop: "{{ database_list }}"
           register: backup_result
       delegate_to: localhost
