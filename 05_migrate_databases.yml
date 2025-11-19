@@ -164,8 +164,19 @@
             # device_name: /dev/sdg
             instance: "{{ hostvars[dest]['instance_id'] }}"
             region: "{{ hostvars[dest]['placement']['region'] }}"
-            state: present
-          register: attachment_result
+
+        - name: Wait for volume to be in-use
+          amazon.aws.ec2_vol_info:
+            filters:
+              # volume-id: "{{ volume_id }}"
+              volume-id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+              status: "in-use"
+            region: "{{ hostvars[dest]['placement']['region'] }}"
+          register: result
+          until: result | length > 0
+          retries: 5
+          delay: 10
+
       delegate_to: localhost
 
     - name: Add Disk 2
@@ -233,7 +244,6 @@
               ALTER ROLE [db_owner] ADD MEMBER [{{ prefix }}-{{ item }}Access];
               ALTER ROLE [db_datareader] ADD MEMBER [{{ prefix }}-dbreader];
               DENY INSERT, UPDATE, DELETE  TO [{{ prefix }}-dbreader];
-
           loop: "{{ database_list }}"
           register: backup_result
       delegate_to: localhost
@@ -246,6 +256,9 @@
             modify_volume: true
             state: absent
           delegate_to: localhost
+
+        - name: Fail
+          ansible.builtin.fail:
 
 - name: Reconfigure source
   gather_facts: false
