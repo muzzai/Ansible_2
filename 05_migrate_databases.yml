@@ -242,6 +242,15 @@
           loop: "{{ database_list }}"
           register: backup_result
       delegate_to: localhost
+      rescue:
+        - name: Delete volume.
+          amazon.aws.ec2_vol:
+            id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+          # id: "{{ volume_id }}"
+            region: "{{ hostvars[dest]['placement']['region'] }}"
+            modify_volume: true
+            state: absent
+          delegate_to: localhost
 
 - name: Reconfigure source
   gather_facts: false
