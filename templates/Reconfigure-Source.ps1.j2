@@ -12,7 +12,7 @@ $AD_Database         = "{{ AD_Database }}"
 $AD_SQLDatabase      = "{{ prefix }}-{{ AD_Database }}"
 
 $AD_Access_user      = "{{ prefix }}-{{ AD_Database }}Access"
-$AD_User_pass        = "{{ {{ hostvars['localhost'].passwords[AN_Database] }}"
+$AD_User_pass        = "{{ hostvars['localhost'].passwords[AD_Database] }}"
 
 $AN_Access_user      = "{{ prefix }}-{{ AN_Database }}Access"
 $AN_User_pass        = "{{ hostvars['localhost'].passwords[AN_Database] }}"
