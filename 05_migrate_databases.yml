@@ -200,6 +200,13 @@
           delay: 10
       delegate_to: localhost
 
+    # - name: Reboot host
+    #   ansible.windows.win_reboot:
+    - name: Debug localhost
+      ansible.builtin.debug:
+        var: hostvars['localhost']
+
+
     - name: Add Disk 2
       ansible.builtin.include_role:
         name: prepare_disk
@@ -213,9 +220,6 @@
         path: "{{ target_mssql_backup_path }}\\{{ item }}.bak"
       loop: "{{ database_list }}"
       register: files
-
-    - name: Reboot host
-      ansible.windows.win_reboot:
 
     - name: Restore databases and create users
       block:
@@ -241,7 +245,7 @@
                 CREATE LOGIN [{{ prefix }}-dbreader] WITH PASSWORD = '{{ db_reader_password }}', CHECK_POLICY = OFF;
                 GRANT CONNECT SQL TO [{{ prefix }}-dbreader];
 
-              CREATE LOGIN [{{ prefix }}-{{ item }}Access] WITH PASSWORD = '{{ passwords[item] }}', CHECK_POLICY = OFF;
+              CREATE LOGIN [{{ prefix }}-{{ item }}Access] WITH PASSWORD = '{{ hostvars['localhost']['passwords'][item] }}', CHECK_POLICY = OFF;
               GRANT CONNECT SQL TO [{{ prefix }}-{{ item }}Access];
               GRANT VIEW ANY DEFINITION TO [{{ prefix }}-{{ item }}Access];
               GRANT VIEW SERVER STATE TO [{{ prefix }}-{{ item }}Access];
@@ -290,8 +294,6 @@
     sql_s3_url_expiry: 3600
     sql_s3_region_effective: "{{ hostvars[source]['placement']['region'] }}"
   tasks:
-
-
     - name: Debug localhost
       ansible.builtin.debug:
         var: hostvars['localhost']
