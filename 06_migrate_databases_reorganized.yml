@@ -132,7 +132,7 @@
           PRINT 'Backup created successfully: ' + @BackupPath
 
           ALTER DATABASE [{{ item }}] SET OFFLINE;
-      loop: "{{ db_list }}"
+      loop: "{{ database_list }}"
       delegate_to: localhost
       register: backup_result
 
@@ -195,7 +195,7 @@
     az_group: "{{ availability_zone_group | default('skip') }}"
     dest: "{{ dest | default('skip') }}"
     is_initialized: true
-    db_list: "{{ hostvars['localhost']['database_list'] }}"
+    database_list: "{{ hostvars['localhost']['database_list'] }}"
   tasks:
     - name: Reboot host
       ansible.windows.win_reboot:
@@ -213,7 +213,7 @@
     - name: Ensure backup file
       ansible.windows.win_stat:
         path: "{{ target_mssql_backup_path }}\\{{ item }}.bak"
-      loop: "{{ db_list }}"
+      loop: "{{ database_list }}"
       register: files
 
     - name: Fail if any backup file is missing
@@ -251,7 +251,7 @@
           GRANT CONNECT SQL TO [{{ prefix }}-{{ item }}Access];
           GRANT VIEW ANY DEFINITION TO [{{ prefix }}-{{ item }}Access];
           GRANT VIEW SERVER STATE TO [{{ prefix }}-{{ item }}Access];
-      loop: "{{ db_list }}"
+      loop: "{{ database_list }}"
       no_log: false
       register: backup_result
 
@@ -270,7 +270,7 @@
           ALTER ROLE [db_owner] ADD MEMBER [{{ prefix }}-{{ item }}Access];
           ALTER ROLE [db_datareader] ADD MEMBER [{{ prefix }}-dbreader];
           DENY INSERT, UPDATE, DELETE  TO [{{ prefix }}-dbreader];
-      loop: "{{ db_list }}"
+      loop: "{{ database_list }}"
       register: backup_result
 
 - name: Reconfigure source
