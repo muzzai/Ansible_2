@@ -206,6 +206,7 @@
 
     - name: Reboot host
       ansible.windows.win_reboot:
+        post_reboot_delay: 60
 
     - name: Debug localhost
       ansible.builtin.debug:
