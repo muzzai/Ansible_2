@@ -255,6 +255,7 @@
               GRANT VIEW SERVER STATE TO [{{ prefix }}-{{ item }}Access];
           loop: "{{ db_list }}"
           register: backup_result
+          delegate_to: localhost
 
         - name: Create users
           community.general.mssql_script:
@@ -273,7 +274,8 @@
               DENY INSERT, UPDATE, DELETE  TO [{{ prefix }}-dbreader];
           loop: "{{ db_list }}"
           register: backup_result
-      delegate_to: localhost
+          delegate_to: localhost
+
       rescue:
         - name: Delete volume.
           amazon.aws.ec2_vol:
