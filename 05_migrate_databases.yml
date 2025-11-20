@@ -161,47 +161,51 @@
         - name: Build connection details
           ansible.builtin.include_role:
             name: build_connection_details
+      delegate_to: localhost
 
-        - name: Detach volume from the source
-          amazon.aws.ec2_vol:
-            id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
-            # id: "{{ volume_id }}"
-            instance: "None"
-            region: "{{ hostvars[dest]['placement']['region'] }}"
-            modify_volume: true
+    - name: Detach volume from the source
+      amazon.aws.ec2_vol:
+        id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+        # id: "{{ volume_id }}"
+        instance: "None"
+        region: "{{ hostvars[dest]['placement']['region'] }}"
+        modify_volume: true
+      delegate_to: localhost
 
-        - name: Wait for volume to be available
-          amazon.aws.ec2_vol_info:
-            filters:
-              # volume-id: "{{ volume_id }}"
-              volume-id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
-              status: "available"
-            region: "{{ hostvars[dest]['placement']['region'] }}"
-          register: result
-          until: result | length > 0
-          retries: 5
-          delay: 10
+    - name: Wait for volume to be available
+      amazon.aws.ec2_vol_info:
+        filters:
+          # volume-id: "{{ volume_id }}"
+          volume-id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+          status: "available"
+        region: "{{ hostvars[dest]['placement']['region'] }}"
+      register: result
+      until: result | length > 0
+      retries: 5
+      delay: 10
+      delegate_to: localhost
 
-        - name: Attach new volume to dest
-          amazon.aws.ec2_vol:
-            id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
-            # id: "{{ volume_id }}"
-            device_name: "{{ hostvars['localhost']['new_volume_device_name'] }}"
-            # device_name: /dev/sdg
-            instance: "{{ hostvars[dest]['instance_id'] }}"
-            region: "{{ hostvars[dest]['placement']['region'] }}"
+    - name: Attach new volume to dest
+      amazon.aws.ec2_vol:
+        id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+        # id: "{{ volume_id }}"
+        device_name: "{{ hostvars['localhost']['new_volume_device_name'] }}"
+        # device_name: /dev/sdg
+        instance: "{{ hostvars[dest]['instance_id'] }}"
+        region: "{{ hostvars[dest]['placement']['region'] }}"
+      delegate_to: localhost
 
-        - name: Wait for volume to be in-use
-          amazon.aws.ec2_vol_info:
-            filters:
-              # volume-id: "{{ volume_id }}"
-              volume-id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
-              status: "in-use"
-            region: "{{ hostvars[dest]['placement']['region'] }}"
-          register: result
-          until: result | length > 0
-          retries: 5
-          delay: 10
+    - name: Wait for volume to be in-use
+      amazon.aws.ec2_vol_info:
+        filters:
+          # volume-id: "{{ volume_id }}"
+          volume-id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+          status: "in-use"
+        region: "{{ hostvars[dest]['placement']['region'] }}"
+      register: result
+      until: result | length > 0
+      retries: 5
+      delay: 10
       delegate_to: localhost
 
     - name: Reboot host
