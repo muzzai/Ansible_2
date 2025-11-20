@@ -11,6 +11,17 @@
         AN_ProductName: "Alloy Navigator Express"
       when: ProductIsExpress
 
+    - name: Initialize passwords
+      ansible.builtin.set_fact:
+        passwords: {}
+      delegate_to: localhost
+
+    - name: Generate unique passwords for each database
+      ansible.builtin.set_fact:
+        passwords: "{{ passwords | combine({ item: lookup('password', '/dev/null', chars='ascii_letters,digits,hexdigits', length=20) }) }}"
+      loop: "{{ database_list }}"
+      delegate_to: localhost
+
     - name: Get device name
       ansible.builtin.set_fact:
           new_volume_device_name: >-
@@ -192,18 +203,8 @@
       loop: "{{ database_list }}"
       register: files
 
-    - name: Initialize passwords
-      ansible.builtin.set_fact:
-        passwords: {}
-      run_once: true
-      delegate_to: localhost
-
-    - name: Generate unique passwords for each database
-      ansible.builtin.set_fact:
-        passwords: "{{ passwords | combine({ item: lookup('password', '/dev/null', chars='ascii_letters,digits,hexdigits', length=20) }) }}"
-      loop: "{{ database_list }}"
-      delegate_to: localhost
-      run_once: true
+    - name: Reboot host
+      ansible.windows.win_reboot:
 
     - name: Restore databases and create users
       block:
