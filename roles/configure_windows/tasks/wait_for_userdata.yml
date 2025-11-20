@@ -11,7 +11,7 @@
   vars:
     ansible_connection: ssh
     ansible_user: Administrator
-    ansible_shell_type: powershell
+    ansible_shell_type: cmd
     ansible_ssh_common_args: >-
       -o UserKnownHostsFile=/dev/null
       -o StrictHostKeyChecking=no
@@ -20,7 +20,7 @@
   ansible.windows.win_stat:
     path: C:\debug\user_data_result.log
   register: configure_windows_provision_ec2_user_data_status_ps
-  until: configure_windows_provision_ec2_user_data_status_ps.stat.exists
+  until: configure_windows_provision_ec2_user_data_status_ps.stat is defined and configure_windows_provision_ec2_user_data_status_ps.stat.exists
   retries: 15
   delay: 15
   ignore_errors: true
