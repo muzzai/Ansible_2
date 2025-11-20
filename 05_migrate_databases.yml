@@ -61,7 +61,7 @@
         state: present
         volume_size: "{{ volume_size }}"
         volume_type: gp2
-        tags:
+        resource_tags:
           Name: "{{ prefix }}-temp_volume"
       register: volume_for_backups
 
@@ -154,6 +154,7 @@
     db_reader_password: "some_pass"
     volume_id: vol-01dde0a878cd44fb6
     is_initialized: true
+    db_list: "{{ hostvars['localhost']['database_list'] }}"
   tasks:
     - name: Build connection details
       block:
@@ -221,7 +222,7 @@
     - name: Ensure backup file
       ansible.windows.win_stat:
         path: "{{ target_mssql_backup_path }}\\{{ item }}.bak"
-      loop: "{{ database_list }}"
+      loop: "{{ db_list }}"
       register: files
 
     - name: Restore databases and create users
@@ -252,7 +253,7 @@
               GRANT CONNECT SQL TO [{{ prefix }}-{{ item }}Access];
               GRANT VIEW ANY DEFINITION TO [{{ prefix }}-{{ item }}Access];
               GRANT VIEW SERVER STATE TO [{{ prefix }}-{{ item }}Access];
-          loop: "{{ database_list }}"
+          loop: "{{ db_list }}"
           register: backup_result
 
         - name: Create users
@@ -270,18 +271,18 @@
               ALTER ROLE [db_owner] ADD MEMBER [{{ prefix }}-{{ item }}Access];
               ALTER ROLE [db_datareader] ADD MEMBER [{{ prefix }}-dbreader];
               DENY INSERT, UPDATE, DELETE  TO [{{ prefix }}-dbreader];
-          loop: "{{ database_list }}"
+          loop: "{{ db_list }}"
           register: backup_result
       delegate_to: localhost
       rescue:
-        # - name: Delete volume.
-        #   amazon.aws.ec2_vol:
-        #     id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
-        #   # id: "{{ volume_id }}"
-        #     region: "{{ hostvars[dest]['placement']['region'] }}"
-        #     modify_volume: true
-        #     state: absent
-        #   delegate_to: localhost
+        - name: Delete volume.
+          amazon.aws.ec2_vol:
+            id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+          # id: "{{ volume_id }}"
+            region: "{{ hostvars[dest]['placement']['region'] }}"
+            modify_volume: true
+            state: absent
+          delegate_to: localhost
 
         - name: Fail
           ansible.builtin.fail:
@@ -296,6 +297,7 @@
     sql_s3_object: "ScriptHelper.exe"
     sql_s3_url_expiry: 3600
     sql_s3_region_effective: "{{ hostvars[source]['placement']['region'] }}"
+    passwords: "{{ hostvars['localhost']['passwords'] }}"
   tasks:
     - name: Debug localhost
       ansible.builtin.debug:
