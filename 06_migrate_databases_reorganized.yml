@@ -205,6 +205,10 @@
       ansible.builtin.include_role:
         name: prepare_disk
 
+    - name: Set backup path
+      ansible.builtin.set_fact:
+        target_mssql_backup_path: "{{ current_drive }}{{ mssql_backup_path }}"
+
     - name: Ensure backup file
       ansible.windows.win_stat:
         path: "{{ target_mssql_backup_path }}\\{{ item }}.bak"
@@ -217,9 +221,6 @@
       when: >
         files.results | selectattr('stat.exists', 'equalto', false) | list | length > 0
 
-    - name: Set backup path
-      ansible.builtin.set_fact:
-        target_mssql_backup_path: "{{ current_drive }}{{ mssql_backup_path }}"
 
 - name: Restore databases and create users
   hosts: localhost
