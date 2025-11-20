@@ -17,12 +17,13 @@
         AN_ProductName: "Alloy Navigator"
         AN_Database: "AlloyNavigator"
         AD_Database: "AlloyDiscovery"
+      when: not ProductIsExpress
 
     - name: Set database list
       ansible.builtin.set_fact:
         database_list:
-              - "{{ AN_Database }}"
-              - "{{ AD_Database }}"
+          - "{{ AN_Database }}"
+          - "{{ AD_Database }}"
 
     - name: Initialize passwords
       ansible.builtin.set_fact:
@@ -69,7 +70,7 @@
         var: volume_for_backups
 
 - name: Create backups
-  gather_facts: false
+  gather_facts:
   hosts: "{{ az_group }}:&{{ source }}"
   vars:
     az_group: "{{ availability_zone_group | default('skip') }}"
@@ -86,6 +87,8 @@
       no_log: true
 
     - name: Try creating a backup and Cleanup
+      vars:
+        db_list: "{{ hostvars['localhost']['database_list'] }}"
       block:
 
         - name: Add Disk
@@ -124,7 +127,7 @@
               PRINT 'Backup created successfully: ' + @BackupPath
 
               ALTER DATABASE [{{ item }}] SET OFFLINE;
-          loop: "{{ database_list }}"
+          loop: "{{ db_list }}"
           delegate_to: localhost
           register: backup_result
 
