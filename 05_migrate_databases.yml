@@ -14,13 +14,11 @@
     - name: Initialize passwords
       ansible.builtin.set_fact:
         passwords: {}
-      delegate_to: localhost
 
     - name: Generate unique passwords for each database
       ansible.builtin.set_fact:
         passwords: "{{ passwords | combine({ item: lookup('password', '/dev/null', chars='ascii_letters,digits,hexdigits', length=20) }) }}"
       loop: "{{ database_list }}"
-      delegate_to: localhost
 
     - name: Get device name
       ansible.builtin.set_fact:
