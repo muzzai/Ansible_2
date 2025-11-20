@@ -99,7 +99,6 @@
     - name: Set backup path
       ansible.builtin.set_fact:
         source_mssql_backup_path: "{{ next_drive_letter }}{{ mssql_backup_path }}"
-      delegate_to: localhost
 
     - name: Create Migration folder
       ansible.windows.win_file:
@@ -109,9 +108,10 @@
 - name: Create backups
   hosts: localhost
   vars:
-    source_mssql_backup_path: "{{ hostvars['localhost']['source_mssql_backup_path'] }}"
+    source_mssql_backup_path: "{{ hostvars[source]['source_mssql_backup_path'] }}"
     database_list: "{{ hostvars['localhost']['database_list'] }}"
   tasks:
+
     - name: Create database backups on Windows
       community.general.mssql_script:
         login_host: "{{ hostvars[source]['ansible_host'] }}"
@@ -153,7 +153,6 @@
         instance: "None"
         region: "{{ hostvars[dest]['placement']['region'] }}"
         modify_volume: true
-      delegate_to: localhost
 
     - name: Wait for volume to be available
       amazon.aws.ec2_vol_info:
@@ -166,7 +165,6 @@
       until: result | length > 0
       retries: 5
       delay: 10
-      delegate_to: localhost
 
     - name: Attach new volume to dest
       amazon.aws.ec2_vol:
@@ -176,7 +174,6 @@
         # device_name: /dev/sdg
         instance: "{{ hostvars[dest]['instance_id'] }}"
         region: "{{ hostvars[dest]['placement']['region'] }}"
-      delegate_to: localhost
 
     - name: Wait for volume to be in-use
       amazon.aws.ec2_vol_info:
@@ -189,7 +186,6 @@
       until: result | length > 0
       retries: 5
       delay: 10
-      delegate_to: localhost
 
 - name: Prepare media
   gather_facts: false
@@ -223,13 +219,11 @@
     - name: Set backup path
       ansible.builtin.set_fact:
         target_mssql_backup_path: "{{ current_drive }}{{ mssql_backup_path }}"
-      delegate_to: localhost
-
 
 - name: Restore databases and create users
   hosts: localhost
   vars:
-    target_mssql_backup_path: "{{ hostvars['localhost']['target_mssql_backup_path'] }}"
+    target_mssql_backup_path: "{{ hostvars[dest]['target_mssql_backup_path'] }}"
     database_list: "{{ hostvars['localhost']['database_list'] }}"
   tasks:
     - name: Restore databases
@@ -295,13 +289,6 @@
     - name: Debug localhost
       ansible.builtin.debug:
         var: hostvars['localhost']
-
-    - name: Build connection details
-      block:
-        - name: Build connection details
-          ansible.builtin.include_role:
-            name: build_connection_details
-      delegate_to: localhost
 
     - name: Generate installer presigned URL
       delegate_to: localhost
