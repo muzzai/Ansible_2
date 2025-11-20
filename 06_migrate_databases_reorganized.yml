@@ -1,5 +1,20 @@
 ---
-- name: Prepare volume
+- name: Build connection details
+  gather_facts: false
+  hosts: "{{ source }}, {{ dest }}"
+  vars:
+    source: "{{ source | default('skip') }}"
+    dest: "{{ dest | default('skip') }}"
+  tasks:
+    - name: Build connection details
+      block:
+        - name: Build connection details
+          ansible.builtin.include_role:
+            name: build_connection_details
+      delegate_to: localhost
+      no_log: true
+
+- name: Create backups
   gather_facts: false
   hosts: localhost
   tasks:
@@ -69,100 +84,65 @@
       ansible.builtin.debug:
         var: volume_for_backups
 
-- name: Create backups
+- name: Prepare disk
   gather_facts: false
   hosts: "{{ az_group }}:&{{ source }}"
   vars:
     az_group: "{{ availability_zone_group | default('skip') }}"
     source: "{{ source | default('skip') }}"
     is_initialized: false
-
   tasks:
-    - name: Build connection details
-      block:
-        - name: Build connection details
-          ansible.builtin.include_role:
-            name: build_connection_details
-      delegate_to: localhost
-      no_log: true
+    - name: Add Disk
+      ansible.builtin.include_role:
+        name: prepare_disk
 
-    - name: Try creating a backup and Cleanup
-      vars:
-        db_list: "{{ hostvars['localhost']['database_list'] }}"
-      block:
+    - name: Set backup path
+      ansible.builtin.set_fact:
+        source_mssql_backup_path: "{{ next_drive_letter }}{{ mssql_backup_path }}"
+      run_once: true
 
-        - name: Add Disk
-          ansible.builtin.include_role:
-            name: prepare_disk
+    - name: Create Migration folder
+      ansible.windows.win_file:
+        path: "{{ source_mssql_backup_path }}"
+        state: directory
 
-        - name: Set backup path
-          ansible.builtin.set_fact:
-            source_mssql_backup_path: "{{ next_drive_letter }}{{ mssql_backup_path }}"
-
-        - name: Create Migration folder
-          ansible.windows.win_file:
-            path: "{{ source_mssql_backup_path }}"
-            state: directory
-
-        - name: Create database backups on Windows
-          community.general.mssql_script:
-            login_host: "{{ hostvars[source]['ansible_host'] }}"
-            login_user: "{{ source_SaUserName }}"
-            login_password: "{{ source_SaPassword }}"
-            login_port: 51967
-            name: master
-            script: |
-              ALTER DATABASE [{{ item }}] SET ONLINE;
-              ALTER DATABASE [{{ item }}]
-              SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-
-              DECLARE @BackupPath NVARCHAR(500) = N'{{ source_mssql_backup_path }}\{{ item }}.bak'
-
-              BACKUP DATABASE [{{ item }}]
-              TO DISK = @BackupPath
-              WITH FORMAT,
-                    MEDIANAME = '{{ item }}_Backup',
-                    NAME = 'Full Backup of {{ item }}';
-
-              PRINT 'Backup created successfully: ' + @BackupPath
-
-              ALTER DATABASE [{{ item }}] SET OFFLINE;
-          loop: "{{ db_list }}"
-          delegate_to: localhost
-          register: backup_result
-
-        - name: Show backup results
-          ansible.builtin.debug:
-            var: backup_result.results
-
-      rescue:
-        - name: Delete volume.
-          amazon.aws.ec2_vol:
-            id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
-          # id: "{{ volume_id }}"
-            region: "{{ hostvars[dest]['placement']['region'] }}"
-            modify_volume: true
-            state: absent
-          delegate_to: localhost
-
-- name: Restore backups
-  gather_facts: false
-  hosts: "{{ az_group }}:&{{ dest }}"
-  vars:
-    az_group: "{{ availability_zone_group | default('skip') }}"
-    dest: "{{ dest | default('skip') }}"
-    db_reader_password: "some_pass"
-    volume_id: vol-01dde0a878cd44fb6
-    is_initialized: true
-    db_list: "{{ hostvars['localhost']['database_list'] }}"
+- name: Create backups
+  hosts: localhost
   tasks:
-    - name: Build connection details
-      block:
-        - name: Build connection details
-          ansible.builtin.include_role:
-            name: build_connection_details
-      delegate_to: localhost
+    - name: Create database backups on Windows
+      community.general.mssql_script:
+        login_host: "{{ hostvars[source]['ansible_host'] }}"
+        login_user: "{{ source_SaUserName }}"
+        login_password: "{{ source_SaPassword }}"
+        login_port: 51967
+        name: master
+        script: |
+          ALTER DATABASE [{{ item }}] SET ONLINE;
+          ALTER DATABASE [{{ item }}]
+          SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 
+          DECLARE @BackupPath NVARCHAR(500) = N'{{ source_mssql_backup_path }}\{{ item }}.bak'
+
+          BACKUP DATABASE [{{ item }}]
+          TO DISK = @BackupPath
+          WITH FORMAT,
+                MEDIANAME = '{{ item }}_Backup',
+                NAME = 'Full Backup of {{ item }}';
+
+          PRINT 'Backup created successfully: ' + @BackupPath
+
+          ALTER DATABASE [{{ item }}] SET OFFLINE;
+      loop: "{{ db_list }}"
+      delegate_to: localhost
+      register: backup_result
+
+    - name: Show backup results
+      ansible.builtin.debug:
+        var: backup_result.results
+
+- name: Re-attach volume to "{{ dest }}"
+  hosts: localhost
+  tasks:
     - name: Detach volume from the source
       amazon.aws.ec2_vol:
         id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
@@ -208,13 +188,18 @@
       delay: 10
       delegate_to: localhost
 
+- name: Prepare media
+  gather_facts: false
+  hosts: "{{ az_group }}:&{{ dest }}"
+  vars:
+    az_group: "{{ availability_zone_group | default('skip') }}"
+    dest: "{{ dest | default('skip') }}"
+    is_initialized: true
+    db_list: "{{ hostvars['localhost']['database_list'] }}"
+  tasks:
     - name: Reboot host
       ansible.windows.win_reboot:
         post_reboot_delay: 60
-
-    - name: Debug localhost
-      ansible.builtin.debug:
-        var: hostvars['localhost']
 
     - name: Add Disk 2
       ansible.builtin.include_role:
@@ -223,6 +208,7 @@
     - name: Set backup path
       ansible.builtin.set_fact:
         target_mssql_backup_path: "{{ current_drive }}{{ mssql_backup_path }}"
+      run_once: true
 
     - name: Ensure backup file
       ansible.windows.win_stat:
@@ -230,70 +216,62 @@
       loop: "{{ db_list }}"
       register: files
 
-    - name: Restore databases and create users
-      block:
-        - name: Restore databases
-          community.general.mssql_script:
-            login_host: "{{ hostvars[dest]['ansible_host'] }}"
-            login_user: "{{ dest_SaUserName }}"
-            login_password: "{{ dest_SaPassword }}"
-            login_port: 51967
-            name: master
-            script: |
-              RESTORE DATABASE [{{ prefix }}-{{ item }}]
-              FROM DISK = '{{ target_mssql_backup_path }}\{{ item }}.bak'
-              WITH
-                  MOVE '{{ item }}'     TO '{{ target_mssql_backup_path }}\{{ prefix }}-{{ item }}.mdf',
-                  MOVE '{{ item }}_log' TO '{{ target_mssql_backup_path }}\{{ prefix }}-{{ item }}_log.ldf',
-                  REPLACE,
-                  STATS = 5;
-              ALTER DATABASE [{{ prefix }}-{{ item }}] SET ONLINE;
-              ALTER DATABASE [{{ prefix }}-{{ item }}] SET MULTI_USER WITH ROLLBACK IMMEDIATE;
+    - name: Fail if any backup file is missing
+      ansible.builtin.fail:
+        msg: "Backup file for one or more databases is missing!"
+      when: >
+        files.results | selectattr('stat.exists', 'equalto', false) | list | length > 0
 
-              IF NOT EXISTS (select 1 from sys.sql_logins where name = '{{ prefix }}-dbreader')
-                CREATE LOGIN [{{ prefix }}-dbreader] WITH PASSWORD = '{{ db_reader_password }}', CHECK_POLICY = OFF;
-                GRANT CONNECT SQL TO [{{ prefix }}-dbreader];
+- name: Restore databases and create users
+  hosts: localhost
+  tasks:
+    - name: Restore databases
+      community.general.mssql_script:
+        login_host: "{{ hostvars[dest]['ansible_host'] }}"
+        login_user: "{{ dest_SaUserName }}"
+        login_password: "{{ dest_SaPassword }}"
+        login_port: 51967
+        name: master
+        script: |
+          RESTORE DATABASE [{{ prefix }}-{{ item }}]
+          FROM DISK = '{{ target_mssql_backup_path }}\{{ item }}.bak'
+          WITH
+              MOVE '{{ item }}'     TO '{{ target_mssql_backup_path }}\{{ prefix }}-{{ item }}.mdf',
+              MOVE '{{ item }}_log' TO '{{ target_mssql_backup_path }}\{{ prefix }}-{{ item }}_log.ldf',
+              REPLACE,
+              STATS = 5;
+          ALTER DATABASE [{{ prefix }}-{{ item }}] SET ONLINE;
+          ALTER DATABASE [{{ prefix }}-{{ item }}] SET MULTI_USER WITH ROLLBACK IMMEDIATE;
 
-              CREATE LOGIN [{{ prefix }}-{{ item }}Access] WITH PASSWORD = '{{ hostvars['localhost']['passwords'][item] }}', CHECK_POLICY = OFF;
-              GRANT CONNECT SQL TO [{{ prefix }}-{{ item }}Access];
-              GRANT VIEW ANY DEFINITION TO [{{ prefix }}-{{ item }}Access];
-              GRANT VIEW SERVER STATE TO [{{ prefix }}-{{ item }}Access];
-          loop: "{{ db_list }}"
-          no_log: false
-          register: backup_result
-          delegate_to: localhost
+          IF NOT EXISTS (select 1 from sys.sql_logins where name = '{{ prefix }}-dbreader')
+            CREATE LOGIN [{{ prefix }}-dbreader] WITH PASSWORD = '{{ db_reader_password }}', CHECK_POLICY = OFF;
+            GRANT CONNECT SQL TO [{{ prefix }}-dbreader];
 
-        - name: Create users
-          community.general.mssql_script:
-            login_host: "{{ hostvars[dest]['ansible_host'] }}"
-            login_user: "{{ dest_SaUserName }}"
-            login_password: "{{ dest_SaPassword }}"
-            login_port: 51967
-            name: "{{ prefix }}-{{ item }}"
-            script: |
-              IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'{{ prefix }}-{{ item }}Access')
-                CREATE USER [{{ prefix }}-{{ item }}Access] FOR LOGIN [{{ prefix }}-{{ item }}Access];
-              IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'{{ prefix }}-dbreader')
-                CREATE USER [{{ prefix }}-dbreader] FOR LOGIN [{{ prefix }}-dbreader];
-              ALTER ROLE [db_owner] ADD MEMBER [{{ prefix }}-{{ item }}Access];
-              ALTER ROLE [db_datareader] ADD MEMBER [{{ prefix }}-dbreader];
-              DENY INSERT, UPDATE, DELETE  TO [{{ prefix }}-dbreader];
-          loop: "{{ db_list }}"
-          register: backup_result
-          delegate_to: localhost
+          CREATE LOGIN [{{ prefix }}-{{ item }}Access] WITH PASSWORD = '{{ hostvars['localhost']['passwords'][item] }}', CHECK_POLICY = OFF;
+          GRANT CONNECT SQL TO [{{ prefix }}-{{ item }}Access];
+          GRANT VIEW ANY DEFINITION TO [{{ prefix }}-{{ item }}Access];
+          GRANT VIEW SERVER STATE TO [{{ prefix }}-{{ item }}Access];
+      loop: "{{ db_list }}"
+      no_log: false
+      register: backup_result
 
-      rescue:
-        - name: Delete volume.
-          amazon.aws.ec2_vol:
-            id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
-          # id: "{{ volume_id }}"
-            region: "{{ hostvars[dest]['placement']['region'] }}"
-            modify_volume: true
-            state: absent
-          delegate_to: localhost
-
-        - name: Fail
-          ansible.builtin.fail:
+    - name: Create users
+      community.general.mssql_script:
+        login_host: "{{ hostvars[dest]['ansible_host'] }}"
+        login_user: "{{ dest_SaUserName }}"
+        login_password: "{{ dest_SaPassword }}"
+        login_port: 51967
+        name: "{{ prefix }}-{{ item }}"
+        script: |
+          IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'{{ prefix }}-{{ item }}Access')
+            CREATE USER [{{ prefix }}-{{ item }}Access] FOR LOGIN [{{ prefix }}-{{ item }}Access];
+          IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'{{ prefix }}-dbreader')
+            CREATE USER [{{ prefix }}-dbreader] FOR LOGIN [{{ prefix }}-dbreader];
+          ALTER ROLE [db_owner] ADD MEMBER [{{ prefix }}-{{ item }}Access];
+          ALTER ROLE [db_datareader] ADD MEMBER [{{ prefix }}-dbreader];
+          DENY INSERT, UPDATE, DELETE  TO [{{ prefix }}-dbreader];
+      loop: "{{ db_list }}"
+      register: backup_result
 
 - name: Reconfigure source
   gather_facts: false
@@ -329,7 +307,6 @@
       register: helper_url
 
     - name: Share url
-      delegate_to: localhost
       ansible.builtin.set_fact:
         helper_url: "{{ helper_url.url }}"
 
