@@ -3,13 +3,26 @@
   gather_facts: false
   hosts: localhost
   tasks:
-    - name: Set databases names
+    - name: Set databases names when express
       ansible.builtin.set_fact:
         AN_Database: "AlloyNavigatorExpress"
         AD_Database: "AlloyNavigatorExpress.ad"
         AN_RegistryName: "Alloy Navigator Express"
         AN_ProductName: "Alloy Navigator Express"
       when: ProductIsExpress
+
+    - name: Set databases names when not express
+      ansible.builtin.set_fact:
+        AN_RegistryName: "Alloy Navigator"
+        AN_ProductName: "Alloy Navigator"
+        AN_Database: "AlloyNavigator"
+        AD_Database: "AlloyDiscovery"
+
+    - name: Set database list
+      ansible.builtin.set_fact:
+        database_list:
+              - "{{ AN_Database }}"
+              - "{{ AD_Database }}"
 
     - name: Initialize passwords
       ansible.builtin.set_fact:
