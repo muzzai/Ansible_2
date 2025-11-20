@@ -99,7 +99,7 @@
     - name: Set backup path
       ansible.builtin.set_fact:
         source_mssql_backup_path: "{{ next_drive_letter }}{{ mssql_backup_path }}"
-      run_once: true
+      delegate_to: localhost
 
     - name: Create Migration folder
       ansible.windows.win_file:
@@ -205,11 +205,6 @@
       ansible.builtin.include_role:
         name: prepare_disk
 
-    - name: Set backup path
-      ansible.builtin.set_fact:
-        target_mssql_backup_path: "{{ current_drive }}{{ mssql_backup_path }}"
-      run_once: true
-
     - name: Ensure backup file
       ansible.windows.win_stat:
         path: "{{ target_mssql_backup_path }}\\{{ item }}.bak"
@@ -221,6 +216,12 @@
         msg: "Backup file for one or more databases is missing!"
       when: >
         files.results | selectattr('stat.exists', 'equalto', false) | list | length > 0
+
+    - name: Set backup path
+      ansible.builtin.set_fact:
+        target_mssql_backup_path: "{{ current_drive }}{{ mssql_backup_path }}"
+      delegate_to: localhost
+
 
 - name: Restore databases and create users
   hosts: localhost
