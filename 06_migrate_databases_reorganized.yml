@@ -6,13 +6,6 @@
     source: "{{ source | default('skip') }}"
     dest: "{{ dest | default('skip') }}"
   tasks:
-    - name: Build connection details
-      block:
-        - name: Build connection details
-          ansible.builtin.include_role:
-            name: build_connection_details
-      delegate_to: localhost
-      no_log: true
 
 - name: Create backups
   gather_facts: false
@@ -92,6 +85,14 @@
     source: "{{ source | default('skip') }}"
     is_initialized: false
   tasks:
+    - name: Build connection details
+      block:
+        - name: Build connection details
+          ansible.builtin.include_role:
+            name: build_connection_details
+      delegate_to: localhost
+      no_log: true
+
     - name: Add Disk
       ansible.builtin.include_role:
         name: prepare_disk
@@ -198,7 +199,7 @@
   tasks:
     - name: Reboot host
       ansible.windows.win_reboot:
-        post_reboot_delay: 60
+        post_reboot_delay: 300
 
     - name: Add Disk 2
       ansible.builtin.include_role:
