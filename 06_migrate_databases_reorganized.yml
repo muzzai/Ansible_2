@@ -1,12 +1,4 @@
 ---
-- name: Build connection details
-  gather_facts: false
-  hosts: "{{ source }}, {{ dest }}"
-  vars:
-    source: "{{ source | default('skip') }}"
-    dest: "{{ dest | default('skip') }}"
-  tasks:
-
 - name: Create backups
   gather_facts: false
   hosts: localhost
@@ -197,9 +189,17 @@
     is_initialized: true
     database_list: "{{ hostvars['localhost']['database_list'] }}"
   tasks:
+    - name: Build connection details
+      block:
+        - name: Build connection details
+          ansible.builtin.include_role:
+            name: build_connection_details
+      delegate_to: localhost
+      no_log: true
+
     - name: Reboot host
       ansible.windows.win_reboot:
-        post_reboot_delay: 300
+        post_reboot_delay: 60
 
     - name: Add Disk 2
       ansible.builtin.include_role:
