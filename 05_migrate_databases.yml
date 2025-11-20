@@ -200,12 +200,12 @@
           delay: 10
       delegate_to: localhost
 
-    # - name: Reboot host
-    #   ansible.windows.win_reboot:
+    - name: Reboot host
+      ansible.windows.win_reboot:
+
     - name: Debug localhost
       ansible.builtin.debug:
         var: hostvars['localhost']
-
 
     - name: Add Disk 2
       ansible.builtin.include_role:
