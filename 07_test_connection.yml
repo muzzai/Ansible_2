@@ -20,8 +20,8 @@
     - name: Select 1 from dest
       community.general.mssql_script:
         login_host: "{{ hostvars[host2]['ansible_host'] }}"
-        login_user: "{{ sa_username }}"
-        login_password: "{{ sa_password }}"
+        login_user: "{{ sa_username2 }}"
+        login_password: "{{ sa_password2 }}"
         login_port: 51967
         name: master
         script: |
