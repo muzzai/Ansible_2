@@ -100,6 +100,7 @@
 
 - name: Create backups
   hosts: localhost
+  debugger: always
   vars:
     source_mssql_backup_path: "{{ hostvars[source]['source_mssql_backup_path'] }}"
     database_list: "{{ hostvars['localhost']['database_list'] }}"
@@ -221,6 +222,7 @@
 
 - name: Restore databases and create users
   hosts: localhost
+  debugger: on_failed
   vars:
     target_mssql_backup_path: "{{ hostvars[dest]['target_mssql_backup_path'] }}"
     database_list: "{{ hostvars['localhost']['database_list'] }}"
@@ -234,6 +236,7 @@
         name: master
         script: |
           select 1
+
 
     - name: Debug connection vars
       ansible.builtin.debug:
