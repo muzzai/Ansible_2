@@ -224,6 +224,7 @@
 
 - name: Restore databases and create users
   hosts: localhost
+  gather_facts: false
   vars:
     target_mssql_backup_path: "{{ hostvars[dest]['target_mssql_backup_path'] }}"
     database_list: "{{ hostvars['localhost']['database_list'] }}"
