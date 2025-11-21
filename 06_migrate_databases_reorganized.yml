@@ -1,5 +1,5 @@
 ---
-- name: Create backups
+- name: Prepare ebs_vol
   gather_facts: false
   hosts: localhost
   tasks:
@@ -105,7 +105,6 @@
     source_mssql_backup_path: "{{ hostvars[source]['source_mssql_backup_path'] }}"
     database_list: "{{ hostvars['localhost']['database_list'] }}"
   tasks:
-
     - name: Create database backups on Windows
       community.general.mssql_script:
         login_host: "{{ hostvars[source]['ansible_host'] }}"
@@ -130,7 +129,6 @@
 
           ALTER DATABASE [{{ item }}] SET OFFLINE;
       loop: "{{ database_list }}"
-      delegate_to: localhost
       register: backup_result
 
     - name: Show backup results
@@ -238,7 +236,6 @@
         name: master
         script: |
           select 1
-
 
     - name: Debug connection vars
       ansible.builtin.debug:
