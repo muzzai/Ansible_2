@@ -228,11 +228,11 @@
     target_mssql_backup_path: "{{ hostvars[dest]['target_mssql_backup_path'] }}"
     database_list: "{{ hostvars['localhost']['database_list'] }}"
   tasks:
-    - name: Create database backups on Windows
+    - name: Select 1
       community.general.mssql_script:
-        login_host: "{{ hostvars[source]['ansible_host'] }}"
-        login_user: "{{ source_SaUserName }}"
-        login_password: "{{ source_SaPassword }}"
+        login_host: "{{ hostvars[dest]['ansible_host'] }}"
+        login_user: "{{ dest_SaUserName }}"
+        login_password: "{{ dest_SaPassword }}"
         login_port: 51967
         name: master
         script: |
