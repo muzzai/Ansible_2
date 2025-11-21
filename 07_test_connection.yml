@@ -1,0 +1,17 @@
+---
+- name: Test connection to my provisioned SQL Server
+  hosts: localhost
+  vars:
+    host: "{{ host | default('skip') }}"
+    sa_username: sa
+    sa_password: "Aa123456!"
+  tasks:
+    - name: Create database backups on Windows
+      community.general.mssql_script:
+        login_host: "{{ hostvars[host]['ansible_host'] }}"
+        login_user: "{{ sa_username }}"
+        login_password: "{{ sa_password }}"
+        login_port: 51967
+        name: master
+        script: |
+          select 1
