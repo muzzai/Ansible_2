@@ -100,6 +100,7 @@
 
 - name: Create backups
   hosts: localhost
+  debugger: always
   vars:
     source_mssql_backup_path: "{{ hostvars[source]['source_mssql_backup_path'] }}"
     database_list: "{{ hostvars['localhost']['database_list'] }}"
@@ -221,22 +222,23 @@
       when: >
         files.results | selectattr('stat.exists', 'equalto', false) | list | length > 0
 
-
 - name: Restore databases and create users
   hosts: localhost
+  debugger: on_failed
   vars:
     target_mssql_backup_path: "{{ hostvars[dest]['target_mssql_backup_path'] }}"
     database_list: "{{ hostvars['localhost']['database_list'] }}"
   tasks:
     - name: Select 1
       community.general.mssql_script:
-        login_host: "{{ hostvars[dest]['ansible_host'] }}"
-        login_user: sa
-        login_password: "Aa123456!"
+        login_host: "{{ hostvars[source]['ansible_host'] }}"
+        login_user: "{{ source_SaUserName }}"
+        login_password: "{{ source_SaPassword }}"
         login_port: 51967
         name: master
         script: |
           select 1
+
 
     - name: Debug connection vars
       ansible.builtin.debug:
