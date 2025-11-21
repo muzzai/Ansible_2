@@ -238,12 +238,20 @@
         name: master
         script: |
           select 1
+        vars:
+          ansible_python_interpreter: "/usr/bin/python3"
+        environment:
+          FREETDSCONF: "/etc/freetds/freetds.conf"
 
     - name: Debug connection vars
       ansible.builtin.debug:
         var: dest_SaPassword
 
     - name: Restore databases
+      vars:
+        ansible_python_interpreter: "/usr/bin/python3"
+      environment:
+        FREETDSCONF: "/etc/freetds/freetds.conf"
       community.general.mssql_script:
         login_host: "{{ hostvars[dest]['ansible_host'] }}"
         login_user: "{{ dest_SaUserName }}"
@@ -270,10 +278,15 @@
           GRANT VIEW ANY DEFINITION TO [{{ prefix }}-{{ item }}Access];
           GRANT VIEW SERVER STATE TO [{{ prefix }}-{{ item }}Access];
       loop: "{{ database_list }}"
+
       no_log: false
       register: backup_result
 
     - name: Create users
+      vars:
+        ansible_python_interpreter: "/usr/bin/python3"
+      environment:
+        FREETDSCONF: "/etc/freetds/freetds.conf"
       community.general.mssql_script:
         login_host: "{{ hostvars[dest]['ansible_host'] }}"
         login_user: "{{ dest_SaUserName }}"
