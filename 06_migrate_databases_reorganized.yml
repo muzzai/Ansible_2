@@ -227,9 +227,9 @@
   vars:
     target_mssql_backup_path: "{{ hostvars[dest]['target_mssql_backup_path'] }}"
     database_list: "{{ hostvars['localhost']['database_list'] }}"
-  #   ansible_python_interpreter: "/usr/bin/python3"
-  # environment:
-  #   FREETDSCONF: "/etc/freetds/freetds.conf"
+    ansible_python_interpreter: "/usr/bin/python3"
+  environment:
+    FREETDSCONF: "/etc/freetds/freetds.conf"
   tasks:
     - name: Select 1
       community.general.mssql_script:
