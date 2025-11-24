@@ -191,9 +191,9 @@
       delegate_to: localhost
       no_log: true
 
-    - name: Reboot host
-      ansible.windows.win_reboot:
-        post_reboot_delay: 180
+    # - name: Reboot host
+    #   ansible.windows.win_reboot:
+    #     post_reboot_delay: 180
 
     - name: Add Disk 2
       ansible.builtin.include_role:
