@@ -105,6 +105,12 @@
         state: stopped
       failed_when: false
 
+    - name: Stop and disable telemetry service
+      ansible.windows.win_service:
+        name: SQLTELEMETRY
+        state: stopped
+        start_mode: disabled
+
     - name: Get SQL Server instance name
       ansible.windows.win_shell: |
         $regPath = "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server"
@@ -117,18 +123,24 @@
       ansible.builtin.set_fact:
         sql_isntance_name: "{{ sql_instance.stdout_lines[0] }}"
 
+    - name: Get subkeys
+      ansible.windows.win_reg_stat:
+        path: "HKLM:\\SOFTWARE\\Microsoft\\Microsoft SQL Server\\{{ sql_isntance_name }}\\MSSQLServer\\SuperSocketNetLib\\Tcp"
+      register: sql_tcp
+
     - name: Change SQL Server port in registry
       ansible.windows.win_regedit:
-        path: "HKLM:\\SOFTWARE\\Microsoft\\Microsoft SQL Server\\{{ sql_isntance_name }}\\MSSQLServer\\SuperSocketNetLib\\Tcp\\IPAll"
+        path: "HKLM:\\SOFTWARE\\Microsoft\\Microsoft SQL Server\\{{ sql_isntance_name }}\\MSSQLServer\\SuperSocketNetLib\\Tcp\\{{ item }}"
         name: TcpPort
         data: "{{ sql_server_port }}"
         type: string
         state: present
+      loop: "{{ sql_tcp.sub_keys }}"
 
-    - name: Start SQL Server service
+    - name: Stop SQL Server service
       ansible.windows.win_service:
         name: MSSQLSERVER
-        state: started
+        state: stopped
       failed_when: false
 
 - name: Open SQL Server Port
