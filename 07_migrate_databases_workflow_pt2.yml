@@ -23,7 +23,7 @@
 
     - name: Fail when prefix not uninque
       ansible.builtin.fail:
-      when: databases_count['queries'][0]['rows'][0]['Value'] > 0
+      when: databases_count.queries[0][0][0][0]
 
 
     - name: Debug connection vars
