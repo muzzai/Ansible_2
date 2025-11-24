@@ -25,6 +25,14 @@
           - "{{ AN_Database }}"
           - "{{ AD_Database }}"
 
+    - name: Set stats for later
+      ansible.builtin.set_stats:
+        data:
+          an_db: "{{ AN_Database }}"
+          ad_db: "{{ AD_Database }}"
+          an_rn: "{{ AN_RegistryName }}"
+          an_pn: "{{ AN_ProductName }}"
+
     - name: Initialize passwords
       ansible.builtin.set_fact:
         passwords: {}
@@ -221,7 +229,3 @@
           target_mssql_backup_path: "{{ hostvars[dest]['target_mssql_backup_path'] }}"
           database_list: "{{ hostvars['localhost']['database_list'] }}"
           passwords: "{{ hostvars['localhost']['passwords'] }}"
-          an_db: "{{ AN_Database }}"
-          ad_db: "{{ AD_Database }}"
-          an_rn: "{{ AN_RegistryName }}"
-          an_pn: "{{ AN_ProductName }}"
