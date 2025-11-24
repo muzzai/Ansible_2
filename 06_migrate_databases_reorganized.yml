@@ -100,7 +100,6 @@
 
 - name: Create backups
   hosts: localhost
-  debugger: always
   vars:
     source_mssql_backup_path: "{{ hostvars[source]['source_mssql_backup_path'] }}"
     database_list: "{{ hostvars['localhost']['database_list'] }}"
