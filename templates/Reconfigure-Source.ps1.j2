@@ -3,19 +3,20 @@
 ################################################################
 
 # --- Product / Registry info ---
-$AN_ProductName      = "Alloy Navigator Enterprise"
-$AN_RegistryName     = "Alloy Navigator"
-$AN_Database         = "{{ AN_Database }}"
-$AN_SQLDatabase      = "{{ prefix }}-{{ AN_Database }}"
+$AN_ProductName      = "{{ an_rn }}"
+$AN_RegistryName     = "{{ an_pn }}"
 
-$AD_Database         = "{{ AD_Database }}"
-$AD_SQLDatabase      = "{{ prefix }}-{{ AD_Database }}"
+$an_db               = "{{ an_db }}"
+$AN_SQLDatabase      = "{{ prefix }}-{{ an_db }}"
 
-$AD_Access_user      = "{{ prefix }}-{{ AD_Database }}Access"
-$AD_User_pass        = "{{ passwords[AD_Database] }}"
+$ad_db               = "{{ ad_db }}"
+$AD_SQLDatabase      = "{{ prefix }}-{{ ad_db }}"
 
-$AN_Access_user      = "{{ prefix }}-{{ AN_Database }}Access"
-$AN_User_pass        = "{{ passwords[AN_Database }}"
+$AD_Access_user      = "{{ prefix }}-{{ ad_db }}Access"
+$AD_User_pass        = "{{ passwords[ad_db] }}"
+
+$AN_Access_user      = "{{ prefix }}-{{ an_db }}Access"
+$AN_User_pass        = "{{ passwords[an_db] }}"
 
 $ProductIsExpress    = $false
 $ADC_NetworkInventory = $false
@@ -25,10 +26,6 @@ $SQLInstanceAddress  = "{{ hostvars[dest]['ansible_host'] }}"
 $SQLServerInstance   = "$SQLInstanceAddress,51967"
 $SQLSaUserName       = "{{ dest_SaUserName }}"
 $SQLSaPassword       = "{{ dest_SaPassword }}"
-
-# --- Misc variables ---
-$RegistryName        = "{{ AN_RegistryName }}"
-$ProductName         = "{{ AN_ProductName }}"
 
 ################################################################
 #                      MAIN SCRIPT                             #
@@ -150,12 +147,12 @@ function MakeAccessKey($ProductName, $RegistryName, $Database, $SQLDatabase, [re
 
 # Run AN Access Key creation
 $AN_AccessKeyName = ""
-MakeAccessKey $AN_ProductName $AN_RegistryName $AN_Database $AN_SQLDatabase ([ref]$AN_AccessKeyName)
+MakeAccessKey $AN_ProductName $AN_RegistryName $an_db $AN_SQLDatabase ([ref]$AN_AccessKeyName)
 
 # Run AD Access Key creation if needed
 if ((-not $ProductIsExpress) -and (-not $ADC_NetworkInventory)) {
   $AD_AccessKeyName = ""
-  MakeAccessKey 'Alloy Discovery' 'Alloy Discovery' $AD_Database $AD_SQLDatabase ([ref]$AD_AccessKeyName)
+  MakeAccessKey 'Alloy Discovery' 'Alloy Discovery' $ad_db $AD_SQLDatabase ([ref]$AD_AccessKeyName)
 }
 
 Invoke-Command -ArgumentList ($AN_AccessKeyName, $SQLServerInstance, $AN_SQLDatabase)  {
