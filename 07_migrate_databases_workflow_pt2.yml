@@ -3,8 +3,8 @@
   hosts: localhost
   debugger: on_failed
   vars:
-    target_mssql_backup_path: "{{ hostvars[dest]['target_mssql_backup_path'] }}"
-    database_list: "{{ hostvars['localhost']['database_list'] }}"
+    backup_path: "{{ target_mssql_backup_path | default('no_path') }}"
+    db_list: "{{ database_list | default([])}}"
   tasks:
     - name: Select 1
       community.general.mssql_script:
@@ -78,7 +78,7 @@
     sql_s3_object: "ScriptHelper.exe"
     sql_s3_url_expiry: 3600
     sql_s3_region_effective: "{{ hostvars[source]['placement']['region'] }}"
-
+    passwords: "{{ passwords | default({}) }}"
   tasks:
     - name: Debug localhost
       ansible.builtin.debug:
