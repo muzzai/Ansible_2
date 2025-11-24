@@ -19,9 +19,9 @@
 
     - name: Stop and disable telemetry service
       ansible.windows.win_service:
-        name: MSSQLSERVER
+        name: SQLTELEMETRY
         state: stopped
-      failed_when: false
+        start_mode: disabled
 
     - name: Gather information about all Windows services
       ansible.windows.win_service_info:
@@ -60,4 +60,4 @@
         data: "{{ sql_server_port }}"
         type: string
         state: present
-      loop: sql_tcp.sub_keys
+      loop: "{{ sql_tcp.sub_keys }}"
