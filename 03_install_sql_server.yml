@@ -137,11 +137,10 @@
         state: present
       loop: "{{ sql_tcp.sub_keys }}"
 
-    - name: Stop SQL Server service
+    - name: Start SQL Server service
       ansible.windows.win_service:
         name: MSSQLSERVER
-        state: stopped
-      failed_when: false
+        state: started
 
 - name: Open SQL Server Port
   hosts: localhost
