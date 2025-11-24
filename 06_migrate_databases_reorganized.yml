@@ -198,7 +198,7 @@
 
     - name: Reboot host
       ansible.windows.win_reboot:
-        post_reboot_delay: 60
+        post_reboot_delay: 180
 
     - name: Add Disk 2
       ansible.builtin.include_role:
@@ -220,129 +220,9 @@
       when: >
         files.results | selectattr('stat.exists', 'equalto', false) | list | length > 0
 
-- name: Restore databases and create users
-  hosts: localhost
-  debugger: on_failed
-  vars:
-    target_mssql_backup_path: "{{ hostvars[dest]['target_mssql_backup_path'] }}"
-    database_list: "{{ hostvars['localhost']['database_list'] }}"
-  tasks:
-    - name: Select 1
-      community.general.mssql_script:
-        login_host: "{{ hostvars[source]['ansible_host'] }}"
-        login_user: "{{ source_SaUserName }}"
-        login_password: "{{ source_SaPassword }}"
-        login_port: 51967
-        name: master
-        script: |
-          select 1
-
-
-    - name: Debug connection vars
-      ansible.builtin.debug:
-        var: dest_SaPassword
-
-    - name: Restore databases
-      community.general.mssql_script:
-        login_host: "{{ hostvars[dest]['ansible_host'] }}"
-        login_user: sa
-        login_password: "Aa123456!"
-        login_port: 51967
-        name: master
-        script: |
-          RESTORE DATABASE [{{ prefix }}-{{ item }}]
-          FROM DISK = '{{ target_mssql_backup_path }}\{{ item }}.bak'
-          WITH
-              MOVE '{{ item }}'     TO '{{ target_mssql_backup_path }}\{{ prefix }}-{{ item }}.mdf',
-              MOVE '{{ item }}_log' TO '{{ target_mssql_backup_path }}\{{ prefix }}-{{ item }}_log.ldf',
-              REPLACE,
-              STATS = 5;
-          ALTER DATABASE [{{ prefix }}-{{ item }}] SET ONLINE;
-          ALTER DATABASE [{{ prefix }}-{{ item }}] SET MULTI_USER WITH ROLLBACK IMMEDIATE;
-
-          IF NOT EXISTS (select 1 from sys.sql_logins where name = '{{ prefix }}-dbreader')
-            CREATE LOGIN [{{ prefix }}-dbreader] WITH PASSWORD = '{{ db_reader_password }}', CHECK_POLICY = OFF;
-            GRANT CONNECT SQL TO [{{ prefix }}-dbreader];
-
-          CREATE LOGIN [{{ prefix }}-{{ item }}Access] WITH PASSWORD = '{{ hostvars['localhost']['passwords'][item] }}', CHECK_POLICY = OFF;
-          GRANT CONNECT SQL TO [{{ prefix }}-{{ item }}Access];
-          GRANT VIEW ANY DEFINITION TO [{{ prefix }}-{{ item }}Access];
-          GRANT VIEW SERVER STATE TO [{{ prefix }}-{{ item }}Access];
-      loop: "{{ database_list }}"
-      no_log: false
-      register: restoration_result
-
-    - name: Create users
-      community.general.mssql_script:
-        login_host: "{{ hostvars[dest]['ansible_host'] }}"
-        login_user: "{{ dest_SaUserName }}"
-        login_password: "{{ dest_SaPassword }}"
-        login_port: 51967
-        name: "{{ prefix }}-{{ item }}"
-        script: |
-          IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'{{ prefix }}-{{ item }}Access')
-            CREATE USER [{{ prefix }}-{{ item }}Access] FOR LOGIN [{{ prefix }}-{{ item }}Access];
-          IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'{{ prefix }}-dbreader')
-            CREATE USER [{{ prefix }}-dbreader] FOR LOGIN [{{ prefix }}-dbreader];
-          ALTER ROLE [db_owner] ADD MEMBER [{{ prefix }}-{{ item }}Access];
-          ALTER ROLE [db_datareader] ADD MEMBER [{{ prefix }}-dbreader];
-          DENY INSERT, UPDATE, DELETE  TO [{{ prefix }}-dbreader];
-      loop: "{{ database_list }}"
-      register: user_creation_result
-
-- name: Reconfigure source
-  gather_facts: false
-  hosts: "{{ az_group }}:&{{ source }}"
-  vars:
-    az_group: "{{ availability_zone_group | default('skip') }}"
-    source: "{{ source | default('skip') }}"
-    sql_s3_bucket: "alloy-software-installers"
-    sql_s3_object: "ScriptHelper.exe"
-    sql_s3_url_expiry: 3600
-    sql_s3_region_effective: "{{ hostvars[source]['placement']['region'] }}"
-    passwords: "{{ hostvars['localhost']['passwords'] }}"
-  tasks:
-    - name: Debug localhost
-      ansible.builtin.debug:
-        var: hostvars['localhost']
-
-    - name: Generate installer presigned URL
-      delegate_to: localhost
-      amazon.aws.s3_object:
-        mode: geturl
-        bucket: "{{ sql_s3_bucket }}"
-        object: "{{ sql_s3_object }}"
-        expiry: "{{ sql_s3_url_expiry }}"
-        region: "{{ sql_s3_region_effective }}"
-      register: helper_url
-
-    - name: Share url
-      ansible.builtin.set_fact:
-        helper_url: "{{ helper_url.url }}"
-
-    - name: Download script "ScriptHelper.exe"
-      ansible.windows.win_get_url:
-        url: "{{ helper_url }}"
-        dest: C:\Install
-
-    - name: Ensure script folder
-      ansible.builtin.win_file:
-        path: C:\Migration-script
-        state: directory
-
-    - name: Generate script
-      ansible.windows.win_template:
-        src: templates/Reconfigure-Source.ps1.j2
-        dest: C:\Migration-script\Reconfigure-Source.ps1
-        force: true
-
-    - name: Execute SQL restore script
-      ansible.windows.win_shell: |
-        & C:\Migration-script\Reconfigure-Source.ps1
-      args:
-        executable: powershell.exe
-
-    - name: Restart IIS
-      ansible.windows.win_service:
-        name: W3SVC
-        state: restarted
+    - name: Set stats for later
+      ansible.builtin.set_stats:
+        data:
+          target_mssql_backup_path: "{{ hostvars[dest]['target_mssql_backup_path'] }}"
+          database_list: "{{ hostvars['localhost']['database_list'] }}"
+          passwords: "{{ hostvars['localhost']['passwords'] }}"
