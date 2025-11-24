@@ -221,3 +221,7 @@
           target_mssql_backup_path: "{{ hostvars[dest]['target_mssql_backup_path'] }}"
           database_list: "{{ hostvars['localhost']['database_list'] }}"
           passwords: "{{ hostvars['localhost']['passwords'] }}"
+          an_db: "{{ AN_Database }}"
+          ad_db: "{{ AD_Database }}"
+          an_rn: "{{ AN_RegistryName }}"
+          an_pn: "{{ AN_ProductName }}"
