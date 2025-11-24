@@ -1,6 +1,7 @@
 ---
 - name: Rest
   hosts: srv-sql-dev-us-east-2
+  gather_facts: false
   tasks:
     - name: Build connection details
       no_log: true
