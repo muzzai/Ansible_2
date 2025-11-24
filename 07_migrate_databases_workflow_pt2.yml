@@ -6,7 +6,7 @@
     backup_path: "{{ target_mssql_backup_path | default('no_path') }}"
     db_list: "{{ database_list | default([])}}"
   tasks:
-    - name: Select 1
+    - name: Check if prefix already exists
       community.general.mssql_script:
         login_host: "{{ hostvars[source]['ansible_host'] }}"
         login_user: "{{ source_SaUserName }}"
@@ -14,7 +14,17 @@
         login_port: 51967
         name: master
         script: |
-          select 1
+          select count(*) as [Value] from sys.databases where name like '{{ prefix }}%'
+      register: databases_count
+
+    - name: Debug count
+      ansible.builtin.debug:
+        var: databases_count
+
+    - name: Fail when prefix not uninque
+      ansible.builtin.fail:
+      when: databases_count['queries'][0]['rows'][0]['Value'] > 0
+
 
     - name: Debug connection vars
       ansible.builtin.debug:
