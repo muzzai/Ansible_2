@@ -1,0 +1,39 @@
+---
+- name: Rest
+  hosts: srv-sql-dev-us-east-2
+  tasks:
+    - name: Build connection details
+      no_log: true
+      delegate_to: localhost
+      block:
+        - name: Build connection details
+          ansible.builtin.include_role:
+            name: build_connection_details
+
+    - name: Stop SQL Server service
+      ansible.windows.win_service:
+        name: MSSQLSERVER
+        state: stopped
+      failed_when: false
+
+    - name: Get SQL Server instance name
+      ansible.windows.win_shell: |
+        $regPath = "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server"
+        Get-ChildItem $regPath |
+        Where-Object {$_.PSChildName -like "MSSQL*.*"} |
+        Select-Object -ExpandProperty PSChildName
+      register: sql_instance
+
+    - name: Extract Name
+      ansible.builtin.set_fact:
+        sql_isntance_name: "{{ sql_instance.stdout_lines[0] }}"
+
+
+    - name: Get subkeys and try iterating them
+      ansible.windows.win_reg_stat:
+        path: "HKLM:\\SOFTWARE\\Microsoft\\Microsoft SQL Server\\{{ sql_isntance_name }}\\MSSQLServer\\SuperSocketNetLib\\Tcp"
+      register: sql_tcp
+
+    - name: Debug subkeys
+      ansible.builtin.debug:
+        var: sql_tcp
