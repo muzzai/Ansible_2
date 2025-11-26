@@ -74,8 +74,7 @@ $AccessKeyFile
 }
 
 
-function MakeAccessKey($ProductName, $RegistryName, $Database, $SQLDatabase, [ref]$AccessKeyNameResult) {
-
+function MakeAccessKey($ProductName, $RegistryName, $Database, $SQLDatabase, $SQLSaUserName, $SQLSaPassword, [ref]$AccessKeyNameResult) {
   Write-Output "Getting current $ProductName connection"
 
   $OldAccessKeyID, $OldAccessKeyName, $ProductVersion = Invoke-Command -ArgumentList($RegistryName)  {
@@ -88,14 +87,6 @@ function MakeAccessKey($ProductName, $RegistryName, $Database, $SQLDatabase, [re
       $Connection.PSChildName
       $Connection.GetValue("KeyName")
       (Get-Item "HKLM:\SOFTWARE\Alloy Software\Access Keys\$($Connection.GetValue("KeyName"))").GetValue("Version")
-  }
-
-  if ($ProductName -contains "Navigator") {
-    $SQLSaUserName = $AN_Access_user
-    $SQLSaPassword = $AN_User_pass
-  } else {
-    $SQLSaUserName = $AD_Access_user
-    $SQLSaPassword = $AD_User_pass
   }
 
   Write-Output "Generating $ProductName access key"
@@ -147,12 +138,12 @@ function MakeAccessKey($ProductName, $RegistryName, $Database, $SQLDatabase, [re
 
 # Run AN Access Key creation
 $AN_AccessKeyName = ""
-MakeAccessKey $AN_ProductName $AN_RegistryName $an_db $AN_SQLDatabase ([ref]$AN_AccessKeyName)
+MakeAccessKey $AN_ProductName $AN_RegistryName $an_db $AN_SQLDatabase $AN_Access_user $AN_User_pass ([ref]$AN_AccessKeyName)
 
 # Run AD Access Key creation if needed
 if ((-not $ProductIsExpress) -and (-not $ADC_NetworkInventory)) {
   $AD_AccessKeyName = ""
-  MakeAccessKey 'Alloy Discovery' 'Alloy Discovery' $ad_db $AD_SQLDatabase ([ref]$AD_AccessKeyName)
+  MakeAccessKey 'Alloy Discovery' 'Alloy Discovery' $ad_db $AD_SQLDatabase $AD_Access_user $AD_User_pass ([ref]$AD_AccessKeyName)
 }
 
 Invoke-Command -ArgumentList ($AN_AccessKeyName, $SQLServerInstance, $AN_SQLDatabase)  {
