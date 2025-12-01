@@ -8,6 +8,7 @@
   tasks:
     - name: Generate keys
       delegate_to: localhost
+      connection: local
       block:
         - name: Ensure SSH key directory exists
           ansible.builtin.file:
