@@ -40,13 +40,13 @@
 
         - name: Read public key content
           ansible.builtin.slurp:
-            src: "{{ provision_public_key_path_expanded }}"
+            src: "{{ provision_public_key_path }}"
           register: public_key_content
           delegate_facts: false
 
         - name: Read private key content for Vault storage
           ansible.builtin.slurp:
-            src: "{{ provision_private_key_path_expanded }}"
+            src: "{{ provision_private_key_path }}"
           register: private_key_content
 
         - name: Show private key
