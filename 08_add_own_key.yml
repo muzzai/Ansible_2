@@ -19,7 +19,7 @@
 
         - name: Derive public key file paths
           ansible.builtin.set_fact:
-            provision_public_key_path: "{{ lookup('env', 'HOME') }}/.ssh/{{ inventory_hostname }}.pub"
+            provision_public_key_path: "{{ provision_private_key_path }}.pub"
 
         - name: Ensure SSH key directory exists
           ansible.builtin.file:
