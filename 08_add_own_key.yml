@@ -5,6 +5,7 @@
   vars:
     ec2_ssh_key_type: rsa
     ec2_ssh_key_bits: 4096
+    ansible_keep_remote_files: true
 
   tasks:
     - name: Generate keys
