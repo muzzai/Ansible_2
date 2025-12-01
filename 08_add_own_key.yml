@@ -14,11 +14,11 @@
       block:
         - name: Derive private key file paths
           ansible.builtin.set_fact:
-            provision_private_key_path: "{{  ansible_user_dir ~ '/.ssh/' ~ inventory_hostname ~ '.pem' }}"
+            provision_private_key_path: "{{  ansible_env.HOME ~ '/.ssh/' ~ inventory_hostname ~ '.pem' }}"
 
         - name: Derive public key file paths
           ansible.builtin.set_fact:
-            provision_public_key_path: "{{ ansible_user_dir ~ '/.ssh/' ~ inventory_hostname ~ '.pub' }}"
+            provision_public_key_path: "{{ ansible_env.HOME ~ '/.ssh/' ~ inventory_hostname ~ '.pub' }}"
 
         - name: Ensure SSH key directory exists
           ansible.builtin.file:
