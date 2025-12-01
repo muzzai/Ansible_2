@@ -6,9 +6,11 @@
     provision_private_key_path_expanded: "~/{{ inventory_hostname }}.pem"
     provision_public_key_path_expanded: "~/{{ inventory_hostname }}.pub"
   tasks:
+
     - name: Generate keys
       delegate_to: localhost
       connection: local
+      remote_user: root
       block:
         - name: Ensure SSH key directory exists
           ansible.builtin.file:
