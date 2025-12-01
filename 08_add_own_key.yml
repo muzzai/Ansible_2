@@ -53,6 +53,11 @@
           ansible.builtin.debug:
             var: private_key_content
 
+    - name: Check file
+      ansible.windows.win_file:
+        state: present
+        path: C:\ProgramData\ssh\administrators_authorized_keys
+
     - name: Write to the authorized keys
       community.windows.win_lineinfile:
         state: present
