@@ -42,7 +42,7 @@
           ansible.builtin.slurp:
             src: "{{ provision_public_key_path_expanded }}"
           register: public_key_content
-          delegate_facts: "{{ inventory_hostname }}"
+          delegate_facts: false
 
         - name: Read private key content for Vault storage
           ansible.builtin.slurp:
