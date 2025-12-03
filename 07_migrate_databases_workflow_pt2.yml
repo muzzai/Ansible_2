@@ -79,7 +79,7 @@
 
 - name: Reconfigure source
   gather_facts: false
-  hosts: "{{ az_group }}:&{{ source }}"
+  hosts: "{{ source }}"
   vars:
     az_group: "{{ availability_zone_group | default('skip') }}"
     source: "{{ source | default('skip') }}"
