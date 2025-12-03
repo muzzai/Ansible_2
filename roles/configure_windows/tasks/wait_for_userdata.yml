@@ -7,20 +7,15 @@
     timeout: 300
   delegate_to: localhost
 
-- name: Wait for user data script to complete (falling back to powershell)
-  vars:
-    ansible_connection: ssh
-    ansible_user: Administrator
-    ansible_shell_type: cmd
-    ansible_ssh_common_args: >-
-      -o UserKnownHostsFile=/dev/null
-      -o StrictHostKeyChecking=no
-      -o PasswordAuthentication=no
-      -o PreferredAuthentications=publickey
-  ansible.windows.win_stat:
+- name: Wait for user data script to complete
+  ansible.windows.win_wait_for:
     path: C:\debug\user_data_result.log
-  register: configure_windows_provision_ec2_user_data_status_ps
-  until: configure_windows_provision_ec2_user_data_status_ps.stat is defined and configure_windows_provision_ec2_user_data_status_ps.stat.exists
-  retries: 15
-  delay: 15
+    state: present
+    sleep: 15
+    timeout: 300
   ignore_errors: true
+  register: poll_result
+
+- name: Fail if poll was unsuccessful
+  ansible.builtin.fail:
+  when: poll_result.elapsed >= 300
