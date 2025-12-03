@@ -5,6 +5,18 @@
   vars:
     public_key: some_value
   tasks:
+    - name: Get PowerShell version on remote Windows host
+      ansible.windows.win_shell: |
+        $PSVersionTable.PSVersion | ConvertTo-Json
+      register: ps_version_raw
+
+    - name: Parse PowerShell version
+      ansible.builtin.set_fact:
+        ps_version: "{{ ps_version_raw.stdout | from_json }}"
+
+    - name: Show PowerShell version (Major.Minor.Patch)
+      ansible.builtin.debug:
+        msg: "Remote PowerShell version: {{ ps_version.Major }}.{{ ps_version.Minor }}.{{ ps_version.Patch }}"
 
     - name: Ensure script folder
       ansible.windows.win_file:
