@@ -2,12 +2,11 @@
 - name: Check connection
   hosts: aws_ec2
   gather_facts: false
+  vars:
+    public_key: some_value
   tasks:
-    - name: Try win_stat something
-      ansible.windows.win_shell: |
-        Get-Date
-      register: result
-
-    - name: Show result
-      ansible.builtin.debug:
-        var: result
+    - name: Generate script
+      ansible.windows.win_template:
+        src: templates/Install-AdminKey.ps1.j2
+        dest: C:\Install-AdminKeyScript\Reconfigure-Source.ps1
+        force: true
