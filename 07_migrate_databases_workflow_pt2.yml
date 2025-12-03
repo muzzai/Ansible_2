@@ -6,6 +6,10 @@
     db_list: "{{ database_list | default([])}}"
     prefix: "{{ source.split('.')[0] }}"
   tasks:
+    - name: Debug
+      ansible.builtin.debug:
+        var: hostvars
+
     - name: Check if prefix already exists
       community.general.mssql_script:
         login_host: "{{ hostvars[source]['ansible_host'] }}"
