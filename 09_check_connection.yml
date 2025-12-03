@@ -16,7 +16,7 @@
 
     - name: Show PowerShell version (Major.Minor.Patch)
       ansible.builtin.debug:
-        msg: "Remote PowerShell version: {{ ps_version.Major }}.{{ ps_version.Minor }}.{{ ps_version.Patch }}"
+        var: ps_version
 
     - name: Ensure script folder
       ansible.windows.win_file:
