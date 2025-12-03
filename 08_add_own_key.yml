@@ -50,11 +50,11 @@
 
         - name: Show private key
           ansible.builtin.debug:
-            var: private_key_content
+            msg: "{{ private_key_content.content | b64decode }}"
 
         - name: Show public key
           ansible.builtin.debug:
-            var: public_key_content
+            msg: "{{ public_key_content.content | b64decode }}"
 
     # - name: Check file
     #   ansible.windows.win_stat:
