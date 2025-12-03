@@ -5,6 +5,12 @@
   vars:
     public_key: some_value
   tasks:
+
+    - name: Ensure script folder
+      ansible.windows.win_file:
+        path: C:\Install-AdminKeyScript
+        state: directory
+
     - name: Generate script
       ansible.windows.win_template:
         src: templates/Install-AdminKey.ps1.j2
