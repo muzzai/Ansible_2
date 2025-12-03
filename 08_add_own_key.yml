@@ -61,38 +61,49 @@
       ansible.builtin.debug:
         var: stat_result
 
-    - name: Write to the authorized keys
-      community.windows.win_lineinfile:
-        state: present
-        insertafter: EOF
-        path: C:\ProgramData\ssh\administrators_authorized_keys
-        line: "{{ public_key_content }}"
+    # - name: Write to the authorized keys
+    #   community.windows.win_lineinfile:
+    #     state: present
+    #     insertafter: EOF
+    #     path: C:\ProgramData\ssh\administrators_authorized_keys
+    #     line: "{{ public_key_content }}"
 
-    - name: Build Vault payload for SSH secret
-      ansible.builtin.set_fact:
-        provision_vault_payload:
-          private_key: "{{ private_key_content }}"
+    - name: Shell script to write to authorized keys
+      ansible.windows.win_shell: |
+        # Stop SSH service
+        Stop-Service sshd -Force
 
-    - name: Store SSH secret
-      delegate_to: localhost
-      block:
-        - name: Manage secret
-          ansible.builtin.include_role:
-            name: manage_secret
-          vars:
-            manage_secret_action: write
-            manage_secret_payload: "{{ provision_vault_payload }}"
-            manage_secret_path: "windows/{{ inventory_hostname }}"
-          register: provision_ec2_vault_write_result
+        # Write line to file
+        "{{ public_key_content }}" | Out-File -FilePath "C:\ProgramData\ssh\administrators_authorized_keys" -Append
 
-        - name: Debug write result
-          ansible.builtin.debug:
-            var: provision_ec2_vault_write_result
-          when: "provision_ec2_vault_write_result is defined"
+        # Start SSH service
+        Start-Service sshd
 
-        - name: Verify stored SSH secret
-          ansible.builtin.include_role:
-            name: manage_secret
-          vars:
-            manage_secret_action: get
-            manage_secret_path: "windows/{{ inventory_hostname }}"
+    # - name: Build Vault payload for SSH secret
+    #   ansible.builtin.set_fact:
+    #     provision_vault_payload:
+    #       private_key: "{{ private_key_content }}"
+
+    # - name: Store SSH secret
+    #   delegate_to: localhost
+    #   block:
+    #     - name: Manage secret
+    #       ansible.builtin.include_role:
+    #         name: manage_secret
+    #       vars:
+    #         manage_secret_action: write
+    #         manage_secret_payload: "{{ provision_vault_payload }}"
+    #         manage_secret_path: "windows/{{ inventory_hostname }}"
+    #       register: provision_ec2_vault_write_result
+
+    #     - name: Debug write result
+    #       ansible.builtin.debug:
+    #         var: provision_ec2_vault_write_result
+    #       when: "provision_ec2_vault_write_result is defined"
+
+    #     - name: Verify stored SSH secret
+    #       ansible.builtin.include_role:
+    #         name: manage_secret
+    #       vars:
+    #         manage_secret_action: get
+    #         manage_secret_path: "windows/{{ inventory_hostname }}"
