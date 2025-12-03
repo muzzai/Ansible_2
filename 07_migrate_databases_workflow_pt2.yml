@@ -94,7 +94,6 @@
     sql_s3_region_effective: "{{ hostvars[source]['placement']['region'] }}"
     passwords: "{{ passwords | default({}) }}"
   tasks:
-
     - name: Build connection details
       block:
         - name: Build connection details
