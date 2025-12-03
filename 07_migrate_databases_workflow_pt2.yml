@@ -1,10 +1,10 @@
 ---
 - name: Restore databases and create users
   hosts: localhost
-  debugger: on_failed
   vars:
     backup_path: "{{ target_mssql_backup_path | default('no_path') }}"
     db_list: "{{ database_list | default([])}}"
+    prefix: "{{ source.split('.')[0] }}"
   tasks:
     - name: Check if prefix already exists
       community.general.mssql_script:
