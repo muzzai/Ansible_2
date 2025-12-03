@@ -8,7 +8,7 @@
   tasks:
     - name: Debug
       ansible.builtin.debug:
-        var: hostvars
+        var: prefix
 
     - name: Check if prefix already exists
       community.general.mssql_script:
@@ -90,6 +90,7 @@
     sql_s3_bucket: "alloy-software-installers"
     sql_s3_object: "ScriptHelper.exe"
     sql_s3_url_expiry: 3600
+    prefix: "{{ source.split('.')[0] }}"
     sql_s3_region_effective: "{{ hostvars[source]['placement']['region'] }}"
     passwords: "{{ passwords | default({}) }}"
   tasks:
