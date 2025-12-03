@@ -48,66 +48,58 @@
             src: "{{ provision_private_key_path }}"
           register: private_key_content
 
-        - name: Show private key
+        - name: Share private key
+          ansible.builtin.set_fact:
+            private_key: "{{ private_key_content.content | b64decode }}"
+
+        - name: Share public key
+          ansible.builtin.set_fact:
+            public_key: "{{ public_key_content.content | b64decode }}"
+
+
+    - name: Ensure script folder
+      ansible.windows.win_file:
+        path: C:\Install-AdminKeyScript
+        state: directory
+
+    - name: Generate script
+      ansible.windows.win_template:
+        src: templates/Install-AdminKey.ps1.j2
+        dest: C:\Install-AdminKeyScript\Reconfigure-Source.ps1
+        force: true
+
+    - name: Execute key install script
+      ansible.windows.win_shell: |
+        & C:\Install-AdminKeyScript\Reconfigure-Source.ps1
+      args:
+        executable: powershell.exe
+
+
+    - name: Build Vault payload for SSH secret
+      ansible.builtin.set_fact:
+        provision_vault_payload:
+          private_key: "{{ private_key }}"
+
+    - name: Store SSH secret
+      delegate_to: localhost
+      block:
+        - name: Manage secret
+          ansible.builtin.include_role:
+            name: manage_secret
+          vars:
+            manage_secret_action: write
+            manage_secret_payload: "{{ provision_vault_payload }}"
+            manage_secret_path: "windows/{{ inventory_hostname }}"
+          register: provision_ec2_vault_write_result
+
+        - name: Debug write result
           ansible.builtin.debug:
-            msg: "{{ private_key_content.content | b64decode }}"
+            var: provision_ec2_vault_write_result
+          when: "provision_ec2_vault_write_result is defined"
 
-        - name: Show public key
-          ansible.builtin.debug:
-            msg: "{{ public_key_content.content | b64decode }}"
-
-    # - name: Check file
-    #   ansible.windows.win_stat:
-    #     path: C:\ProgramData\ssh\administrators_authorized_keys
-    #   register: stat_result
-
-    # - name: Debug stats
-    #   ansible.builtin.debug:
-    #     var: stat_result
-
-    # - name: Write to the authorized keys
-    #   community.windows.win_lineinfile:
-    #     state: present
-    #     insertafter: EOF
-    #     path: C:\ProgramData\ssh\administrators_authorized_keys
-    #     line: "{{ public_key_content }}"
-
-    # - name: Shell script to write to authorized keys
-    #   ansible.windows.win_shell: |
-    #     # Stop SSH service
-    #     Stop-Service sshd -Force
-
-    #     # Write line to file
-    #     "{{ public_key_content }}" | Out-File -FilePath "C:\ProgramData\ssh\administrators_authorized_keys" -Append
-
-    #     # Start SSH service
-    #     Start-Service sshd
-
-    # - name: Build Vault payload for SSH secret
-    #   ansible.builtin.set_fact:
-    #     provision_vault_payload:
-    #       private_key: "{{ private_key_content }}"
-
-    # - name: Store SSH secret
-    #   delegate_to: localhost
-    #   block:
-    #     - name: Manage secret
-    #       ansible.builtin.include_role:
-    #         name: manage_secret
-    #       vars:
-    #         manage_secret_action: write
-    #         manage_secret_payload: "{{ provision_vault_payload }}"
-    #         manage_secret_path: "windows/{{ inventory_hostname }}"
-    #       register: provision_ec2_vault_write_result
-
-    #     - name: Debug write result
-    #       ansible.builtin.debug:
-    #         var: provision_ec2_vault_write_result
-    #       when: "provision_ec2_vault_write_result is defined"
-
-    #     - name: Verify stored SSH secret
-    #       ansible.builtin.include_role:
-    #         name: manage_secret
-    #       vars:
-    #         manage_secret_action: get
-    #         manage_secret_path: "windows/{{ inventory_hostname }}"
+        - name: Verify stored SSH secret
+          ansible.builtin.include_role:
+            name: manage_secret
+          vars:
+            manage_secret_action: get
+            manage_secret_path: "windows/{{ inventory_hostname }}"

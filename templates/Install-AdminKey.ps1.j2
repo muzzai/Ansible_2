@@ -1,0 +1,41 @@
+#------------------------------------------------------------------------------
+# Install the public key for the user 'administrator' and set permissions.
+#
+Write-Host "Configuring the public key (administrators_authorized_keys)..."
+$publicKey = "{{ public_key }}"
+
+# Define file path
+$authKeysPath = "C:\ProgramData\ssh\administrators_authorized_keys"
+
+if (Test-Path $authKeysPath) {
+    Write-Host "Making the administrators_authorized_keys file writable..."
+    $acl = Get-Acl $authKeysPath
+    $tempRule = New-Object System.Security.AccessControl.FileSystemAccessRule("Administrator", "Modify", "Allow")
+    $acl.AddAccessRule($tempRule)
+    Set-Acl -Path $authKeysPath -AclObject $acl
+} else {
+    Write-Host "Creating the administrators_authorized_keys file..."
+    New-Item -Path $authKeysPath -ItemType File -Force
+}
+
+Set-Content -Path $authKeysPath -Value $publicKey -Encoding ascii
+
+Write-Host "Applying strict permission to the administrators_authorized_keys file..."
+# Remove existing ACLs and disable inheritance
+$acl = Get-Acl $authKeysPath
+$acl.SetAccessRuleProtection($true, $false)  # Disable inheritance, remove inherited rules
+$acl.Access | ForEach-Object { $acl.RemoveAccessRule($_) }
+
+# Add read access for Administrators group
+$adminRule = New-Object System.Security.AccessControl.FileSystemAccessRule("Administrators", "Read", "Allow")
+$acl.AddAccessRule($adminRule)
+
+# Add read access for SYSTEM
+$systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule("SYSTEM", "Read", "Allow")
+$acl.AddAccessRule($systemRule)
+
+# Apply the new ACL
+Set-Acl -Path $authKeysPath -AclObject $acl
+
+#icacls "C:\ProgramData\ssh\administrators_authorized_keys" /inheritance:r
+#icacls "C:\ProgramData\ssh\administrators_authorized_keys" /grant "Administrators:R" "SYSTEM:R"
