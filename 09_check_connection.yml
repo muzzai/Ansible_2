@@ -4,8 +4,8 @@
   gather_facts: false
   tasks:
     - name: Try win_stat something
-      ansible.windows.win_stat:
-        path: C:\ProgramData\ssh\administrators_authorized_keys
+      ansible.windows.win_shell: |
+        Get-Date
       register: result
 
     - name: Show result
