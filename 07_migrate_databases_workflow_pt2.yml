@@ -102,10 +102,6 @@
       delegate_to: localhost
       no_log: true
 
-    - name: Debug localhost
-      ansible.builtin.debug:
-        var: hostvars['localhost']
-
     - name: Generate installer presigned URL
       delegate_to: localhost
       amazon.aws.s3_object:
