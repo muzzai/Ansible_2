@@ -54,7 +54,7 @@
 
         - name: Show public key
           ansible.builtin.debug:
-            var: private_key_content
+            var: public_key_content
 
     # - name: Check file
     #   ansible.windows.win_stat:
