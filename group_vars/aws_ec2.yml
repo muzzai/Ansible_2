@@ -3,12 +3,12 @@ ansible_connection: ssh
 ansible_shell_type: powershell
 ansible_ssh_transfer_method: scp
 ansible_shell_executable: powershell.exe
-# ansible_scp_extra_args: "-O"
+ansible_scp_extra_args: "-O"
 mssql_backup_path: :\Backups
 all_drive_letters: ['D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
 prefix: sql-migrated
 passwords: {}
-ansible_remote_tmp: C:\Windows\Temp
+ansible_remote_tmp: /Windows/Temp
 ansible_ssh_common_args: >-
       -o UserKnownHostsFile=/dev/null
       -o StrictHostKeyChecking=no
