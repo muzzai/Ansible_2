@@ -4,7 +4,7 @@
 
 # --- Product / Registry info ---
 $AN_ProductName      = "{{ an_rn }}"
-$AN_RegistryName     = "Alloy Navigator Express"
+$AN_RegistryName     = "{{ an_pn }}"
 
 $an_db               = "{{ an_db }}"
 $AN_SQLDatabase      = "{{ prefix }}-{{ an_db }}"
@@ -18,7 +18,7 @@ $AD_User_pass        = "{{ passwords[ad_db] }}"
 $AN_Access_user      = "{{ prefix }}-{{ an_db }}Access"
 $AN_User_pass        = "{{ passwords[an_db] }}"
 
-$ProductIsExpress    = $false
+$ProductIsExpress    = "{{ ProductIsExpress }}"
 $ADC_NetworkInventory = $false
 
 # --- SQL Server settings ---
