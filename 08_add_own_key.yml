@@ -52,14 +52,18 @@
           ansible.builtin.debug:
             var: private_key_content
 
-    - name: Check file
-      ansible.windows.win_stat:
-        path: C:\ProgramData\ssh\administrators_authorized_keys
-      register: stat_result
+        - name: Show public key
+          ansible.builtin.debug:
+            var: private_key_content
 
-    - name: Debug stats
-      ansible.builtin.debug:
-        var: stat_result
+    # - name: Check file
+    #   ansible.windows.win_stat:
+    #     path: C:\ProgramData\ssh\administrators_authorized_keys
+    #   register: stat_result
+
+    # - name: Debug stats
+    #   ansible.builtin.debug:
+    #     var: stat_result
 
     # - name: Write to the authorized keys
     #   community.windows.win_lineinfile:
@@ -68,16 +72,16 @@
     #     path: C:\ProgramData\ssh\administrators_authorized_keys
     #     line: "{{ public_key_content }}"
 
-    - name: Shell script to write to authorized keys
-      ansible.windows.win_shell: |
-        # Stop SSH service
-        Stop-Service sshd -Force
+    # - name: Shell script to write to authorized keys
+    #   ansible.windows.win_shell: |
+    #     # Stop SSH service
+    #     Stop-Service sshd -Force
 
-        # Write line to file
-        "{{ public_key_content }}" | Out-File -FilePath "C:\ProgramData\ssh\administrators_authorized_keys" -Append
+    #     # Write line to file
+    #     "{{ public_key_content }}" | Out-File -FilePath "C:\ProgramData\ssh\administrators_authorized_keys" -Append
 
-        # Start SSH service
-        Start-Service sshd
+    #     # Start SSH service
+    #     Start-Service sshd
 
     # - name: Build Vault payload for SSH secret
     #   ansible.builtin.set_fact:
