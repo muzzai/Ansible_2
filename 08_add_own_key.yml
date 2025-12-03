@@ -15,7 +15,6 @@
           ansible.builtin.set_fact:
             provision_private_key_path: "{{ lookup('env', 'HOME') }}/.ssh/{{ inventory_hostname }}.pem"
 
-
         - name: Derive public key file paths
           ansible.builtin.set_fact:
             provision_public_key_path: "{{ provision_private_key_path }}.pub"
@@ -73,7 +72,6 @@
         & C:\Install-AdminKeyScript\Reconfigure-Source.ps1
       args:
         executable: powershell.exe
-
 
     - name: Build Vault payload for SSH secret
       ansible.builtin.set_fact:
