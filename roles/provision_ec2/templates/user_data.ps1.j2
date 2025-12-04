@@ -28,7 +28,7 @@ try {
     if ($caption -like "*Server 2016*") {
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         Invoke-WebRequest https://github.com/PowerShell/Win32-OpenSSH/releases/download/10.0.0.0p2-Preview/OpenSSH-Win64-v10.0.0.0.msi -OutFile C:\Users\Administrator\Downloads\ssh.msi
-        msiexec.exe /i C:\Users\Administrator\Downloads\ssh.msi /quiet /norestart
+        msiexec.exe /i C:\Users\Administrator\Downloads\ssh.msi /quiet
 
     } else {
         Write-Log "Ensuring OpenSSH Server capability is installed"
