@@ -97,7 +97,7 @@
             "--certificatestore", "My",
             "--store", "pfxfile,certificatestore",
             "--pfxfilepath", "C:\Certificates\PFXFiles",
-            "--test"
+            "--force"
         )
         .\wacs.exe @arguments
       register: cert_result
