@@ -6,13 +6,11 @@
     win_acme_version: "2.2.9.1701"
     win_acme_install_path: C:\Program Files\win-acme
     win_acme_config_path: C:\ProgramData\win-acme
-    pathtoPFX: C:\Certificates\PFXFiles
+    path_to_pfx: C:\Certificates\PFXFiles
     certificate_path: C:\Certificates
-    email_address: "admin@example.com"
-    domain: srv-2016-test.alloysoftware.us
+    email_address: ""
+    domain: "{{ inventory_hostname }}"
     installationsiteid: 2
-    hostname: "{{ ansible_hostname }}"
-    renewal_days: 30
   tasks:
 
     - name: Build connection details
@@ -33,6 +31,16 @@
         path: "{{ win_acme_install_path }}"
         state: directory
       when: not win_acme_installed.stat.exists
+
+    - name: Create certificates directory
+      ansible.windows.win_file:
+        path: "{{ certificate_path }}"
+        state: directory
+
+    - name: Ensure pfx path exists
+      ansible.windows.win_file:
+        path: "{{ path_to_pfx }}"
+        state: directory
 
     - name: Download win-acme
       ansible.windows.win_get_url:
@@ -71,7 +79,7 @@
                    --csr rsa `
                    --certificatestore My `
                    --store pfxfile,certificatestore
-                   --pfxfilepath {{ pathtoPFX }}
+                   --pfxfilepath {{ path_to_pfx }}
                    {% if use_staging %}--test{% endif %}
       register: cert_result
 
@@ -79,12 +87,6 @@
       ansible.builtin.debug:
         msg: "Certificate issued for {{ domain }}"
       when: cert_result.rc == 0
-
-    # - name: Create certificates directory
-    #   ansible.windows.win_file:
-    #     path: "{{ certificate_path }}"
-    #     state: directory
-
 
     # - name: Create renewal script
     #   ansible.windows.win_template:
