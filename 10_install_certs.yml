@@ -8,9 +8,7 @@
     win_acme_config_path: C:\ProgramData\win-acme
     path_to_pfx: C:\Certificates\PFXFiles
     certificate_path: C:\Certificates
-    email_address: ""
     domain: "{{ inventory_hostname }}"
-    installationsiteid: 2
   tasks:
 
     - name: Build connection details
@@ -94,7 +92,7 @@
             "--installationsiteid {{ installationsiteid }}",
             "--centralsslstore 'C:\Certificates'",
             "--friendlyname '{{ friendly_name }}'",
-            "--emailaddress '{{ email }}'",
+            "--emailaddress '{{ email_address }}'",
             "--csr rsa",
             "--certificatestore My",
             "--store pfxfile,certificatestore",
