@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Settings>
+  <ClientNames>
+    <string>letsencrypt.org</string>
+  </ClientNames>
+  <UI>
+    <PageSize>50</PageSize>
+    <DateFormat>yyyy-MM-dd</DateFormat>
+  </UI>
+  <Acme>
+    <DefaultBaseUri>https://acme-v02.api.letsencrypt.org/</DefaultBaseUri>
+    <DefaultBaseUriTest>https://acme-staging-v02.api.letsencrypt.org/</DefaultBaseUriTest>
+    <DisableTelemetry>true</DisableTelemetry>
+    <EncryptConfig>true</EncryptConfig>
+  </Acme>
+  <ScheduledTask>
+    <RenewalDays>{{ renewal_days }}</RenewalDays>
+    <RandomDelay>00:00:00</RandomDelay>
+  </ScheduledTask>
+  <CertificateStore>
+    <DefaultPath>{{ certificate_path }}</DefaultPath>
+    <DefaultCentralSslStore>null</DefaultCentralSslStore>
+  </CertificateStore>
+  <Notification>
+    <SmtpServer></SmtpServer>
+    <SmtpPort>25</SmtpPort>
+    <SmtpUser></SmtpUser>
+    <SmtpPassword></SmtpPassword>
+    <SmtpSecure>None</SmtpSecure>
+    <SenderName>win-acme</SenderName>
+    <SenderAddress>{{ email_address }}</SenderAddress>
+    <ReceiverAddresses>
+      <string>{{ email_address }}</string>
+    </ReceiverAddresses>
+    <EmailOnSuccess>false</EmailOnSuccess>
+    <EmailOnFailure>true</EmailOnFailure>
+  </Notification>
+  <Security>
+    <RSAKeyBits>2048</RSAKeyBits>
+  </Security>
+  <Script>
+    <Timeout>600</Timeout>
+  </Script>
+</Settings>

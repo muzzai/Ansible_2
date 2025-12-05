@@ -3,11 +3,14 @@
   hosts: aws_ec2
   gather_facts: false
   vars:
-    win_acme_version: "2.2.0"
-    win_acme_install_path: "C:\\Program Files\\win-acme"
-    win_acme_config_path: "C:\\ProgramData\\win-acme"
+    win_acme_version: "2.2.9.1701"
+    win_acme_install_path: C:\Program Files\win-acme
+    win_acme_config_path: C:\ProgramData\win-acme
+    pathtoPFX: C:\Certificates\PFXFiles
+    certificate_path: C:\Certificates
     email_address: "admin@example.com"
-    certificate_path: "C:\\Certificates"
+    domain: srv-2016-test.alloysoftware.us
+    installationsiteid: 2
     hostname: "{{ ansible_hostname }}"
     renewal_days: 30
   tasks:
@@ -33,7 +36,7 @@
 
     - name: Download win-acme
       ansible.windows.win_get_url:
-        url: "https://github.com/win-acme/win-acme/releases/download/v{{ win_acme_version }}/win-acme.v{{ win_acme_version }}.zip"
+        url: "https://github.com/win-acme/win-acme/releases/download/v{{ win_acme_version }}/win-acme.v{{ win_acme_version }}.x64.pluggable.zip"
         dest: "C:\\Temp\\win-acme.v{{ win_acme_version }}.zip"
       when: not win_acme_installed.stat.exists
 
@@ -49,44 +52,68 @@
         path: "{{ win_acme_config_path }}"
         state: directory
 
-    - name: Create certificates directory
-      ansible.windows.win_file:
-        path: "{{ certificate_path }}"
-        state: directory
-
     - name: Create win-acme settings file
       ansible.windows.win_template:
         src: templates/settings.config.j2
         dest: "{{ win_acme_config_path }}\\settings.config"
 
-    - name: Create renewal script
-      ansible.windows.win_template:
-        src: templates/renew-certificates.ps1.j2
-        dest: "{{ win_acme_install_path }}\\renew-certificates.ps1"
+    - name: Issue certificate
+      ansible.windows.win_shell: >-
+        cd "{{ win_acme_install_path }}"
+        .\wacs.exe --host {{ domain }} `
+                   --accepttos `
+                   --verbose `
+                   --target manual `
+                   --installationsiteid {{ installationsiteid }}
+                   --centralsslstore "C:\Certificates" `
+                   --friendlyname 'Alloy Navigator Site' `
+                   --emailaddress {{ email_address }} `
+                   --csr rsa `
+                   --certificatestore My `
+                   --store pfxfile,certificatestore
+                   --pfxfilepath {{ pathtoPFX }}
+                   {% if use_staging %}--test{% endif %}
+      register: cert_result
 
-    - name: Create scheduled task for certificate renewal
-      community.windows.win_scheduled_task:
-        name: "win-acme Certificate Renewal"
-        description: "Automatically renew Let's Encrypt certificates"
-        actions:
-          - path: PowerShell.exe
-            arguments: >
-              -ExecutionPolicy Bypass -NoProfile -File "{{ win_acme_install_path }}\\renew-certificates.ps1"
-        triggers:
-          - type: daily
-            enabled: true
-            delay: P1Y
-            start_boundary:
-            repetition:
-              interval: P1Y
-        state: present
-
-    - name: Test win-acme installation
-      ansible.windows.win_command: "{{ win_acme_install_path }}\\wacs.exe --version"
-      register: version_test
-      changed_when: false
-
-    - name: Display win-acme version
+    - name: Show result
       ansible.builtin.debug:
-        msg: "win-acme {{ win_acme_version }} installed successfully"
-      when: version_test.rc == 0
+        msg: "Certificate issued for {{ domain }}"
+      when: cert_result.rc == 0
+
+    # - name: Create certificates directory
+    #   ansible.windows.win_file:
+    #     path: "{{ certificate_path }}"
+    #     state: directory
+
+
+    # - name: Create renewal script
+    #   ansible.windows.win_template:
+    #     src: templates/renew-certificates.ps1.j2
+    #     dest: "{{ win_acme_install_path }}\\renew-certificates.ps1"
+
+    # - name: Create scheduled task for certificate renewal
+    #   community.windows.win_scheduled_task:
+    #     name: "win-acme Certificate Renewal"
+    #     description: "Automatically renew Let's Encrypt certificates"
+    #     actions:
+    #       - path: PowerShell.exe
+    #         arguments: >
+    #           -ExecutionPolicy Bypass -NoProfile -File "{{ win_acme_install_path }}\\renew-certificates.ps1"
+    #     triggers:
+    #       - type: daily
+    #         enabled: true
+    #         delay: P1Y
+    #         start_boundary:
+    #         repetition:
+    #           interval: P1Y
+    #     state: present
+
+    # - name: Test win-acme installation
+    #   ansible.windows.win_command: "{{ win_acme_install_path }}\\wacs.exe --version"
+    #   register: version_test
+    #   changed_when: false
+
+    # - name: Display win-acme version
+    #   ansible.builtin.debug:
+    #     msg: "win-acme {{ win_acme_version }} installed successfully"
+    #   when: version_test.rc == 0
