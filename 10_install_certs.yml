@@ -87,18 +87,18 @@
       ansible.windows.win_shell: |
         cd "C:\Program Files\win-acme"
         $arguments = @(
-            "--host", "{{ domain }}",
+            "--host {{ domain }}",
             "--accepttos",
             "--verbose",
-            "--target", "manual",
-            "--installationsiteid", "2",
-            "--centralsslstore", "C:\Certificates",
-            "--friendlyname", "{{ friendly_name }}",
-            "--emailaddress", "{{ email }}",
-            "--csr", "rsa",
-            "--certificatestore", "My",
-            "--store", "pfxfile,certificatestore",
-            "--pfxfilepath", "C:\Certificates\PFXFiles",
+            "--target manual",
+            "--installationsiteid {{ installationsiteid }}",
+            "--centralsslstore 'C:\Certificates'",
+            "--friendlyname '{{ friendly_name }}'",
+            "--emailaddress '{{ email }}'",
+            "--csr rsa",
+            "--certificatestore My",
+            "--store pfxfile,certificatestore",
+            "--pfxfilepath 'C:\Certificates\PFXFiles'",
             "--test"
         )
         .\wacs.exe @arguments
