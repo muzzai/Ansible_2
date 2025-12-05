@@ -65,22 +65,43 @@
         src: templates/settings.config.j2
         dest: "{{ win_acme_config_path }}\\settings.config"
 
-    - name: Issue certificate
+    # - name: Issue certificate
+    #   ansible.windows.win_shell: |
+    #     cd "{{ win_acme_install_path }}"
+    #     .\wacs.exe --host {{ domain }} `
+    #                --accepttos `
+    #                --verbose `
+    #                --target manual `
+    #                --installationsiteid {{ installationsiteid }}
+    #                --centralsslstore "C:\Certificates" `
+    #                --friendlyname 'Alloy Navigator Site' `
+    #                --emailaddress {{ email_address }} `
+    #                --csr rsa `
+    #                --certificatestore My `
+    #                --store pfxfile,certificatestore
+    #                --pfxfilepath {{ path_to_pfx }}
+    #                {% if use_staging %}--test{% endif %}
+    #   register: cert_result
+
+    - name: Issue certificate (corrected PowerShell syntax)
       ansible.windows.win_shell: |
-        cd "{{ win_acme_install_path }}"
-        .\wacs.exe --host {{ domain }} `
-                   --accepttos `
-                   --verbose `
-                   --target manual `
-                   --installationsiteid {{ installationsiteid }}
-                   --centralsslstore "C:\Certificates" `
-                   --friendlyname 'Alloy Navigator Site' `
-                   --emailaddress {{ email_address }} `
-                   --csr rsa `
-                   --certificatestore My `
-                   --store pfxfile,certificatestore
-                   --pfxfilepath {{ path_to_pfx }}
-                   {% if use_staging %}--test{% endif %}
+        cd "C:\Program Files\win-acme"
+        $arguments = @(
+            "--host", "{{ domain }}",
+            "--accepttos",
+            "--verbose",
+            "--target", "manual",
+            "--installationsiteid", "2",
+            "--centralsslstore", "C:\Certificates",
+            "--friendlyname", "{{ friendly_name }}",
+            "--emailaddress", "{{ email }}",
+            "--csr", "rsa",
+            "--certificatestore", "My",
+            "--store", "pfxfile,certificatestore",
+            "--pfxfilepath", "C:\Certificates\PFXFiles",
+            "--test"
+        )
+        .\wacs.exe @arguments
       register: cert_result
 
     - name: Show result
