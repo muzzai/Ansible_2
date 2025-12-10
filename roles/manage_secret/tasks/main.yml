@@ -16,20 +16,17 @@
       Validation failed
       {% endif %}
 
-
 - name: Create a temporary file for the CA certificate
   ansible.builtin.tempfile:
     state: file
     suffix: .crt
   register: manage_secret_temp_ca_cert
-  run_once: true
 
 - name: Write the CA certificate to the temporary file
   ansible.builtin.copy:
     content: "{{ manage_secret_vault_ca_cert_env_var }}"
     dest: "{{ manage_secret_temp_ca_cert.path }}"
     mode: "600"
-  run_once: true
 
 - name: Store SSH secret
   community.hashi_vault.vault_kv2_write:
@@ -44,7 +41,6 @@
     validate_certs: true
   when: manage_secret_action == 'write'
   register: manage_secret_vault_write_result
-  run_once: true
 
 - name: Fetch SSH private key from Vault
   community.hashi_vault.vault_kv2_get:
@@ -63,10 +59,9 @@
   ansible.builtin.set_fact:
     manage_secret_retrieved_data: "{{ manage_secret_data.data }}"
   when: manage_secret_action == 'get'
-  run_once: true
 
 - name: Clean up temporary CA certificate file
   ansible.builtin.file:
     path: "{{ manage_secret_temp_ca_cert.path }}"
     state: absent
-  run_once: true
+
