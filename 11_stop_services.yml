@@ -15,7 +15,7 @@
     - name: Stop IIS services
       ansible.windows.win_service:
         name: W3SVC
-        state: stopped
+        state: started
 
     - name: Stop SQL Server services
       ansible.windows.win_service_info:
