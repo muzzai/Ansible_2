@@ -55,6 +55,20 @@
           ansible.builtin.set_fact:
             public_key: "{{ public_key_content.content | b64decode }}"
 
+    - name: Remove chroot for all users
+      community.windows.win_lineinfile:
+        path: C:\ProgramData\ssh\sshd_config
+        line: ChrootDirectory "C:\inetpub\ftproot\Audits"
+        state: absent
+
+    - name: Add chroot for FTP user
+      community.windows.win_lineinfile:
+        path: C:\ProgramData\ssh\sshd_config
+        state: present
+        insertafter: EOF
+        line: |
+          Match User FTPUser
+              ChrootDirectory  "C:\inetpub\ftproot\Audits"
 
     - name: Ensure script folder
       ansible.windows.win_file:
@@ -87,7 +101,7 @@
           vars:
             manage_secret_action: write
             manage_secret_payload: "{{ provision_vault_payload }}"
-            manage_secret_path: "windows/{{ inventory_hostname }}"
+            manage_secret_path: "windows/{{ hostvars[inventory_hostname]['instance_id'] }}"
           register: provision_ec2_vault_write_result
 
         - name: Debug write result
@@ -100,4 +114,4 @@
             name: manage_secret
           vars:
             manage_secret_action: get
-            manage_secret_path: "windows/{{ inventory_hostname }}"
+            manage_secret_path: "windows/{{ hostvars[inventory_hostname]['instance_id'] }}"
