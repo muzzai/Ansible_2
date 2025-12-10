@@ -64,4 +64,3 @@
   ansible.builtin.file:
     path: "{{ manage_secret_temp_ca_cert.path }}"
     state: absent
-
