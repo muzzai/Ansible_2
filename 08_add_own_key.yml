@@ -65,6 +65,7 @@
       community.windows.win_lineinfile:
         path: C:\ProgramData\ssh\sshd_config
         state: present
+        create: false
         insertafter: EOF
         line: |
           Match User FTPUser

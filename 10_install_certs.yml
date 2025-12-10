@@ -19,49 +19,54 @@
           ansible.builtin.include_role:
             name: build_connection_details
 
-    - name: Check if win-acme is already installed
-      ansible.windows.win_stat:
-        path: "{{ win_acme_install_path }}"
-      register: win_acme_installed
+    - name: Return information about an existing website
+      microsoft.iis.website_info:
+        name: 'Default Web Site'
+      register: stored_info
 
-    - name: Create installation directory
-      ansible.windows.win_file:
-        path: "{{ win_acme_install_path }}"
-        state: directory
-      when: not win_acme_installed.stat.exists
+    # - name: Check if win-acme is already installed
+    #   ansible.windows.win_stat:
+    #     path: "{{ win_acme_install_path }}"
+    #   register: win_acme_installed
 
-    - name: Create certificates directory
-      ansible.windows.win_file:
-        path: "{{ certificate_path }}"
-        state: directory
+    # - name: Create installation directory
+    #   ansible.windows.win_file:
+    #     path: "{{ win_acme_install_path }}"
+    #     state: directory
+    #   when: not win_acme_installed.stat.exists
 
-    - name: Ensure pfx path exists
-      ansible.windows.win_file:
-        path: "{{ path_to_pfx }}"
-        state: directory
+    # - name: Create certificates directory
+    #   ansible.windows.win_file:
+    #     path: "{{ certificate_path }}"
+    #     state: directory
 
-    - name: Download win-acme
-      ansible.windows.win_get_url:
-        url: "https://github.com/win-acme/win-acme/releases/download/v{{ win_acme_version }}/win-acme.v{{ win_acme_version }}.x64.pluggable.zip"
-        dest: "C:\\Temp\\win-acme.v{{ win_acme_version }}.zip"
-      when: not win_acme_installed.stat.exists
+    # - name: Ensure pfx path exists
+    #   ansible.windows.win_file:
+    #     path: "{{ path_to_pfx }}"
+    #     state: directory
 
-    - name: Extract win-acme
-      community.windows.win_unzip:
-        src: "C:\\Temp\\win-acme.v{{ win_acme_version }}.zip"
-        dest: "{{ win_acme_install_path }}"
-        creates: "{{ win_acme_install_path }}\\wacs.exe"
-      when: not win_acme_installed.stat.exists
+    # - name: Download win-acme
+    #   ansible.windows.win_get_url:
+    #     url: "https://github.com/win-acme/win-acme/releases/download/v{{ win_acme_version }}/win-acme.v{{ win_acme_version }}.x64.pluggable.zip"
+    #     dest: "C:\\Temp\\win-acme.v{{ win_acme_version }}.zip"
+    #   when: not win_acme_installed.stat.exists
 
-    - name: Create config directory
-      ansible.windows.win_file:
-        path: "{{ win_acme_config_path }}"
-        state: directory
+    # - name: Extract win-acme
+    #   community.windows.win_unzip:
+    #     src: "C:\\Temp\\win-acme.v{{ win_acme_version }}.zip"
+    #     dest: "{{ win_acme_install_path }}"
+    #     creates: "{{ win_acme_install_path }}\\wacs.exe"
+    #   when: not win_acme_installed.stat.exists
 
-    - name: Create win-acme settings file
-      ansible.windows.win_template:
-        src: templates/settings.config.j2
-        dest: "{{ win_acme_config_path }}\\settings.config"
+    # - name: Create config directory
+    #   ansible.windows.win_file:
+    #     path: "{{ win_acme_config_path }}"
+    #     state: directory
+
+    # - name: Create win-acme settings file
+    #   ansible.windows.win_template:
+    #     src: templates/settings.config.j2
+    #     dest: "{{ win_acme_config_path }}\\settings.config"
 
     # - name: Issue certificate
     #   ansible.windows.win_shell: |
@@ -81,36 +86,40 @@
     #                {% if use_staging %}--test{% endif %}
     #   register: cert_result
 
-    - name: Issue certificate (corrected PowerShell syntax)
-      ansible.windows.win_shell: |
-        cd "C:\Program Files\win-acme"
-        $arguments = @(
-            "--host", "{{ domain }}",
-            "--accepttos",
-            "--verbose",
-            "--target", "manual",
-            "--installationsiteid", "2",
-            "--centralsslstore", "C:\Certificates",
-            "--friendlyname", "{{ friendly_name }}",
-            "--emailaddress", "{{ email_address }}",
-            "--csr", "rsa",
-            "--certificatestore", "My",
-            "--store", "pfxfile,certificatestore",
-            "--pfxfilepath", "C:\Certificates\PFXFiles",
-            "--force"
-        )
-        .\wacs.exe @arguments
-      register: cert_result
-
-    - name: Show result
-      ansible.builtin.debug:
-        msg: "Certificate issued for {{ domain }}"
-      when: cert_result.rc == 0
-
     # - name: Create renewal script
     #   ansible.windows.win_template:
     #     src: templates/renew-certificates.ps1.j2
     #     dest: "{{ win_acme_install_path }}\\renew-certificates.ps1"
+
+    # - name: Issue certificate (corrected PowerShell syntax)
+    #   ansible.windows.win_shell: |
+    #     cd "C:\Program Files\win-acme"
+    #     $arguments = @(
+    #         "--host", "{{ domain }}",
+    #         "--accepttos",
+    #         "--verbose",
+    #         "--target", "manual",
+    #         "--installationsiteid", "2",
+    #         "--centralsslstore", "C:\Certificates",
+    #         "--friendlyname", "{{ friendly_name }}",
+    #         "--emailaddress", "{{ email_address }}",
+    #         "--csr", "rsa",
+    #         "--certificatestore", "My",
+    #         "--store", "pfxfile,certificatestore",
+    #         "--pfxfilepath", "C:\Certificates\PFXFiles",
+    #         "--force",
+    #         "--installation", "iis,script",
+    #         "--script", "{{ win_acme_install_path }}\renew-certificates.ps1",
+
+
+    #     )
+    #     .\wacs.exe @arguments
+    #   register: cert_result
+
+    # - name: Show result
+    #   ansible.builtin.debug:
+    #     msg: "Certificate issued for {{ domain }}"
+    #   when: cert_result.rc == 0
 
     # - name: Create scheduled task for certificate renewal
     #   community.windows.win_scheduled_task:

@@ -21,7 +21,7 @@
   vars:
     manage_secret_action: write
     manage_secret_payload: "{{ provision_vault_payload }}"
-    manage_secret_path: "windows/{{ route53_effective_record_name }}"
+    manage_secret_path: "windows/{{ ec2_instance_info.instance_id }}"
   register: provision_ec2_vault_write_result
 
 - name: Debug write result
@@ -34,4 +34,4 @@
     name: manage_secret
   vars:
     manage_secret_action: get
-    manage_secret_path: "windows/{{ route53_effective_record_name }}"
+    manage_secret_path: "windows/{{ ec2_instance_info.instance_id }}"

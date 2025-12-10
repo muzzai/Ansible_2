@@ -108,6 +108,11 @@
         path: "{{ source_mssql_backup_path }}"
         state: directory
 
+    - name: Stop IIS services
+      ansible.windows.win_service:
+        name: W3SVC
+        state: started
+
 - name: Create backups
   hosts: localhost
   vars:
