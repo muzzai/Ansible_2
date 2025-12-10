@@ -24,7 +24,7 @@
 
     - name: Get MSSQL servicename info
       ansible.builtin.set_fact:
-        sql_server_service_name: "{{ services_info.services | json_query('[?starts_with(name, `MSSQL\\$`)].name') }}"
+        sql_server_service_name: "{{ services_info.services | json_query('[?starts_with(name, `MSSQL$`)].name') }}"
 
     - name: Debug service name
       ansible.builtin.debug:
