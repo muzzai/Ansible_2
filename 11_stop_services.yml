@@ -1,8 +1,9 @@
 - name: Stop Alloy Navigator services
   gather_facts: false
   hosts: "{{ source }}"
+  vars:
+    source: "{{ source | default('skip') }}"
   tasks:
-
     - name: Build connection details
       block:
         - name: Build connection details
