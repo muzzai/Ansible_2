@@ -1,0 +1,25 @@
+- name: Stop Alloy Navigator services
+  gather_facts: false
+  hosts: "{{ source }}"
+  tasks:
+
+    - name: Build connection details
+      block:
+        - name: Build connection details
+          ansible.builtin.include_role:
+            name: build_connection_details
+      delegate_to: localhost
+      no_log: true
+
+    - name: Stop IIS services
+      ansible.windows.win_service:
+        name: W3SVC
+        state: stopped
+
+    - name: Stop SQL Server services
+      ansible.windows.win_service_info:
+      register: services_info
+
+    - name: Debug services
+      ansible.builtin.debug:
+        var: services_info
