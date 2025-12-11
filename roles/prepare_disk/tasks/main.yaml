@@ -31,7 +31,7 @@
 - name: Fail when less than 2 partitions
   ansible.builtin.fail:
     msg: "Only {{ existing_partitions | length }} partition(s) found, need at least 2"
-  when: existing_partitions | length < 2
+  when: existing_partitions | length < 2 and is_initialized
 
 - name: Get existing partition name
   ansible.builtin.set_fact:
