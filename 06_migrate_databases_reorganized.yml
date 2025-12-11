@@ -209,6 +209,7 @@
       community.windows.win_initialize_disk:
         disk_number: 1
         online: true
+      ignore_errors: true
 
     - name: Set backup path
       ansible.builtin.set_fact:
