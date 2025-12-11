@@ -24,6 +24,15 @@
         | selectattr('drive_letter', 'defined')
         | map(attribute='drive_letter') | select | unique | sort | list }}"
 
+- name: Debug partitions
+  ansible.builtin.debug:
+    var: existing_partitions
+
+- name: Fail when less than 2 partitions
+  ansible.builtin.fail:
+    msg: "Only {{ existing_partitions | length }} partition(s) found, need at least 2"
+  when: existing_partitions | length < 2
+
 - name: Get existing partition name
   ansible.builtin.set_fact:
     current_drive: "{{ existing_partitions | last }}"
