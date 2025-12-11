@@ -35,7 +35,7 @@
     - name: Get Route 53 record details
       amazon.aws.route53_info:
         type: A
-        hosted_zone_id: "{{ zone_id: }}"
+        hosted_zone_id: "{{ zone_id }}"
         query: record_sets
         start_record_name: "{{ domain_name }}"
       register: route53_info
