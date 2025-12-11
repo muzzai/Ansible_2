@@ -94,6 +94,14 @@
   vars:
     source: "{{ source | default('skip') }}"
   tasks:
+    - name: Build connection details
+      block:
+        - name: Build connection details
+          ansible.builtin.include_role:
+            name: build_connection_details
+      delegate_to: localhost
+      no_log: true
+
     - name: Get and update hostname in bindings
       microsoft.iis.website_info:
         name: Default Web Site
