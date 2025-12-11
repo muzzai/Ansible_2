@@ -1,0 +1,130 @@
+$pathToRenewals = 'C:\ProgramData\win-acme\'
+$pathToScripts = 'C:\Certificates\Scripts'
+$pathToPFX = 'C:\Certificates\PFXFiles'
+
+# where to send emails on failure
+$EmailAddresses = 'dsurint@alloysoftware.com'
+
+try {
+    Expand-Archive -Path 'C:\Certificates\win-acme.zip' -Force -DestinationPath 'C:\Certificates\win-acme'
+    New-Item -Path $pathToScripts -ItemType "directory" -Force | select-Object Name
+    New-Item -Path $pathToPFX -ItemType "directory" -Force | select-Object Name
+}  catch {
+    Throw ("Ran into an issue: {0}" -f $_)
+    return
+}
+
+$scriptText = @'
+param($thumb, $ftpSiteHostname)
+
+Import-Module WebAdministration
+
+$configItem = 'ftpServer.security.ssl.serverCertHash'
+Set-ItemProperty "IIS:\Sites\$ftpSiteHostname" -Name $configItem -Value $thumb
+& C:\windows\system32\inetsrv\appcmd.exe set config -section:system.applicationHost/sites "/[name='$($ftpSiteHostname)'].ftpServer.security.ssl.serverCertHash:$($thumb)" /commit:apphost
+& C:\windows\system32\inetsrv\appcmd.exe set config -section:system.applicationHost/sites "/[name='$($ftpSiteHostname)'].ftpServer.security.ssl.serverCertStoreName:My" /commit:apphost
+'@
+
+$scriptText | Out-File ($pathtoScripts+"\Install-FTP-Cert-Script.ps1") -Force
+
+if ($PSVersionTable.PSEdition -eq "Core") {
+    $iissite1 = (powershell -NoLogo -NonInteractive -ExecutionPolicy Unrestricted -Command 'get-iissite | ConvertTo-Json') | ConvertFrom-Json
+    $defaulSiteDomainNames = $iissite1 | Where-Object {$_.ID -eq 1} | select -ExpandProperty Bindings | ForEach-Object { $_.TrimStart("[http] ") } | % {$_ -replace "^\*\:\d*\:", ''} | select -Unique | where-Object {$_}
+} else {
+    $iissite1 = get-iissite
+    $defaulSiteDomainNames = $iissite1 | Where-Object {$_.ID -eq 1} | select -ExpandProperty Bindings | select -ExpandProperty bindingInformation | % {$_ -replace "^\*\:\d*\:", ''} | select -Unique | where-Object {$_}
+}
+
+$alloyserviceNames = @($defaulSiteDomainNames | where { ($_ -match "^.*\.alloyservice.com") -or ($_ -match "^.*\.alloysoftware\..*") })
+
+if ($PSVersionTable.PSEdition -eq "Core") {
+    $iissite2 = (powershell -NoLogo -NonInteractive -ExecutionPolicy Unrestricted -Command 'Get-IISSite | ConvertTo-Json') | ConvertFrom-Json
+    $ftpSiteName = @($iissite2 | Where-Object {$_.Bindings | Where-Object { $_ -like '*ftp*' }} | select -ExpandProperty Name)[0]
+} else {
+    $iissite2 = Get-IISSite
+    $ftpSiteName = @($iissite2 | Where-Object {$_.Bindings.Protocol -contains 'ftp'} | select -ExpandProperty Name)[0]
+}
+
+if ($alloyserviceNames.Length -ne 1) {
+    throw "Invalid count of alloyservice.com domain names: {0}" -f $alloyserviceNames.Length
+    return
+}
+
+Write-Output "Alloy Service Name: $($alloyserviceNames[0])"
+Write-Output "FTP Site Name: $ftpSiteName"
+
+try {
+    rm $pathToRenewals -Recurse -Force -ErrorAction Stop
+}
+
+catch [System.Management.Automation.ItemNotFoundException] {
+    Write-Host "Renewals doesn't exist on the default path"
+}
+
+try {
+    Remove-Item Cert:\LocalMachine\My\*
+} catch {
+    Write-Host $_
+}
+
+
+try {
+    Get-ChildItem Cert:\LocalMachine\WebHosting | Where-Object { $_.FriendlyName -notmatch "^\*" } | Remove-Item
+} catch {
+    Write-Host $_
+}
+
+#issuing a certificate, installing it and creating a renewal for each hostname of the default website hostnames
+#also adding instance address to the etc/hosts
+
+$etcfile = "$env:windir\System32\drivers\etc\hosts"
+$hostfile = Get-Content $etcfile
+
+foreach ($name in $defaulSiteDomainNames) {
+
+    $aListHTTPS = @(
+    #"--test",   # for testing purposes
+    "--verbose",   # print more info
+    "--target manual",
+   ("--host {0}" -f $name),
+    "--installationsiteid 1",
+   ("--friendlyname 'HTTPS_{0}'" -f $name),  # friendly name for the renewal job
+    #"--validation selfhosting", # launch a temporary website listening on port 80
+    "--csr rsa", # use RSA as the encryption algorithm
+    "--store pfxfile,certificatestore",   # store the certificate
+    "--pfxfilepath $pathtoPFX", # as a .pfx file in the folder
+    "--certificatestore My", # also save it to My store
+    "--emailaddress $EmailAddresses", # where to send emails on failure
+    "--accepttos" # auto accept Terms of Service
+    )
+
+    if (($name -match 'alloyservice.com$') -or ($name -match 'alloysoftware\..*$')) {
+        $installationArgs = @(
+            "--installation iis,script",
+            ("--script "+$pathtoScripts+"\Install-FTP-Cert-Script.ps1"),
+            "--scriptparameters \`"'{CertThumbprint}' '$ftpSiteName'\`""
+        )
+    } else {
+        $installationArgs = @(
+            "--installation iis"
+        )
+    }
+
+    $aListHTTPS += $installationArgs
+
+    $processHTTPS = Start-Process -FilePath "C:\Certificates\win-acme\wacs.exe" -ArgumentList $aListHTTPS -PassThru
+    Wait-Process -Id $processHTTPS.id
+
+#adding sites to the etc/hosts
+    if ($name -match '.com$')
+    {
+      if (-not ($hostfile -imatch $name))
+      {
+         $hostfile += "127.0.0.1     "+$name
+      }
+    }
+
+
+}
+#commit etc/hosts file
+Set-Content -Path $etcfile -Value $hostfile -Force

@@ -110,3 +110,41 @@
     - name: Show debug info
       ansible.builtin.debug:
         var: website_info
+
+    - name: Delete existing bindings
+      microsoft.iis.website:
+        name: Default Web Site
+        bindings:
+          set:
+
+    - name: Add new bindings
+      microsoft.iis.website:
+        name: Default Web Site
+        bindings:
+          add:
+            - ip: '*'
+              hostname: '*'
+              port: 80
+            - ip: '*'
+              hostname: "{{ source }}"
+              port: 80
+            - ip: '*'
+              hostname: "{{ source }}"
+              port: 443
+
+    - name: Ensure script folder
+      ansible.builtin.win_file:
+        path: C:\Remove-Old-Renewals-Install-New-Certs
+        state: directory
+
+    - name: Generate script
+      ansible.windows.win_template:
+        src: templates/Reconfigure-Source.ps1.j2
+        dest: C:\Remove-Old-Renewals-Install-New-Certs\Remove-Old-Renewals-Install-New-Certs.ps1
+        force: true
+
+    - name: Execute SQL restore script
+      ansible.windows.win_shell: |
+        & C:\Remove-Old-Renewals-Install-New-Certs\Remove-Old-Renewals-Install-New-Certs.ps1
+      args:
+        executable: powershell.exe
