@@ -41,6 +41,7 @@
         login_port: 51967
         name: master
         script: |
+          ALTER DATABASE [{{ item }}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
           DROP DATABASE [{{ item }}]
       loop: "{{ database_list }}"
       no_log: false
