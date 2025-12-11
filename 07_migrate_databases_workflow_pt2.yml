@@ -164,3 +164,10 @@
       amazon.aws.ec2_vol:
         id: "{{ volume_id }}"
         state: absent
+        region: "{{ hostvars[source]['placement']['region'] }}"
+
+    - name: Stop source
+      amazon.aws.ec2_instance:
+        instance_ids:
+          - "{{ hostvars[source]['instance_id'] }}"
+        state:

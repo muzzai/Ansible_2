@@ -35,9 +35,6 @@
         bindings:
           add:
             - ip: '*'
-              hostname: '*'
-              port: 80
-            - ip: '*'
               hostname: "{{ source }}"
               port: 80
             - ip: '*'
