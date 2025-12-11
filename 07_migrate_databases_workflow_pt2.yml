@@ -136,6 +136,7 @@
 
     - name: Release current association
       amazon.aws.ec2_eip:
+        region: "{{ hostvars[source]['placement']['region'] }}"
         device_id: "{{ hostvars[source]['instance_id'] }}"
         ip: "{{ record_ip }}"
         state: absent
@@ -143,6 +144,7 @@
 
     - name: Associate to new instance
       amazon.aws.ec2_eip:
+        region: "{{ hostvars[source]['placement']['region'] }}"
         device_id: "{{ hostvars[dest]['instance_id'] }}"
         ip: "{{ record_ip }}"
         state: present
