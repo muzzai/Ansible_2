@@ -45,7 +45,7 @@
           DROP DATABASE [{{ item }}]
       loop: "{{ database_list }}"
       no_log: false
-      register: restoration_result
+      ignore_errors: true
 
     - name: Restore databases
       community.general.mssql_script:
