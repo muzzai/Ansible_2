@@ -56,11 +56,11 @@
         script: |
           RESTORE DATABASE [{{ item }}]
           FROM DISK = '{{ target_mssql_backup_path }}\{{ item }}.bak'
-          WITH
-              MOVE '{{ item }}'     TO '{{ target_mssql_backup_path }}\{{ item }}.mdf',
-              MOVE '{{ item }}_log' TO '{{ target_mssql_backup_path }}\{{ item }}_log.ldf',
-              REPLACE,
-              STATS = 5;
+          --WITH
+          --    MOVE '{{ item }}'     TO '{{ target_mssql_backup_path }}\{{ item }}.mdf',
+          --    MOVE '{{ item }}_log' TO '{{ target_mssql_backup_path }}\{{ item }}_log.ldf',
+          --    REPLACE,
+          --    STATS = 5;
           ALTER DATABASE [{{ item }}] SET ONLINE;
           ALTER DATABASE [{{ item }}] SET MULTI_USER WITH ROLLBACK IMMEDIATE;
 
@@ -68,7 +68,8 @@
             CREATE LOGIN [dbreader] WITH PASSWORD = '{{ db_reader_password }}', CHECK_POLICY = OFF;
             GRANT CONNECT SQL TO [dbreader];
 
-          CREATE LOGIN [{{ item }}Access] WITH PASSWORD = '{{ hostvars['localhost']['passwords'][item] }}', CHECK_POLICY = OFF;
+          IF NOT EXISTS (select 1 from sys.sql_logins where name = 'dbreader')
+            CREATE LOGIN [{{ item }}Access] WITH PASSWORD = '{{ hostvars['localhost']['passwords'][item] }}', CHECK_POLICY = OFF;
           GRANT CONNECT SQL TO [{{ item }}Access];
           GRANT VIEW ANY DEFINITION TO [{{ item }}Access];
           GRANT VIEW SERVER STATE TO [{{ item }}Access];
@@ -94,9 +95,72 @@
       loop: "{{ database_list }}"
       register: user_creation_result
 
-- name: Reconfigure source
+- name: Reconfigure AWS side
   gather_facts: false
-  hosts: "{{ source }}"
+  hosts: localhost
+  vars:
+    domain_name: "{{ source }}"
+    zone_id: "{{ hosted_zone_id }}"
+  tasks:
+    - name: Get Route 53 record details
+      amazon.aws.route53_info:
+        type: A
+        hosted_zone_id: "{{ zone_id }}"
+        query: record_sets
+        start_record_name: "{{ domain_name }}"
+      register: route53_info
+
+    - name: Extract IP address from record
+      ansible.builtin.set_fact:
+        record_ip: "{{ route53_info.resource_record_sets[0].resource_records[0].value }}"
+
+    - name: Get EIP allocation ID by IP address
+      amazon.aws.ec2_eip_info:
+        region: "{{ hostvars[source]['placement']['region'] }}"
+        filters:
+          "public-ip": "{{ record_ip }}"
+      register: eip_info
+
+    - name: Debug EIP info
+      ansible.builtin.debug:
+        var: eip_info
+
+    - name: Debug Allocation ID info
+      ansible.builtin.debug:
+        msg: "Allocation ID: {{ eip_info.addresses[0].allocation_id }}"
+
+    - name: Release current association
+      amazon.aws.ec2_eip:
+        device_id: "{{ hostvars[source]['instance_id'] }}"
+        ip: "{{ record_ip }}"
+        state: absent
+      register: release_result
+
+    - name: Associate to new instance
+      amazon.aws.ec2_eip:
+        device_id: "{{ hostvars[dest]['instance_id'] }}"
+        ip: "{{ record_ip }}"
+        state: present
+      register: association_result
+
+    - name: Verify association
+      amazon.aws.ec2_eip_info:
+        region: "{{ hostvars[source]['placement']['region'] }}"
+        filters:
+          "public-ip": "{{ record_ip }}"
+      register: verification
+      until: verification.addresses[0].instance_id == hostvars[dest]['instance_id']
+      retries: 5
+      delay: 5
+
+    - name: Delete volume
+      amazon.aws.ec2_vol:
+        id: "{{ volume_id }}"
+        state: absent
+
+- name: Configure destination
+  gather_facts: false
+  hosts: "{{ dest }}"
   vars:
     az_group: "{{ availability_zone_group | default('skip') }}"
     source: "{{ source | default('skip') }}"
@@ -104,7 +168,6 @@
     sql_s3_object: "ScriptHelper.exe"
     sql_s3_url_expiry: 3600
     prefix: "{{ source.split('.')[0] }}"
-    sql_s3_region_effective: "{{ hostvars[source]['placement']['region'] }}"
     passwords: "{{ passwords | default({}) }}"
   tasks:
     - name: Build connection details
@@ -114,6 +177,34 @@
             name: build_connection_details
       delegate_to: localhost
       no_log: true
+
+    - name: Get and update hostname in bindings
+      microsoft.iis.website_info:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     - name: Get Script Helper URL
       delegate_to: localhost
