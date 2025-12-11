@@ -206,10 +206,16 @@
         name: prepare_disk
 
     - name: Bring disk online
-      community.windows.win_initialize_disk:
-        disk_number: 1
-        online: true
-      ignore_errors: true
+      ansible.windows.win_shell: |
+        $disk = Get-Disk -Number 1
+        if ($disk.OperationalStatus -eq 'Offline') {
+            Set-Disk -Number 1 -IsOffline $false
+            Write-Host "Disk 1 is now online" -ForegroundColor Green
+        } else {
+            Write-Host "Disk 1 is already online" -ForegroundColor Yellow
+        }
+      args:
+        executable: powershell.exe
 
     - name: Set backup path
       ansible.builtin.set_fact:

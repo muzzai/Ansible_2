@@ -25,68 +25,68 @@
 #       ansible.builtin.debug:
 #         var: sql_server_service_name
 
-# - name: Reconfigure AWS side
-#   gather_facts: false
-#   hosts: localhost
-#   vars:
-#     domain_name: "{{ source }}"
-#     zone_id: "{{ hosted_zone_id }}"
-#   tasks:
-#     - name: Get Route 53 record details
-#       amazon.aws.route53_info:
-#         type: A
-#         hosted_zone_id: "{{ zone_id }}"
-#         query: record_sets
-#         start_record_name: "{{ domain_name }}"
-#       register: route53_info
+- name: Reconfigure AWS side
+  gather_facts: false
+  hosts: localhost
+  vars:
+    domain_name: "{{ source }}"
+    zone_id: "{{ hosted_zone_id }}"
+  tasks:
+    - name: Get Route 53 record details
+      amazon.aws.route53_info:
+        type: A
+        hosted_zone_id: "{{ zone_id }}"
+        query: record_sets
+        start_record_name: "{{ domain_name }}"
+      register: route53_info
 
-#     - name: Extract IP address from record
-#       ansible.builtin.set_fact:
-#         record_ip: "{{ route53_info.resource_record_sets[0].resource_records[0].value }}"
+    - name: Extract IP address from record
+      ansible.builtin.set_fact:
+        record_ip: "{{ route53_info.resource_record_sets[0].resource_records[0].value }}"
 
-#     - name: Get EIP allocation ID by IP address
-#       amazon.aws.ec2_eip_info:
-#         region: "{{ hostvars[source]['placement']['region'] }}"
-#         filters:
-#           "public-ip": "{{ record_ip }}"
-#       register: eip_info
+    - name: Get EIP allocation ID by IP address
+      amazon.aws.ec2_eip_info:
+        region: "{{ hostvars[source]['placement']['region'] }}"
+        filters:
+          "public-ip": "{{ record_ip }}"
+      register: eip_info
 
-#     - name: Debug EIP info
-#       ansible.builtin.debug:
-#         var: eip_info
+    - name: Debug EIP info
+      ansible.builtin.debug:
+        var: eip_info
 
-#     - name: Debug Allocation ID info
-#       ansible.builtin.debug:
-#         msg: "Allocation ID: {{ eip_info.addresses[0].allocation_id }}"
+    - name: Debug Allocation ID info
+      ansible.builtin.debug:
+        msg: "Allocation ID: {{ eip_info.addresses[0].allocation_id }}"
 
-#     - name: Release current association
-#       amazon.aws.ec2_eip:
-#         device_id: "{{ hostvars[source]['instance_id'] }}"
-#         ip: "{{ record_ip }}"
-#         state: absent
-#       register: release_result
+    - name: Release current association
+      amazon.aws.ec2_eip:
+        device_id: "{{ hostvars[source]['instance_id'] }}"
+        ip: "{{ record_ip }}"
+        state: absent
+      register: release_result
 
-#     - name: Associate to new instance
-#       amazon.aws.ec2_eip:
-#         device_id: "{{ hostvars[dest]['instance_id'] }}"
-#         ip: "{{ record_ip }}"
-#         state: present
-#       register: association_result
+    - name: Associate to new instance
+      amazon.aws.ec2_eip:
+        device_id: "{{ hostvars[dest]['instance_id'] }}"
+        ip: "{{ record_ip }}"
+        state: present
+      register: association_result
 
-#     - name: Verify association
-#       amazon.aws.ec2_eip_info:
-#         region: "{{ hostvars[source]['placement']['region'] }}"
-#         filters:
-#           "public-ip": "{{ record_ip }}"
-#       register: verification
-#       until: verification.addresses[0].instance_id == hostvars[dest]['instance_id']
-#       retries: 5
-#       delay: 5
+    - name: Verify association
+      amazon.aws.ec2_eip_info:
+        region: "{{ hostvars[source]['placement']['region'] }}"
+        filters:
+          "public-ip": "{{ record_ip }}"
+      register: verification
+      until: verification.addresses[0].instance_id == hostvars[dest]['instance_id']
+      retries: 5
+      delay: 5
 
-#     - name: Delete volume
-#       amazon.aws.ec2_vol:
-#         id: "{{ volume_id }}"
-#         state: absent
+    - name: Delete volume
+      amazon.aws.ec2_vol:
+        id: "{{ volume_id }}"
+        state: absent
 
 - name: Reconfigure IIS on dest
   gather_facts: false

@@ -7,22 +7,22 @@ $AN_ProductName      = "{{ an_rn }}"
 $AN_RegistryName     = "{{ an_pn }}"
 
 $an_db               = "{{ an_db }}"
-$AN_SQLDatabase      = "{{ prefix }}-{{ an_db }}"
+$AN_SQLDatabase      = "{{ an_db }}"
 
 $ad_db               = "{{ ad_db }}"
-$AD_SQLDatabase      = "{{ prefix }}-{{ ad_db }}"
+$AD_SQLDatabase      = "{{ ad_db }}"
 
-$AD_Access_user      = "{{ prefix }}-{{ ad_db }}Access"
+$AD_Access_user      = "{{ ad_db }}Access"
 $AD_User_pass        = "{{ passwords[ad_db] }}"
 
-$AN_Access_user      = "{{ prefix }}-{{ an_db }}Access"
+$AN_Access_user      = "{{ an_db }}Access"
 $AN_User_pass        = "{{ passwords[an_db] }}"
 
 $ProductIsExpress    = "{{ ProductIsExpress }}"
 $ADC_NetworkInventory = $false
 
 # --- SQL Server settings ---
-$SQLInstanceAddress  = "{{ hostvars[dest]['ansible_host'] }}"
+$SQLInstanceAddress  = "{{ source }}"
 $SQLServerInstance   = "$SQLInstanceAddress,51967"
 $SQLSaUserName       = "{{ dest_SaUserName }}"
 $SQLSaPassword       = "{{ dest_SaPassword }}"
@@ -32,7 +32,7 @@ $SQLSaPassword       = "{{ dest_SaPassword }}"
 ################################################################
 
 Write-Output "################################################################"
-Write-Output "# Reconfiguring the source server to use the new database     #"
+Write-Output "# Reconfiguring the destination server to use the new database #"
 Write-Output "################################################################"
 
 function GenerateAccessKey($AccessKeyID, $SQLInstanceAddress, $ProductName, $ProductVersion, $SQLServerInstance, $Database, $UserName, $Password) {
