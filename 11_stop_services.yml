@@ -44,12 +44,9 @@
       ansible.builtin.set_fact:
         record_ip: "{{ route53_info.resource_record_sets[0].resource_records[0].value }}"
 
-    - name: Debug route53_info info
-      ansible.builtin.debug:
-        var: route53_info
-
     - name: Get EIP allocation ID by IP address
       amazon.aws.ec2_eip_info:
+        region: "{{ hostvars[source]['placement']['region'] }}"
         filters:
           "public-ip": "{{ record_ip }}"
       register: eip_info
