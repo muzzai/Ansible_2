@@ -37,6 +37,7 @@
         }
       args:
         executable: powershell
+      ignore_errors: true
 
     - name: Ensure script folder
       ansible.builtin.win_file:
@@ -62,7 +63,7 @@
         bucket: "{{ sql_s3_bucket }}"
         object: "{{ sql_s3_object }}"
         expiry: "{{ sql_s3_url_expiry }}"
-        region: "{{ sql_s3_region_effective }}"
+        region: "{{ hostvars[source]['placement']['region'] }}"
       register: helper_url
 
     - name: Download script "ScriptHelper.exe"
