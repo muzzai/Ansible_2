@@ -75,10 +75,6 @@
           Name: "{{ prefix }}-migration_volume"
       register: volume_for_backups
 
-    - name: Debug volume
-      ansible.builtin.debug:
-        var: volume_for_backups
-
 - name: Prepare disk
   gather_facts: false
   hosts: "{{ source }}"
@@ -205,13 +201,14 @@
       delegate_to: localhost
       no_log: true
 
-    # - name: Reboot host
-    #   ansible.windows.win_reboot:
-    #     post_reboot_delay: 180
-
     - name: Add Disk 2
       ansible.builtin.include_role:
         name: prepare_disk
+
+    - name: Bring disk online
+      community.windows.win_initialize_disk:
+        disk_number: 1
+        online: true
 
     - name: Set backup path
       ansible.builtin.set_fact:
@@ -235,3 +232,4 @@
           target_mssql_backup_path: "{{ hostvars[dest]['target_mssql_backup_path'] }}"
           database_list: "{{ hostvars['localhost']['database_list'] }}"
           passwords: "{{ hostvars['localhost']['passwords'] }}"
+          volume_id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
