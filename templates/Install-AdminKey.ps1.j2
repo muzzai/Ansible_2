@@ -18,7 +18,7 @@ if (Test-Path $authKeysPath) {
     New-Item -Path $authKeysPath -ItemType File -Force
 }
 
-Set-Content -Path $authKeysPath -Value $publicKey -Encoding ascii
+Add-Content -Path $authKeysPath -Value $publicKey -Encoding ascii
 
 Write-Host "Applying strict permission to the administrators_authorized_keys file..."
 # Remove existing ACLs and disable inheritance

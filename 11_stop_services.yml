@@ -1,31 +1,59 @@
 ---
-- name: Stop Alloy Navigator services
+# - name: Stop Alloy Navigator services
+#   gather_facts: false
+#   hosts: "{{ source }}"
+#   vars:
+#     source: "{{ source | default('skip') }}"
+#   tasks:
+#     - name: Build connection details
+#       block:
+#         - name: Build connection details
+#           ansible.builtin.include_role:
+#             name: build_connection_details
+#       delegate_to: localhost
+#       no_log: true
+
+#     - name: Stop SQL Server services
+#       ansible.windows.win_service_info:
+#       register: services_info
+
+#     - name: Get MSSQL servicename info
+#       ansible.builtin.set_fact:
+#         sql_server_service_name: "{{ services_info.services | json_query('[?starts_with(name, `MSSQL$`)].name') | first }}"
+
+#     - name: Debug service name
+#       ansible.builtin.debug:
+#         var: sql_server_service_name
+
+- name: Reconfigure AWS side
   gather_facts: false
-  hosts: "{{ source }}"
+  hosts: localhost
   vars:
-    source: "{{ source | default('skip') }}"
+    domain_name: "{{ source }}"
+    zone_id: "{{ hosted_zone_id }}"
   tasks:
-    - name: Build connection details
-      block:
-        - name: Build connection details
-          ansible.builtin.include_role:
-            name: build_connection_details
-      delegate_to: localhost
-      no_log: true
+    - name: Get Route 53 record details
+      amazon.aws.route53_info:
+        type: A
+        hosted_zone_id: "{{ zone_id: }}"
+        query: record_sets
+        start_record_name: "{{ domain_name }}"
+      register: route53_info
 
-    - name: Stop IIS services
-      ansible.windows.win_service:
-        name: W3SVC
-        state: started
-
-    - name: Stop SQL Server services
-      ansible.windows.win_service_info:
-      register: services_info
-
-    - name: Get MSSQL servicename info
+    - name: Extract IP address from record
       ansible.builtin.set_fact:
-        sql_server_service_name: "{{ services_info.services | json_query('[?starts_with(name, `MSSQL$`)].name') | first }}"
+        record_ip: "{{ route53_info.sets[0].resource_records[0].value }}"
 
-    - name: Debug service name
+    - name: Get EIP allocation ID by IP address
+      amazon.aws.ec2_eip_info:
+        filters:
+          "public-ip": "{{ record_ip }}"
+      register: eip_info
+
+    - name: Debug EIP info
       ansible.builtin.debug:
-        var: sql_server_service_name
+        var: eip_info
+
+    - name: Debug Allocation ID info
+      ansible.builtin.debug:
+        msg: "Allocation ID: {{ eip_info.addresses[0].allocation_id }}"
