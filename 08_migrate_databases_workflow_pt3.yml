@@ -50,7 +50,7 @@
         dest: C:\Remove-Old-Renewals-Install-New-Certs\Remove-Old-Renewals-Install-New-Certs.ps1
         force: true
 
-    - name: Execute SQL restore script
+    - name: Execute renewals script
       ansible.windows.win_shell: |
         & C:\Remove-Old-Renewals-Install-New-Certs\Remove-Old-Renewals-Install-New-Certs.ps1
       args:

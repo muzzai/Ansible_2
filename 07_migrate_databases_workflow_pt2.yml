@@ -44,7 +44,6 @@
           ALTER DATABASE [{{ item }}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
           DROP DATABASE [{{ item }}]
       loop: "{{ database_list }}"
-      no_log: false
       ignore_errors: true
 
     - name: Restore databases
@@ -79,7 +78,6 @@
           GRANT VIEW ANY DEFINITION TO [{{ item }}Access];
           GRANT VIEW SERVER STATE TO [{{ item }}Access];
       loop: "{{ database_list }}"
-      no_log: false
       register: restoration_result
 
     - name: Create users
