@@ -44,7 +44,6 @@
           ALTER DATABASE [{{ item }}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
           DROP DATABASE [{{ item }}]
       loop: "{{ database_list }}"
-      ignore_errors: true
 
     - name: Restore databases
       community.general.mssql_script:
@@ -127,13 +126,6 @@
           "public-ip": "{{ record_ip }}"
       register: eip_info
 
-    - name: Debug EIP info
-      ansible.builtin.debug:
-        var: eip_info
-
-    - name: Debug Allocation ID info
-      ansible.builtin.debug:
-        msg: "Allocation ID: {{ eip_info.addresses[0].allocation_id }}"
 
     - name: Release current association
       amazon.aws.ec2_eip:
@@ -166,9 +158,3 @@
         id: "{{ volume_id }}"
         state: absent
         region: "{{ hostvars[source]['placement']['region'] }}"
-
-    - name: Stop source
-      amazon.aws.ec2_instance:
-        instance_ids:
-          - "{{ hostvars[source]['instance_id'] }}"
-        state: stopped

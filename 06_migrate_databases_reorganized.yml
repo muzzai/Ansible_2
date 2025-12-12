@@ -83,14 +83,6 @@
     source: "{{ source | default('skip') }}"
     is_initialized: false
   tasks:
-    - name: Build connection details
-      block:
-        - name: Build connection details
-          ansible.builtin.include_role:
-            name: build_connection_details
-      delegate_to: localhost
-      no_log: true
-
     - name: Add Disk
       ansible.builtin.include_role:
         name: prepare_disk
@@ -193,14 +185,6 @@
     is_initialized: true
     database_list: "{{ hostvars['localhost']['database_list'] }}"
   tasks:
-    - name: Build connection details
-      block:
-        - name: Build connection details
-          ansible.builtin.include_role:
-            name: build_connection_details
-      delegate_to: localhost
-      no_log: true
-
     - name: Add Disk 2
       ansible.builtin.include_role:
         name: prepare_disk
@@ -232,6 +216,14 @@
         msg: "Backup file for one or more databases is missing!"
       when: >
         files.results | selectattr('stat.exists', 'equalto', false) | list | length > 0
+
+    - name: Stop source
+      amazon.aws.ec2_instance:
+        instance_ids:
+          - "{{ hostvars[source]['instance_id'] }}"
+        region: "{{ hostvars[source]['placement']['region'] }}"
+        state: stopped
+        wait: true
 
     - name: Set stats for later
       ansible.builtin.set_stats:
