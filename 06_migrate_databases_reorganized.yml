@@ -176,6 +176,14 @@
       retries: 5
       delay: 10
 
+    - name: Stop source
+      amazon.aws.ec2_instance:
+        instance_ids:
+          - "{{ hostvars[source]['instance_id'] }}"
+        region: "{{ hostvars[source]['placement']['region'] }}"
+        state: stopped
+        wait: true
+
 - name: Prepare media
   gather_facts: false
   hosts: "{{ dest }}"
@@ -217,13 +225,7 @@
       when: >
         files.results | selectattr('stat.exists', 'equalto', false) | list | length > 0
 
-    - name: Stop source
-      amazon.aws.ec2_instance:
-        instance_ids:
-          - "{{ hostvars[source]['instance_id'] }}"
-        region: "{{ hostvars[source]['placement']['region'] }}"
-        state: stopped
-        wait: true
+
 
     - name: Set stats for later
       ansible.builtin.set_stats:

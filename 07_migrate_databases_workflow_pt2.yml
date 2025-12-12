@@ -44,6 +44,7 @@
           ALTER DATABASE [{{ item }}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
           DROP DATABASE [{{ item }}]
       loop: "{{ database_list }}"
+      ignore_errors: true
 
     - name: Restore databases
       community.general.mssql_script:
