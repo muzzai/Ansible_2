@@ -10,14 +10,6 @@
     prefix: "{{ source.split('.')[0] }}"
     passwords: "{{ passwords | default({}) }}"
   tasks:
-    - name: Build connection details
-      block:
-        - name: Build connection details
-          ansible.builtin.include_role:
-            name: build_connection_details
-      delegate_to: localhost
-      no_log: true
-
     - name: Update hostname in bindings
       ansible.windows.win_shell: |
         # Update hostname for bindings on a specific port
