@@ -130,7 +130,7 @@
     - name: Release current association
       amazon.aws.ec2_eip:
         region: "{{ hostvars[dest]['placement']['region'] }}"
-        device_id: "{{ hostvars[source]['instance_id'] }}"
+        device_id: "{{ source_instance_id }}"
         ip: "{{ record_ip }}"
         state: absent
       register: release_result

@@ -176,6 +176,10 @@
       retries: 5
       delay: 10
 
+    - name: Share source instance id
+      ansible.builtin.set_stats:
+        source_instance_id: "{{ hostvars[source]['instance_id'] }}"
+
     - name: Stop source
       amazon.aws.ec2_instance:
         instance_ids:
