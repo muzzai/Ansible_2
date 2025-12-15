@@ -17,9 +17,23 @@
     - name: List hosted zones
       amazon.aws.route53_info:
         query: hosted_zone
-        hosted_zone_method: details
       register: zones
 
     - name: Debug hosted zones
       ansible.builtin.debug:
         var: zones
+
+    - name: Fail if no hosted zones are visible
+      ansible.builtin.fail:
+        msg: "No hosted zones returned — Route53 role or permissions broken"
+      when: zones.hosted_zones | length == 0
+
+    - name: List record sets for first hosted zone
+      amazon.aws.route53_info:
+        query: record_sets
+        hosted_zone_id: "{{ zones.hosted_zones[0].id }}"
+      register: records
+
+    - name: Debug record sets
+      ansible.builtin.debug:
+        var: records
