@@ -230,8 +230,6 @@
       when: >
         files.results | selectattr('stat.exists', 'equalto', false) | list | length > 0
 
-
-
     - name: Set stats for later
       ansible.builtin.set_stats:
         data:

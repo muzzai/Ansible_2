@@ -10,9 +10,9 @@
     prefix: "{{ source.split('.')[0] }}"
     passwords: "{{ passwords | default({}) }}"
   tasks:
+  # TODO: перенести клиентские биндинги
     - name: Update hostname in bindings
       ansible.windows.win_shell: |
-
         $newHostname = "{{ source }}"
         $oldHostname = "{{ dest }}"
 
