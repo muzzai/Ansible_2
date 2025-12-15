@@ -12,7 +12,7 @@
   tasks:
     - name: Update hostname in bindings
       ansible.windows.win_shell: |
-        # Update hostname for bindings on a specific port
+
         $newHostname = "{{ source }}"
         $oldHostname = "{{ dest }}"
 
@@ -22,7 +22,7 @@
         }
 
         Get-WebBinding -Name "Default Web Site" | Where-Object {
-            $_.bindingInformation -like "$oldHostname"
+            $_.bindingInformation -like "*$oldHostname"
         } | ForEach-Object {
             Remove-WebBinding -Name "Default Web Site" -BindingInformation $_.bindingInformation
             New-WebBinding -Name "Default Web Site" -Protocol $_.protocol -Port $portsByProtocols[$_.protocol] -HostHeader $newHostname -IPAddress "*"
