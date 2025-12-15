@@ -16,7 +16,7 @@
 
     - name: List hosted zones
       amazon.aws.route53_info:
-        query: hosted_zones
+        query: record_sets
       register: zones
 
     - name: Debug hosted zones
