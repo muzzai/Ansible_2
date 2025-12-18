@@ -1,12 +1,12 @@
 ---
 - name: Configure destination
   gather_facts: false
-  hosts: "{{ dest }}"
+  hosts: "{{ source }}"
   vars:
     az_group: "{{ availability_zone_group | default('skip') }}"
     source: "{{ source | default('skip') }}"
     sql_s3_bucket: "alloy-software-installers"
-    dest: "{{ dest | default('skip') }}"
+    source: "{{ source | default('skip') }}"
     sql_s3_object: "ScriptHelper.exe"
     sql_s3_url_expiry: 3600
     prefix: "{{ source.split('.')[0] }}"
