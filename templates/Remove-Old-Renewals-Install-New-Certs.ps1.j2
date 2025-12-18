@@ -83,7 +83,7 @@ $hostfile = Get-Content $etcfile
 foreach ($name in $defaulSiteDomainNames) {
 
     $aListHTTPS = @(
-    "--test",   # for testing purposes
+    #"--test",   # for testing purposes
     "--verbose",   # print more info
     "--target manual",
    ("--host {0}" -f $name),
