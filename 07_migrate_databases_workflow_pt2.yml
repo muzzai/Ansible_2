@@ -104,8 +104,8 @@
 - name: Reconfigure AWS side
   gather_facts: false
   hosts: localhost
-    vars:
-      region: "{{ hostvars[dest]['placement']['region'] }}"
+  vars:
+    region: "{{ hostvars[dest]['placement']['region'] }}"
   tasks:
     - name: Extract IP address from record
       ansible.builtin.set_fact:
