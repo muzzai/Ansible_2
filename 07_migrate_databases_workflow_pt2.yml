@@ -109,7 +109,7 @@
   tasks:
     - name: Extract IP address from record
       ansible.builtin.set_fact:
-        record_ip: "{{ hostvars[source]['ansible_host'] }}"
+        record_ip: "{{ source_public_ip }}"
 
     - name: Get EIP allocation ID by IP address
       amazon.aws.ec2_eip_info:
