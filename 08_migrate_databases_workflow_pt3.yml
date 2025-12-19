@@ -5,7 +5,7 @@
   vars:
     az_group: "{{ availability_zone_group | default('skip') }}"
     source: "{{ source | default('skip') }}"
-    sql_s3_bucket: "alloy-software-installers"
+    sql_s3_bucket: "654529448781-backups"
     source: "{{ source | default('skip') }}"
     sql_s3_object: "ScriptHelper.exe"
     sql_s3_url_expiry: 3600
