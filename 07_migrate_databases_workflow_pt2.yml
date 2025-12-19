@@ -53,29 +53,51 @@
         login_port: 51967
         name: master
         script: |
+          DECLARE @DataPath NVARCHAR(260);
+          DECLARE @LogPath  NVARCHAR(260);
+
+          SELECT
+              @DataPath = CAST(SERVERPROPERTY('InstanceDefaultDataPath') AS NVARCHAR(260)),
+              @LogPath  = CAST(SERVERPROPERTY('InstanceDefaultLogPath')  AS NVARCHAR(260));
+
           RESTORE DATABASE [{{ item }}]
           FROM DISK = '{{ target_mssql_backup_path }}\{{ item }}.bak'
-          --WITH
-          --    MOVE '{{ item }}'     TO '{{ target_mssql_backup_path }}\{{ item }}.mdf',
-          --    MOVE '{{ item }}_log' TO '{{ target_mssql_backup_path }}\{{ item }}_log.ldf',
-          --    REPLACE,
-          --    STATS = 5;
-          ALTER DATABASE [{{ item }}] SET ONLINE;
-          ALTER DATABASE [{{ item }}] SET MULTI_USER WITH ROLLBACK IMMEDIATE;
+          WITH
+              MOVE '{{ item }}'
+                  TO @DataPath + '{{ item }}.mdf',
+              MOVE '{{ item }}_log'
+                  TO @LogPath + '{{ item }}_log.ldf',
+              REPLACE,
+              STATS = 5;
+
+          IF DB_ID('{{ item }}') IS NOT NULL
+          BEGIN
+              ALTER DATABASE [{{ item }}] SET ONLINE;
+              ALTER DATABASE [{{ item }}] SET MULTI_USER WITH ROLLBACK IMMEDIATE;
+          END
 
           IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = 'dbreader')
-              CREATE LOGIN [dbreader] WITH PASSWORD = '{{ db_reader_password }}', CHECK_POLICY = OFF;
+              CREATE LOGIN [dbreader]
+                  WITH PASSWORD = '{{ db_reader_password }}', CHECK_POLICY = OFF;
           ELSE
-              ALTER LOGIN [dbreader] WITH PASSWORD = '{{ db_reader_password }}', CHECK_POLICY = OFF;
+              ALTER LOGIN [dbreader]
+                  WITH PASSWORD = '{{ db_reader_password }}', CHECK_POLICY = OFF;
+
           GRANT CONNECT SQL TO [dbreader];
 
           IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = '{{ item }}Access')
-              CREATE LOGIN [{{ item }}Access] WITH PASSWORD = '{{ hostvars['localhost']['passwords'][item] }}', CHECK_POLICY = OFF;
+              CREATE LOGIN [{{ item }}Access]
+                  WITH PASSWORD = '{{ hostvars['localhost']['passwords'][item] }}',
+                      CHECK_POLICY = OFF;
           ELSE
-              ALTER LOGIN [{{ item }}Access] WITH PASSWORD = '{{ hostvars['localhost']['passwords'][item] }}', CHECK_POLICY = OFF;
+              ALTER LOGIN [{{ item }}Access]
+                  WITH PASSWORD = '{{ hostvars['localhost']['passwords'][item] }}',
+                      CHECK_POLICY = OFF;
+
           GRANT CONNECT SQL TO [{{ item }}Access];
           GRANT VIEW ANY DEFINITION TO [{{ item }}Access];
           GRANT VIEW SERVER STATE TO [{{ item }}Access];
+
       loop: "{{ database_list }}"
       register: restoration_result
 
