@@ -96,10 +96,10 @@
         path: "{{ source_mssql_backup_path }}"
         state: directory
 
-    - name: Stop IIS services
-      ansible.windows.win_service:
-        name: W3SVC
-        state: restarted
+    # - name: Stop IIS services
+    #   ansible.windows.win_service:
+    #     name: W3SVC
+    #     state: stopped
 
 - name: Create backups
   hosts: localhost
@@ -129,7 +129,7 @@
 
           PRINT 'Backup created successfully: ' + @BackupPath
 
-          ALTER DATABASE [{{ item }}] SET OFFLINE;
+          --ALTER DATABASE [{{ item }}] SET OFFLINE;
       loop: "{{ database_list }}"
       register: backup_result
 
