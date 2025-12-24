@@ -6,29 +6,26 @@
     prefix: "{{ source.split('.')[0] }}"
   tasks:
     - name: Set databases names when express
-      ansible.builtin.set_stats:
-        data:
-          AN_Database: "AlloyNavigatorExpress"
-          AD_Database: "AlloyNavigatorExpress.ad"
-          AN_RegistryName: "Alloy Navigator Express"
-          AN_ProductName: "Alloy Navigator Express"
+      ansible.builtin.set_fact:
+        AN_Database: "AlloyNavigatorExpress"
+        AD_Database: "AlloyNavigatorExpress.ad"
+        AN_RegistryName: "Alloy Navigator Express"
+        AN_ProductName: "Alloy Navigator Express"
       when: ProductIsExpress
 
     - name: Set databases names when not express
-      ansible.builtin.set_stats:
-        data:
-          AN_RegistryName: "Alloy Navigator"
-          AN_ProductName: "Alloy Navigator"
-          AN_Database: "AlloyNavigator"
-          AD_Database: "AlloyDiscovery"
+      ansible.builtin.set_fact:
+        AN_RegistryName: "Alloy Navigator"
+        AN_ProductName: "Alloy Navigator"
+        AN_Database: "AlloyNavigator"
+        AD_Database: "AlloyDiscovery"
       when: not ProductIsExpress
 
     - name: Set database list
-      ansible.builtin.set_stats:
-        data:
-          database_list:
-            - "{{ AN_Database }}"
-            - "{{ AD_Database }}"
+      ansible.builtin.set_fact:
+        database_list:
+          - "{{ AN_Database }}"
+          - "{{ AD_Database }}"
 
     #     - name: Get device name
     #   ansible.builtin.set_fact:
@@ -65,6 +62,7 @@
   gather_facts: false
   hosts: "{{ source }}"
   vars:
+    source: "{{ source | default('skip') }}"
     is_initialized: false
     mssql_backup_path: :\Backups
     reg_file_path: :\Regfiles
@@ -75,10 +73,9 @@
     #     name: prepare_disk
 
     - name: Set backup path
-      ansible.builtin.set_stats:
-        data:
-          source_mssql_backup_path: "{{ next_drive_letter }}{{ mssql_backup_path }}"
-          source_reg_file_path: "{{ next_drive_letter }}{{ mssql_backup_path }}"
+      ansible.builtin.set_fact:
+        source_mssql_backup_path: "{{ next_drive_letter }}{{ mssql_backup_path }}"
+        source_reg_file_path: "{{ next_drive_letter }}{{ mssql_backup_path }}"
 
 
     - name: Create Migration folder
