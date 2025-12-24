@@ -91,22 +91,22 @@
       ansible.windows.win_shell: |
         $outputDir = "{{ source_reg_file_path }}"
 
-        Export-RegistryKey -Path "HKCU:\Software\Alloy Software\{{ AN_RegistryName }}\Connections" `
-          -TargetPath "$outputDir`\user_connection.reg"
+        reg export "HKCU\Software\Alloy Software\{{ AN_RegistryName }}\Connections" `
+            "$outputDir\user_connection.reg" /y
 
-        Export-RegistryKey -Path "HKLM:\SOFTWARE\Alloy Software\{{ AN_RegistryName }}\Service Connection" `
-          -TargetPath "$outputDir`\an_service_connection.reg"
+        reg export "HKLM\SOFTWARE\Alloy Software\{{ AN_RegistryName }}\Service Connection" `
+            "$outputDir\an_service_connection.reg" /y
 
         {% if not ProductIsExpress %}
 
-        Export-RegistryKey -Path "HKLM:\SOFTWARE\Alloy Discovery\{{ AN_RegistryName }}\Service Connection" `
-          -TargetPath "$outputDir`\ad_service_connection.reg"
+        reg export "HKLM\SOFTWARE\Alloy Discovery\{{ AN_RegistryName }}\Service Connection" `
+            "$outputDir\ad_service_connection.reg" /y
 
         {% endif %}
 
         $AccessKeysRootPath = "HKLM:\SOFTWARE\Alloy Software\Access Keys"
 
-        $subKeys = Get-ChildItem -Path $AccessKesyRootPath
+        $subKeys = Get-ChildItem -Path $AccessKeysRootPath
 
         foreach ($key in $subKeys) {
             $keyName = Split-Path $key.PSPath -Leaf
