@@ -6,45 +6,31 @@
     prefix: "{{ source.split('.')[0] }}"
   tasks:
     - name: Set databases names when express
-      ansible.builtin.set_fact:
-        AN_Database: "AlloyNavigatorExpress"
-        AD_Database: "AlloyNavigatorExpress.ad"
-        AN_RegistryName: "Alloy Navigator Express"
-        AN_ProductName: "Alloy Navigator Express"
+      ansible.builtin.set_stats:
+        data:
+          AN_Database: "AlloyNavigatorExpress"
+          AD_Database: "AlloyNavigatorExpress.ad"
+          AN_RegistryName: "Alloy Navigator Express"
+          AN_ProductName: "Alloy Navigator Express"
       when: ProductIsExpress
 
     - name: Set databases names when not express
-      ansible.builtin.set_fact:
-        AN_RegistryName: "Alloy Navigator"
-        AN_ProductName: "Alloy Navigator"
-        AN_Database: "AlloyNavigator"
-        AD_Database: "AlloyDiscovery"
+      ansible.builtin.set_stats:
+        data:
+          AN_RegistryName: "Alloy Navigator"
+          AN_ProductName: "Alloy Navigator"
+          AN_Database: "AlloyNavigator"
+          AD_Database: "AlloyDiscovery"
       when: not ProductIsExpress
 
     - name: Set database list
-      ansible.builtin.set_fact:
-        database_list:
-          - "{{ AN_Database }}"
-          - "{{ AD_Database }}"
-
-    - name: Set stats for later
       ansible.builtin.set_stats:
         data:
-          an_db: "{{ AN_Database }}"
-          ad_db: "{{ AD_Database }}"
-          an_rn: "{{ AN_RegistryName }}"
-          an_pn: "{{ AN_ProductName }}"
+          database_list:
+            - "{{ AN_Database }}"
+            - "{{ AD_Database }}"
 
-    - name: Initialize passwords
-      ansible.builtin.set_fact:
-        passwords: {}
-
-    - name: Generate unique passwords for each database
-      ansible.builtin.set_fact:
-        passwords: "{{ passwords | combine({ item: lookup('password', '/dev/null', chars='ascii_letters,digits,hexdigits', length=20) }) }}"
-      loop: "{{ database_list }}"
-
-    - name: Get device name
+        - name: Get device name
       ansible.builtin.set_fact:
           new_volume_device_name: >-
             {{
@@ -75,26 +61,65 @@
           Name: "{{ prefix }}-migration_volume"
       register: volume_for_backups
 
-- name: Prepare disk
+- name: Prepare disk and backup registry
   gather_facts: false
   hosts: "{{ source }}"
   vars:
-    az_group: "{{ availability_zone_group | default('skip') }}"
-    source: "{{ source | default('skip') }}"
     is_initialized: false
+    mssql_backup_path: :\Backups
+    reg_file_path: :\Regfiles
   tasks:
     - name: Add Disk
       ansible.builtin.include_role:
         name: prepare_disk
 
     - name: Set backup path
-      ansible.builtin.set_fact:
-        source_mssql_backup_path: "{{ next_drive_letter }}{{ mssql_backup_path }}"
+      ansible.builtin.set_stats:
+        data:
+          source_mssql_backup_path: "{{ next_drive_letter }}{{ mssql_backup_path }}"
+          source_reg_file_path: "{{ next_drive_letter }}{{ mssql_backup_path }}"
+
 
     - name: Create Migration folder
       ansible.windows.win_file:
-        path: "{{ source_mssql_backup_path }}"
+        path: "{{ item }}"
         state: directory
+      loop:
+        - "{{ source_mssql_backup_path }}"
+        - "{{ source_reg_file_path }}"
+
+    - name: Export Registry Keys
+      ansible.windows.win_shell: |
+        $outputDir = "{{ source_reg_file_path }}"
+
+        Export-RegistryKey -Path HKCU:\Software\Alloy Software\{{ AN_RegistryName }}\Connections `
+          -TargetPath "$outputDir`\user_connection.reg"
+
+        Export-RegistryKey -Path HKLM:\SOFTWARE\Alloy Software\{{ AN_RegistryName }}\Service Connection `
+          -TargetPath "$outputDir`\an_service_connection.reg"
+
+        {% if not ProductIsExpress %}
+
+        Export-RegistryKey -Path HKLM:\SOFTWARE\Alloy Discovery\{{ AN_RegistryName }}\Service Connection `
+          -TargetPath "$outputDir`\ad_service_connection.reg"
+
+        {% endif %}
+
+        $AccessKeysRootPath = "HKLM:\SOFTWARE\Alloy Software\Access Keys"
+
+        $subKeys = Get-ChildItem -Path $AccessKesyRootPath
+
+        foreach ($key in $subKeys) {
+            $keyName = Split-Path $key.PSPath -Leaf
+
+            $outputFile = Join-Path $outputDir "$keyName.reg"
+
+            reg export $key.Name.Replace('HKEY_LOCAL_MACHINE', 'HKLM') $outputFile /y
+
+            Write-Host "Exported $($key.Name) to $outputFile"
+          }
+
+        Write-Host "Export completed! Files saved to: $outputDir"
 
     # - name: Stop IIS services
     #   ansible.windows.win_service:
@@ -103,9 +128,6 @@
 
 - name: Create backups
   hosts: localhost
-  vars:
-    source_mssql_backup_path: "{{ hostvars[source]['source_mssql_backup_path'] }}"
-    database_list: "{{ hostvars['localhost']['database_list'] }}"
   tasks:
     - name: Create database backups on Windows
       community.general.mssql_script:
@@ -235,6 +257,4 @@
       ansible.builtin.set_stats:
         data:
           target_mssql_backup_path: "{{ hostvars[dest]['target_mssql_backup_path'] }}"
-          database_list: "{{ hostvars['localhost']['database_list'] }}"
-          passwords: "{{ hostvars['localhost']['passwords'] }}"
           volume_id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"

@@ -88,3 +88,9 @@
       ansible.windows.win_service:
         name: W3SVC
         state: restarted
+
+
+# TODO Перерегистрация  Automation Server и Inventory
+# TODO Перенос биндингов
+# TODO Rebuild full text search catalog
+

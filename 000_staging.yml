@@ -1,0 +1,261 @@
+---
+- name: Prepare ebs_vol
+  gather_facts: false
+  hosts: localhost
+  vars:
+    prefix: "{{ source.split('.')[0] }}"
+  tasks:
+    - name: Set databases names when express
+      ansible.builtin.set_stats:
+        data:
+          AN_Database: "AlloyNavigatorExpress"
+          AD_Database: "AlloyNavigatorExpress.ad"
+          AN_RegistryName: "Alloy Navigator Express"
+          AN_ProductName: "Alloy Navigator Express"
+      when: ProductIsExpress
+
+    - name: Set databases names when not express
+      ansible.builtin.set_stats:
+        data:
+          AN_RegistryName: "Alloy Navigator"
+          AN_ProductName: "Alloy Navigator"
+          AN_Database: "AlloyNavigator"
+          AD_Database: "AlloyDiscovery"
+      when: not ProductIsExpress
+
+    - name: Set database list
+      ansible.builtin.set_stats:
+        data:
+          database_list:
+            - "{{ AN_Database }}"
+            - "{{ AD_Database }}"
+
+    #     - name: Get device name
+    #   ansible.builtin.set_fact:
+    #       new_volume_device_name: >-
+    #         {{
+    #         (
+    #           ['f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+    #           | map('regex_replace', '(.)', '/dev/sd\1')
+    #           | list
+    #           | difference(
+    #               hostvars[dest].block_device_mappings
+    #                 | map(attribute='device_name')
+    #                 | list
+    #             )
+    #           )[0]
+    #         }}
+
+    # - ansible.builtin.debug:
+    #     msg: "Next device: {{ new_volume_device_name }}"
+
+    # - name: Attach new volume to source
+    #   amazon.aws.ec2_vol:
+    #     device_name: "{{ new_volume_device_name }}"
+    #     instance: "{{ hostvars[source]['instance_id'] }}"
+    #     region: "{{ hostvars[source]['placement']['region'] }}"
+    #     state: present
+    #     volume_size: "{{ volume_size }}"
+    #     volume_type: gp2
+    #     resource_tags:
+    #       Name: "{{ prefix }}-migration_volume"
+    #   register: volume_for_backups
+
+- name: Prepare disk and backup registry
+  gather_facts: false
+  hosts: "{{ source }}"
+  vars:
+    is_initialized: false
+    mssql_backup_path: :\Backups
+    reg_file_path: :\Regfiles
+    next_drive_letter: C
+  tasks:
+    # - name: Add Disk
+    #   ansible.builtin.include_role:
+    #     name: prepare_disk
+
+    - name: Set backup path
+      ansible.builtin.set_stats:
+        data:
+          source_mssql_backup_path: "{{ next_drive_letter }}{{ mssql_backup_path }}"
+          source_reg_file_path: "{{ next_drive_letter }}{{ mssql_backup_path }}"
+
+
+    - name: Create Migration folder
+      ansible.windows.win_file:
+        path: "{{ item }}"
+        state: directory
+      loop:
+        - "{{ source_mssql_backup_path }}"
+        - "{{ source_reg_file_path }}"
+
+    - name: Export Registry Keys
+      ansible.windows.win_shell: |
+        $outputDir = "{{ source_reg_file_path }}"
+
+        Export-RegistryKey -Path HKCU:\Software\Alloy Software\{{ AN_RegistryName }}\Connections `
+          -TargetPath "$outputDir`\user_connection.reg"
+
+        Export-RegistryKey -Path HKLM:\SOFTWARE\Alloy Software\{{ AN_RegistryName }}\Service Connection `
+          -TargetPath "$outputDir`\an_service_connection.reg"
+
+        {% if not ProductIsExpress %}
+
+        Export-RegistryKey -Path HKLM:\SOFTWARE\Alloy Discovery\{{ AN_RegistryName }}\Service Connection `
+          -TargetPath "$outputDir`\ad_service_connection.reg"
+
+        {% endif %}
+
+        $AccessKeysRootPath = "HKLM:\SOFTWARE\Alloy Software\Access Keys"
+
+        $subKeys = Get-ChildItem -Path $AccessKesyRootPath
+
+        foreach ($key in $subKeys) {
+            $keyName = Split-Path $key.PSPath -Leaf
+
+            $outputFile = Join-Path $outputDir "$keyName.reg"
+
+            reg export $key.Name.Replace('HKEY_LOCAL_MACHINE', 'HKLM') $outputFile /y
+
+            Write-Host "Exported $($key.Name) to $outputFile"
+          }
+
+        Write-Host "Export completed! Files saved to: $outputDir"
+
+    # - name: Stop IIS services
+    #   ansible.windows.win_service:
+    #     name: W3SVC
+    #     state: stopped
+
+# - name: Create backups
+#   hosts: localhost
+#   tasks:
+#     - name: Create database backups on Windows
+#       community.general.mssql_script:
+#         login_host: "{{ hostvars[source]['ansible_host'] }}"
+#         login_user: "{{ source_SaUserName }}"
+#         login_password: "{{ source_SaPassword }}"
+#         login_port: 51967
+#         name: master
+#         script: |
+#           ALTER DATABASE [{{ item }}] SET ONLINE;
+#           ALTER DATABASE [{{ item }}]
+#           SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+
+#           DECLARE @BackupPath NVARCHAR(500) = N'{{ source_mssql_backup_path }}\{{ item }}.bak'
+
+#           BACKUP DATABASE [{{ item }}]
+#           TO DISK = @BackupPath
+#           WITH FORMAT,
+#                 MEDIANAME = '{{ item }}_Backup',
+#                 NAME = 'Full Backup of {{ item }}';
+
+#           PRINT 'Backup created successfully: ' + @BackupPath
+
+#           --ALTER DATABASE [{{ item }}] SET OFFLINE;
+#       loop: "{{ database_list }}"
+#       register: backup_result
+
+#     - name: Show backup results
+#       ansible.builtin.debug:
+#         var: backup_result.results
+
+# - name: Re-attach volume to "{{ dest }}"
+#   hosts: localhost
+#   tasks:
+#     - name: Detach volume from the source
+#       amazon.aws.ec2_vol:
+#         id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+#         instance: "None"
+#         region: "{{ hostvars[dest]['placement']['region'] }}"
+#         modify_volume: true
+
+#     - name: Wait for volume to be available
+#       amazon.aws.ec2_vol_info:
+#         filters:
+#           volume-id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+#           status: "available"
+#         region: "{{ hostvars[dest]['placement']['region'] }}"
+#       register: result
+#       until: result | length > 0
+#       retries: 5
+#       delay: 10
+
+#     - name: Attach new volume to dest
+#       amazon.aws.ec2_vol:
+#         id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+#         device_name: "{{ hostvars['localhost']['new_volume_device_name'] }}"
+#         instance: "{{ hostvars[dest]['instance_id'] }}"
+#         region: "{{ hostvars[dest]['placement']['region'] }}"
+
+#     - name: Wait for volume to be in-use
+#       amazon.aws.ec2_vol_info:
+#         filters:
+#           volume-id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+#           status: "in-use"
+#         region: "{{ hostvars[dest]['placement']['region'] }}"
+#       register: result
+#       until: result | length > 0
+#       retries: 5
+#       delay: 10
+
+#     - name: Share source instance data
+#       ansible.builtin.set_stats:
+#         data:
+#           source_instance_id: "{{ hostvars[source]['instance_id'] }}"
+#           source_public_ip: "{{ hostvars[source]['ansible_host'] }}"
+
+#     - name: Stop source
+#       amazon.aws.ec2_instance:
+#         instance_ids:
+#           - "{{ hostvars[source]['instance_id'] }}"
+#         region: "{{ hostvars[source]['placement']['region'] }}"
+#         state: stopped
+#         wait: true
+
+# - name: Prepare media
+#   gather_facts: false
+#   hosts: "{{ dest }}"
+#   vars:
+#     az_group: "{{ availability_zone_group | default('skip') }}"
+#     dest: "{{ dest | default('skip') }}"
+#     is_initialized: true
+#     database_list: "{{ hostvars['localhost']['database_list'] }}"
+#   tasks:
+#     - name: Add Disk 2
+#       ansible.builtin.include_role:
+#         name: prepare_disk
+
+#     - name: Bring disk online
+#       ansible.windows.win_shell: |
+#         $disk = Get-Disk -Number 1
+#         if ($disk.OperationalStatus -eq 'Offline') {
+#             Set-Disk -Number 1 -IsOffline $false
+#             Write-Host "Disk 1 is now online" -ForegroundColor Green
+#         } else {
+#             Write-Host "Disk 1 is already online" -ForegroundColor Yellow
+#         }
+#       args:
+#         executable: powershell.exe
+
+#     - name: Set backup path
+#       ansible.builtin.set_fact:
+#         target_mssql_backup_path: "D{{ mssql_backup_path }}"
+
+#     - name: Ensure backup file
+#       ansible.windows.win_stat:
+#         path: "{{ target_mssql_backup_path }}\\{{ item }}.bak"
+#       loop: "{{ database_list }}"
+#       register: files
+
+#     - name: Fail if any backup file is missing
+#       ansible.builtin.fail:
+#         msg: "Backup file for one or more databases is missing!"
+#       when: >
+#         files.results | selectattr('stat.exists', 'equalto', false) | list | length > 0
+
+#     - name: Set stats for later
+#       ansible.builtin.set_stats:
+#         data:
+#           target_mssql_backup_path: "{{ hostvars[dest]['target_mssql_backup_path'] }}"
+#           volume_id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
