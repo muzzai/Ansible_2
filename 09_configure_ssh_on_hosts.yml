@@ -1,5 +1,6 @@
 ---
 - name: Reconfigure ssh to us powershell.exe
+  hosts: aws_ec2
   vars:
     ansible_user: Administrator
     ansible_connection: ssh
