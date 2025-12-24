@@ -111,7 +111,9 @@
         foreach ($key in $subKeys) {
             $keyName = Split-Path $key.PSPath -Leaf
 
-            $outputFile = Join-Path $outputDir "$keyName.reg"
+            $fileName = (($keyName -split ':') | % {$_.trim() })[1]
+
+            $outputFile = Join-Path $outputDir "$fileName.reg"
 
             reg export $key.Name.Replace('HKEY_LOCAL_MACHINE', 'HKLM') $outputFile /y
 
