@@ -58,6 +58,15 @@
     #       Name: "{{ prefix }}-migration_volume"
     #   register: volume_for_backups
 
+    - name: Set stats
+      ansible.builtin.set_stats:
+        data:
+          database_list: "{{ database_list }}"
+          AN_Database: "{{ AN_Database }}"
+          AD_Database: "{{ AD_Database }}"
+          AN_RegistryName: "{{ AN_RegistryName }}"
+          AN_ProductName: "{{ AN_ProductName }}"
+
 - name: Prepare disk and backup registry
   gather_facts: false
   hosts: "{{ source }}"

@@ -1,6 +1,7 @@
 ---
 - name: Reconfigure ssh to us powershell.exe
   hosts: aws_ec2
+  gather_facts: false
   vars:
     ansible_user: Administrator
     ansible_connection: ssh
@@ -18,9 +19,6 @@
 - name: Adjust sshd_config
   hosts: aws_ec2
   gather_facts: false
-  vars:
-    ec2_ssh_key_type: rsa
-    ec2_ssh_key_bits: 4096
   tasks:
     - name: Restart SSH service
       ansible.windows.win_service:
