@@ -67,7 +67,7 @@
     mssql_backup_path: :\Backups
     reg_file_path: :\Regfiles
     next_drive_letter: C
-    AN_RegistryName: "{{ hostvars[localhost]['AN_RegistryName'] }}"
+    AN_RegistryName: "{{ hostvars['localhost']['AN_RegistryName'] }}"
   tasks:
     # - name: Add Disk
     #   ansible.builtin.include_role:
