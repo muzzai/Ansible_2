@@ -81,6 +81,10 @@
     #   ansible.builtin.include_role:
     #     name: prepare_disk
 
+    - name: Debug stats
+      ansible.builtin.debug:
+        var: ansible_stats
+
     - name: Set backup path
       ansible.builtin.set_fact:
         source_mssql_backup_path: "{{ next_drive_letter }}{{ mssql_backup_path }}"
