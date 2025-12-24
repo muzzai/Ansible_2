@@ -91,15 +91,15 @@
       ansible.windows.win_shell: |
         $outputDir = "{{ source_reg_file_path }}"
 
-        Export-RegistryKey -Path HKCU:\Software\Alloy Software\{{ AN_RegistryName }}\Connections `
+        Export-RegistryKey -Path "HKCU:\Software\Alloy Software\{{ AN_RegistryName }}\Connections" `
           -TargetPath "$outputDir`\user_connection.reg"
 
-        Export-RegistryKey -Path HKLM:\SOFTWARE\Alloy Software\{{ AN_RegistryName }}\Service Connection `
+        Export-RegistryKey -Path "HKLM:\SOFTWARE\Alloy Software\{{ AN_RegistryName }}\Service Connection" `
           -TargetPath "$outputDir`\an_service_connection.reg"
 
         {% if not ProductIsExpress %}
 
-        Export-RegistryKey -Path HKLM:\SOFTWARE\Alloy Discovery\{{ AN_RegistryName }}\Service Connection `
+        Export-RegistryKey -Path "HKLM:\SOFTWARE\Alloy Discovery\{{ AN_RegistryName }}\Service Connection" `
           -TargetPath "$outputDir`\ad_service_connection.reg"
 
         {% endif %}
