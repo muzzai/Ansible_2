@@ -1,11 +1,31 @@
 ---
-- name: Generate key
+- name: Reconfigure ssh to us powershell.exe
+  vars:
+    ansible_user: Administrator
+    ansible_connection: ssh
+    ansible_shell_type: cmd
+    ansible_ssh_transfer_method: scp
+    ansible_shell_executable: cmd
+  tasks:
+    - name: Set PowerShell as default shell
+      ansible.builtin.win_regedit:
+        path: HKLM:\SOFTWARE\OpenSSH
+        name: DefaultShell
+        data: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+        type: string
+
+- name: Adjust sshd_config
   hosts: aws_ec2
   gather_facts: false
   vars:
     ec2_ssh_key_type: rsa
     ec2_ssh_key_bits: 4096
   tasks:
+    - name: Restart SSH service
+      ansible.windows.win_service:
+        name: sshd
+        state: restarted
+
     - name: Remove chroot for all users
       community.windows.win_lineinfile:
         path: C:\ProgramData\ssh\sshd_config
