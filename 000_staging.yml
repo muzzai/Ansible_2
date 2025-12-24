@@ -11,6 +11,7 @@
         AD_Database: "AlloyNavigatorExpress.ad"
         AN_RegistryName: "Alloy Navigator Express"
         AN_ProductName: "Alloy Navigator Express"
+      run_once: true
       when: ProductIsExpress
 
     - name: Set databases names when not express
@@ -19,6 +20,7 @@
         AN_ProductName: "Alloy Navigator"
         AN_Database: "AlloyNavigator"
         AD_Database: "AlloyDiscovery"
+      run_once: true
       when: not ProductIsExpress
 
     - name: Set database list
@@ -26,6 +28,7 @@
         database_list:
           - "{{ AN_Database }}"
           - "{{ AD_Database }}"
+        run_once: true
 
     #     - name: Get device name
     #   ansible.builtin.set_fact:
@@ -57,15 +60,6 @@
     #     resource_tags:
     #       Name: "{{ prefix }}-migration_volume"
     #   register: volume_for_backups
-
-    - name: Set stats
-      ansible.builtin.set_stats:
-        data:
-          database_list: "{{ database_list }}"
-          AN_Database: "{{ AN_Database }}"
-          AD_Database: "{{ AD_Database }}"
-          AN_RegistryName: "{{ AN_RegistryName }}"
-          AN_ProductName: "{{ AN_ProductName }}"
 
 - name: Prepare disk and backup registry
   gather_facts: false
@@ -267,5 +261,9 @@
 #     - name: Set stats for later
 #       ansible.builtin.set_stats:
 #         data:
-#           target_mssql_backup_path: "{{ hostvars[dest]['target_mssql_backup_path'] }}"
+#           target_mssql_backup_path: "{{ hostvars[dest]['target_mssql_backup_path'] }}"\database_list: "{{ database_list }}"
+          # AN_Database: "{{ AN_Database }}"
+          # AD_Database: "{{ AD_Database }}"
+          # AN_RegistryName: "{{ AN_RegistryName }}"
+          # AN_ProductName: "{{ AN_ProductName }}"
 #           volume_id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
