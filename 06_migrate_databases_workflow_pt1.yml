@@ -129,6 +129,7 @@
     region: "{{ hostvars[dest]['placement']['region'] }}"
     volume_id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
     default_site_bindings: "{{ hostvars[source]['default_site_bindings']['stdout'] }}"
+    mssql_backup_path: :\Backups
   tasks:
 
     - name: Debug hostvars
