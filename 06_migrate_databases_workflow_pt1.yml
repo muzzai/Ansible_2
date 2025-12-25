@@ -60,6 +60,7 @@
   hosts: "{{ source }}"
   vars:
     is_initialized: false
+    source: "{{ source | default('skip') }}"
     mssql_backup_path: :\Backups
     reg_file_path: :\Regfiles
     AN_RegistryName: "{{ hostvars['localhost']['AN_RegistryName'] }}"
