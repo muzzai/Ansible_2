@@ -249,7 +249,7 @@
     - name: Set stats for later
       ansible.builtin.set_stats:
         data:
-          database_list: "{{ database_list }}"
+          database_list: "{{ hostvars['localhost']['database_list'] }}"
           volume_id: "{{ volume_id}}"
           default_site_bindings: "{{ default_site_bindings }}"
           computer_name: "{{ hostvars[source]['computer_name']['stdout'] }}"
