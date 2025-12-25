@@ -60,7 +60,7 @@
         $siteName = 'Default Web Site'
 
         $json = @'
-        {{ default_site_bindings.stdout }}
+        {{ default_site_bindings }}
         '@
 
         $bindings = $json | ConvertFrom-Json
