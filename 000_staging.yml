@@ -69,58 +69,6 @@
     next_drive_letter: C
     AN_RegistryName: "{{ hostvars['localhost']['AN_RegistryName'] }}"
   tasks:
-    # - name: Add Disk
-    #   ansible.builtin.include_role:
-    #     name: prepare_disk
-
-    - name: Set backup path
-      ansible.builtin.set_fact:
-        source_mssql_backup_path: "{{ next_drive_letter }}{{ mssql_backup_path }}"
-        source_reg_file_path: "{{ next_drive_letter }}{{ reg_file_path }}"
-
-
-    - name: Create Migration folder
-      ansible.windows.win_file:
-        path: "{{ item }}"
-        state: directory
-      loop:
-        - "{{ source_mssql_backup_path }}"
-        - "{{ source_reg_file_path }}"
-
-    - name: Export Registry Keys
-      ansible.windows.win_shell: |
-        $outputDir = "{{ source_reg_file_path }}"
-
-        reg export "HKCU\Software\Alloy Software\{{ AN_RegistryName }}\Connections" `
-            "$outputDir\user_connection.reg" /y
-
-        reg export "HKLM\SOFTWARE\Alloy Software\{{ AN_RegistryName }}\Service Connection" `
-            "$outputDir\an_service_connection.reg" /y
-
-        {% if not ProductIsExpress %}
-
-        reg export "HKLM\SOFTWARE\Alloy Discovery\{{ AN_RegistryName }}\Service Connection" `
-            "$outputDir\ad_service_connection.reg" /y
-
-        {% endif %}
-
-        $AccessKeysRootPath = "HKLM:\SOFTWARE\Alloy Software\Access Keys"
-
-        $subKeys = Get-ChildItem -Path $AccessKeysRootPath
-
-        foreach ($key in $subKeys) {
-            $keyName = Split-Path $key.PSPath -Leaf
-
-            $fileName = (($keyName -split ':') | % {$_.trim() })[1]
-
-            $outputFile = Join-Path $outputDir "$fileName.reg"
-
-            reg export $key.Name.Replace('HKEY_LOCAL_MACHINE', 'HKLM') $outputFile /y
-
-            Write-Host "Exported $($key.Name) to $outputFile"
-          }
-
-        Write-Host "Export completed! Files saved to: $outputDir"
 
     # - name: Stop IIS services
     #   ansible.windows.win_service:

@@ -5,11 +5,130 @@
 $AN_SQLDatabase      = "{{ AN_Database }}"
 $SQLServerInstance   = "{{ new_hostname }},51967"
 $AN_AccessKeyName    = "{{ an_access_key_name }}"
+$SaUser              = "{{ dest_SaUserName }}"
+$SaPassword          = "{{ dest_SaPassword }}"
+
 
 ################################################################
 #                      MAIN SCRIPT                             #
 ################################################################
 
+Import-Module SqlServer -ErrorAction Stop
+
+
+$SecurePass = ConvertTo-SecureString $SaPassword -AsPlainText -Force
+$Cred       = New-Object System.Management.Automation.PSCredential ($SaUser, $SecurePass)
+
+{% for db in database_list %}
+Write-Host "=== Processing database: {{ db }} ==="
+
+# -------------------------------
+# Restore database
+# -------------------------------
+$decrypted = C:\Install\ScriptHelper.exe DecryptAccessKey "D:\{{ db }}.reg"
+
+$password = (($decrypted -split '`n' | where {$_ -like "Password*"}) -split ': ')[1]
+
+$restoreSql = @"
+DECLARE @DataPath NVARCHAR(260);
+DECLARE @LogPath  NVARCHAR(260);
+DECLARE @Sql NVARCHAR(MAX);
+
+SELECT
+    @DataPath = CAST(SERVERPROPERTY('InstanceDefaultDataPath') AS NVARCHAR(260)),
+    @LogPath  = CAST(SERVERPROPERTY('InstanceDefaultLogPath')  AS NVARCHAR(260));
+
+SET @Sql = N'
+RESTORE DATABASE [{{ db }}]
+FROM DISK = ''{{ target_mssql_backup_path }}\{{ db }}.bak''
+WITH
+    MOVE ''{{ db }}''     TO ''' + @DataPath + '{{ db }}.mdf'',
+    MOVE ''{{ db }}_log'' TO ''' + @LogPath  + '{{ db }}_log.ldf'',
+    REPLACE,
+    STATS = 5;
+';
+
+EXEC (@Sql);
+
+IF DB_ID('{{ db }}') IS NOT NULL
+BEGIN
+    ALTER DATABASE [{{ db }}] SET ONLINE;
+    ALTER DATABASE [{{ db }}] SET MULTI_USER WITH ROLLBACK IMMEDIATE;
+END
+"@
+
+Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
+              -Credential $Cred `
+              -Database master `
+              -Query $restoreSql
+
+# -------------------------------
+# Create / update logins
+# -------------------------------
+$loginSql = @"
+IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = 'dbreader')
+    CREATE LOGIN [dbreader]
+        WITH PASSWORD = '{{ db_reader_password }}', CHECK_POLICY = OFF;
+ELSE
+    ALTER LOGIN [dbreader]
+        WITH PASSWORD = '{{ db_reader_password }}', CHECK_POLICY = OFF;
+
+GRANT CONNECT SQL TO [dbreader];
+
+IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = '{{ db }}Access')
+    CREATE LOGIN [{{ db }}Access]
+        WITH PASSWORD = '$password',
+             CHECK_POLICY = OFF;
+ELSE
+    ALTER LOGIN [{{ db }}Access]
+        WITH PASSWORD = '$password',
+             CHECK_POLICY = OFF;
+
+GRANT CONNECT SQL TO [{{ db }}Access];
+GRANT VIEW ANY DEFINITION TO [{{ db }}Access];
+GRANT VIEW SERVER STATE TO [{{ db }}Access];
+"@
+
+Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
+              -Credential $Cred `
+              -Database master `
+              -Query $loginSql
+
+# -------------------------------
+# Create database users + perms
+# -------------------------------
+$userSql = @"
+USE [{{ db }}];
+
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'{{ db }}Access')
+    DROP USER [{{ db }}Access];
+CREATE USER [{{ db }}Access] FOR LOGIN [{{ db }}Access];
+
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'dbreader')
+    DROP USER [dbreader];
+CREATE USER [dbreader] FOR LOGIN [dbreader];
+
+ALTER ROLE [db_owner]      ADD MEMBER [{{ db }}Access];
+ALTER ROLE [db_datareader] ADD MEMBER [dbreader];
+
+DENY INSERT, UPDATE, DELETE TO [dbreader];
+"@
+
+Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
+              -Credential $Cred `
+              -Database "{{ db }}" `
+              -Query $userSql
+
+{% endfor %}
+
+reg import D:\RegFiles\AlloyNavigator.reg
+reg import D:\RegFiles\an_service_connection.reg
+reg import D:\RegFiles\user_connection.reg
+
+{% if not ProductIsExpress%}
+reg import D:\RegFiles\AlloyDiscoevry.reg
+reg import D:\RegFiles\ad_service_connection.reg
+{% endif %}
 
 Invoke-Command -ArgumentList ($AN_AccessKeyName, $SQLServerInstance, $AN_SQLDatabase)  {
   param($AN_AccessKeyName, $SQLServerInstance, $AN_SQLDatabase)

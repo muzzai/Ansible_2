@@ -3,18 +3,13 @@
   gather_facts: false
   hosts: "{{ source }}"
   vars:
-    az_group: "{{ availability_zone_group | default('skip') }}"
     source: "{{ source | default('skip') }}"
     sql_s3_bucket: "654529448781-backups"
-    source: "{{ source | default('skip') }}"
     sql_s3_object: "ScriptHelper.exe"
     sql_s3_url_expiry: 3600
-    prefix: "{{ source.split('.')[0] }}"
-    passwords: "{{ passwords | default({}) }}"
     old_name: "{{ old_hostname }}"
     new_name: "{{ new_hostname }}"
   tasks:
-  # TODO: перенести клиентские биндинги
     - name: Update hostname in bindings
       ansible.windows.win_shell: |
         $newHostname = "{{ new_name }}"
@@ -88,9 +83,3 @@
       ansible.windows.win_service:
         name: W3SVC
         state: restarted
-
-
-# TODO Перерегистрация  Automation Server и Inventory
-# TODO Перенос биндингов
-# TODO Rebuild full text search catalog
-

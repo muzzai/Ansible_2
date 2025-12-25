@@ -1,139 +1,137 @@
 ---
-- name: Restore databases and create users
-  hosts: localhost
+- name: Prepare media
+  gather_facts: false
+  hosts: "{{ source }}"
   vars:
-    backup_path: "{{ target_mssql_backup_path | default('no_path') }}"
-    db_list: "{{ database_list | default([])}}"
+    source: "{{ source | default('skip') }}"
+    is_initialized: true
+    sql_s3_object: "ScriptHelper.exe"
+    sql_s3_url_expiry: 3600
   tasks:
-    # - name: Debug
-    #   ansible.builtin.debug:
-    #     var: prefix
+    - name: Add Disk To Destination
+      ansible.builtin.include_role:
+        name: prepare_disk
 
-    # - name: Check if prefix already exists
-    #   community.general.mssql_script:
-    #     login_host: "{{ hostvars[source]['ansible_host'] }}"
-    #     login_user: "{{ source_SaUserName }}"
-    #     login_password: "{{ source_SaPassword }}"
-    #     login_port: 51967
-    #     name: master
-    #     script: |
-    #       select count(*) as [Value] from sys.databases where name like '{{ prefix }}%'
-    #   register: databases_count
+    - name: Bring disk online
+      ansible.windows.win_shell: |
+        $disk = Get-Disk -Number 1
+        if ($disk.OperationalStatus -eq 'Offline') {
+            Set-Disk -Number 1 -IsOffline $false
+            Write-Host "Disk 1 is now online" -ForegroundColor Green
+        } else {
+            Write-Host "Disk 1 is already online" -ForegroundColor Yellow
+        }
+      args:
+        executable: powershell.exe
 
-    # - name: Debug count
-    #   ansible.builtin.debug:
-    #     var: databases_count
+    - name: Set backup path
+      ansible.builtin.set_fact:
+        target_mssql_backup_path: "D{{ mssql_backup_path }}"
 
-    # - name: Fail when prefix not uninque
-    #   ansible.builtin.fail:
-    #   when: (databases_count['query_results'][0][0][0][0] | default(1)) > 0
-
-    # - name: Debug connection vars
-    #   ansible.builtin.debug:
-    #     var: dest_SaPassword
-
-    - name: Delete existing databases
-      community.general.mssql_script:
-        login_host: "{{ hostvars[dest]['ansible_host'] }}"
-        login_user: "{{ dest_SaUserName }}"
-        login_password: "{{ dest_SaPassword }}"
-        login_port: 51967
-        name: master
-        script: |
-          USE master;
-
-          IF DB_ID('AlloyNavigator') IS NOT NULL
-          BEGIN
-              ALTER DATABASE [{{ item }}]
-                  SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-
-              DROP DATABASE [{{ item }}];
-          END
+    - name: Ensure backup file
+      ansible.windows.win_stat:
+        path: "{{ target_mssql_backup_path }}\\{{ item }}.bak"
       loop: "{{ database_list }}"
-      ignore_errors: true
+      register: files
 
-    - name: Restore databases
-      community.general.mssql_script:
-        login_host: "{{ hostvars[dest]['ansible_host'] }}"
-        login_user: "{{ dest_SaUserName }}"
-        login_password: "{{ dest_SaPassword }}"
-        login_port: 51967
-        name: master
-        script: |
-          DECLARE @DataPath NVARCHAR(260);
-          DECLARE @LogPath  NVARCHAR(260);
-          DECLARE @Sql NVARCHAR(MAX);
+    - name: Fail if any backup file is missing
+      ansible.builtin.fail:
+        msg: "Backup file for one or more databases is missing!"
+      when: >
+        files.results | selectattr('stat.exists', 'equalto', false) | list | length > 0
 
-          SELECT
-              @DataPath = CAST(SERVERPROPERTY('InstanceDefaultDataPath') AS NVARCHAR(260)),
-              @LogPath  = CAST(SERVERPROPERTY('InstanceDefaultLogPath')  AS NVARCHAR(260));
+      - name: Remove all bindings from Default Web Site
+        ansible.windows.win_shell: |
+          Import-Module WebAdministration
 
-          SET @Sql = N'
-          RESTORE DATABASE [{{ item }}]
-          FROM DISK = ''{{ target_mssql_backup_path }}\{{ item }}.bak''
-          WITH
-              MOVE ''{{ item }}''
-                  TO ''' + @DataPath + '{{ item }}.mdf'',
-              MOVE ''{{ item }}_log''
-                  TO ''' + @LogPath + '{{ item }}_log.ldf'',
-              REPLACE,
-              STATS = 5;
-          ';
+          $siteName = 'Default Web Site'
 
-          EXEC (@Sql);
+          Get-WebBinding -Name $siteName | ForEach-Object {
+              Remove-WebBinding `
+                  -Name $siteName `
+                  -Protocol $_.protocol `
+                  -BindingInformation $_.bindingInformation
+          }
 
-          IF DB_ID('{{ item }}') IS NOT NULL
-          BEGIN
-              ALTER DATABASE [{{ item }}] SET ONLINE;
-              ALTER DATABASE [{{ item }}] SET MULTI_USER WITH ROLLBACK IMMEDIATE;
-          END
+    - name: Restore Default Web Site bindings from exported JSON
+      ansible.windows.win_shell: |
+        Import-Module WebAdministration
 
-          IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = 'dbreader')
-              CREATE LOGIN [dbreader]
-                  WITH PASSWORD = '{{ db_reader_password }}', CHECK_POLICY = OFF;
-          ELSE
-              ALTER LOGIN [dbreader]
-                  WITH PASSWORD = '{{ db_reader_password }}', CHECK_POLICY = OFF;
+        $siteName = 'Default Web Site'
 
-          GRANT CONNECT SQL TO [dbreader];
+        $json = @'
+        {{ default_site_bindings.stdout }}
+        '@
 
-          IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = '{{ item }}Access')
-              CREATE LOGIN [{{ item }}Access]
-                  WITH PASSWORD = '{{ hostvars['localhost']['passwords'][item] }}',
-                      CHECK_POLICY = OFF;
-          ELSE
-              ALTER LOGIN [{{ item }}Access]
-                  WITH PASSWORD = '{{ hostvars['localhost']['passwords'][item] }}',
-                      CHECK_POLICY = OFF;
+        $bindings = $json | ConvertFrom-Json
 
-          GRANT CONNECT SQL TO [{{ item }}Access];
-          GRANT VIEW ANY DEFINITION TO [{{ item }}Access];
-          GRANT VIEW SERVER STATE TO [{{ item }}Access];
+        foreach ($b in $bindings) {
+            if (-not (Get-WebBinding -Name $siteName -Protocol $b.protocol `
+                      | Where-Object { $_.bindingInformation -eq $b.bindingInformation })) {
+
+                New-WebBinding `
+                    -Name $siteName `
+                    -Protocol $b.protocol `
+                    -BindingInformation $b.bindingInformation
+            }
+        }
 
 
-      loop: "{{ database_list }}"
-      register: restoration_result
+    - name: Ensure script folder
+      ansible.builtin.win_file:
+        path: C:\Remove-Old-Renewals-Install-New-Certs
+        state: directory
 
-    - name: Create users
-      community.general.mssql_script:
-        login_host: "{{ hostvars[dest]['ansible_host'] }}"
-        login_user: "{{ dest_SaUserName }}"
-        login_password: "{{ dest_SaPassword }}"
-        login_port: 51967
-        name: "{{ item }}"
-        script: |
-          USE {{ item }}
-          IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'{{ item }}Access')
-          DROP USER [{{ item }}Access]
-          CREATE USER [{{ item }}Access] FOR LOGIN [{{ item }}Access];
-          IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'dbreader')
-          DROP USER [dbreader]
-          CREATE USER [dbreader] FOR LOGIN [dbreader];
-          ALTER ROLE [db_owner] ADD MEMBER [{{ item }}Access];
-          ALTER ROLE [db_datareader] ADD MEMBER [dbreader];
-          DENY INSERT, UPDATE, DELETE  TO [dbreader];
-      loop: "{{ database_list }}"
-      register: user_creation_result
+    - name: Generate script
+      ansible.windows.win_template:
+        src: templates/Remove-Old-Renewals-Install-New-Certs.ps1.j2
+        dest: C:\Remove-Old-Renewals-Install-New-Certs\Remove-Old-Renewals-Install-New-Certs.ps1
+        force: true
+
+    - name: Execute renewals script
+      ansible.windows.win_shell: |
+        & C:\Remove-Old-Renewals-Install-New-Certs\Remove-Old-Renewals-Install-New-Certs.ps1
+      args:
+        executable: powershell.exe
+
+    - name: Get Script Helper URL
+      delegate_to: localhost
+      amazon.aws.s3_object:
+        mode: geturl
+        bucket: "{{ sql_s3_bucket }}"
+        object: "{{ sql_s3_object }}"
+        expiry: "{{ sql_s3_url_expiry }}"
+        region: "{{ hostvars[source]['placement']['region'] }}"
+      register: helper_url
+
+    - name: Download script "ScriptHelper.exe"
+      ansible.windows.win_get_url:
+        url: "{{ helper_url.url }}"
+        dest: C:\Install
+
+    - name: Ensure script folder
+      ansible.builtin.win_file:
+        path: C:\Migration-script
+        state: directory
+
+    - name: Generate script
+      ansible.windows.win_template:
+        src: templates/Reconfigure-Source.ps1.j2
+        dest: C:\Migration-script\Reconfigure-Source.ps1
+        force: true
+
+    - name: Execute SQL restore script
+      ansible.windows.win_shell: |
+        & C:\Migration-script\Reconfigure-Source.ps1
+      args:
+        executable: powershell.exe
+
+    - name: Change computer name
+      ansible.windows.win_hostname:
+        name: "{{ computer_name }}"
+
+    - name: Reboot destination
+      ansible.windows.win_reboot:
 
 - name: Reconfigure AWS side
   gather_facts: false
@@ -141,43 +139,6 @@
   vars:
     region: "{{ hostvars[dest]['placement']['region'] }}"
   tasks:
-    - name: Extract IP address from record
-      ansible.builtin.set_fact:
-        record_ip: "{{ source_public_ip }}"
-
-    - name: Get EIP allocation ID by IP address
-      amazon.aws.ec2_eip_info:
-        region: "{{ region }}"
-        filters:
-          "public-ip": "{{ record_ip }}"
-      register: eip_info
-
-    - name: Release current association
-      amazon.aws.ec2_eip:
-        region: "{{ region }}"
-        device_id: "{{ source_instance_id }}"
-        ip: "{{ record_ip }}"
-        state: absent
-      register: release_result
-
-    - name: Associate to new instance
-      amazon.aws.ec2_eip:
-        region: "{{ region }}"
-        device_id: "{{ hostvars[dest]['instance_id'] }}"
-        ip: "{{ record_ip }}"
-        state: present
-      register: association_result
-
-    - name: Verify association
-      amazon.aws.ec2_eip_info:
-        region: "{{ region }}"
-        filters:
-          "public-ip": "{{ record_ip }}"
-      register: verification
-      until: verification.addresses[0].instance_id == hostvars[dest]['instance_id']
-      retries: 5
-      delay: 5
-
     - name: Delete volume
       amazon.aws.ec2_vol:
         id: "{{ volume_id }}"
