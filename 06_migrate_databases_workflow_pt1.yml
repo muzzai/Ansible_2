@@ -252,5 +252,5 @@
           database_list: "{{ database_list }}"
           volume_id: "{{ volume_id}}"
           default_site_bindings: "{{ default_site_bindings }}"
-          computer_name: "{{ computer_name.stdout }}"
+          computer_name: "{{ hostvars[source]['computer_name']['stdout'] }}"
           mssql_backup_path: "{{ mssql_backup_path }}"
