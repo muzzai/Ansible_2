@@ -125,7 +125,15 @@
 
 - name: Create backups
   hosts: localhost
+  vars:
+    region: "{{ hostvars[dest]['placement']['region'] }}"
+    volume_id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
   tasks:
+
+    - name: Debug hostvars
+      ansible.builtin.debug:
+        var: hostvars[source]
+
     - name: Create database backups on Windows
       community.general.mssql_script:
         login_host: "{{ hostvars[source]['ansible_host'] }}"
@@ -138,7 +146,7 @@
           ALTER DATABASE [{{ item }}]
           SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 
-          DECLARE @BackupPath NVARCHAR(500) = N'{{ source_mssql_backup_path }}\{{ item }}.bak'
+          DECLARE @BackupPath NVARCHAR(500) = N'{{ hostvars[source]['source_mssql_backup_path'] }}\{{ item }}.bak'
 
           BACKUP DATABASE [{{ item }}]
           TO DISK = @BackupPath
@@ -155,13 +163,6 @@
     - name: Show backup results
       ansible.builtin.debug:
         var: backup_result.results
-
-- name: Re-attach volume and EIP to "{{ dest }}"
-  hosts: localhost
-  vars:
-    region: "{{ hostvars[dest]['placement']['region'] }}"
-    volume_id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
-  tasks:
 
     - name: Detach volume from the source
       amazon.aws.ec2_vol:
