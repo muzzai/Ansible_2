@@ -8,9 +8,9 @@
     sql_s3_object: "ScriptHelper.exe"
     sql_s3_url_expiry: 3600
   tasks:
-    - name: Add Disk To Destination
-      ansible.builtin.include_role:
-        name: prepare_disk
+    # - name: Add Disk To Destination
+    #   ansible.builtin.include_role:
+    #     name: prepare_disk
 
     - name: Bring disk online
       ansible.windows.win_shell: |
