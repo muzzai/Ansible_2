@@ -12,6 +12,20 @@ $SaPassword          = "{{ dest_SaPassword }}"
 ################################################################
 #                      MAIN SCRIPT                             #
 ################################################################
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+if (-not (Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue)) {
+    Install-PackageProvider -Name NuGet -Force
+}
+
+if ((Get-PSRepository PSGallery).InstallationPolicy -ne 'Trusted') {
+    Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+}
+
+if (-not (Get-Module -ListAvailable -Name SqlServer)) {
+    Install-Module -Name SqlServer -Scope AllUsers -Force -AllowClobber
+}
+
 
 Import-Module SqlServer -ErrorAction Stop
 
