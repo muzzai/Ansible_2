@@ -156,12 +156,12 @@
       args:
         executable: powershell.exe
 
-    # - name: Change computer name
-    #   ansible.windows.win_hostname:
-    #     name: "{{ computer_name }}"
+    - name: Change computer name
+      ansible.windows.win_hostname:
+        name: "{{ computer_name }}"
 
-    # - name: Reboot destination
-    #   ansible.windows.win_reboot:
+    - name: Reboot destination
+      ansible.windows.win_reboot:
 
 # - name: Reconfigure AWS side
 #   gather_facts: false
