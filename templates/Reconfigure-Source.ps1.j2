@@ -24,7 +24,7 @@ Write-Host "=== Processing database: {{ db }} ==="
 # -------------------------------
 # Restore database
 # -------------------------------
-$decrypted = C:\Install\ScriptHelper.exe DecryptAccessKey "D:\{{ db }}.reg"
+$decrypted = C:\Install\ScriptHelper.exe DecryptAccessKey "D:\RegFiles\{{ db }}.reg"
 
 $password = (($decrypted -split '`n' | where {$_ -like "Password*"}) -split ': ')[1]
 
