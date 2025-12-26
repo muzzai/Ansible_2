@@ -73,7 +73,9 @@ END
 Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
               -Credential $Cred `
               -Database master `
-              -Query $restoreSql
+              -Query $restoreSql `
+              -TrustServerCertificate `
+              -Timeout 0
 
 # -------------------------------
 # Create / update logins
@@ -105,7 +107,9 @@ GRANT VIEW SERVER STATE TO [{{ db }}Access];
 Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
               -Credential $Cred `
               -Database master `
-              -Query $loginSql
+              -Query $loginSql `
+              -TrustServerCertificate `
+              -Timeout 0
 
 # -------------------------------
 # Create database users + perms
@@ -130,7 +134,9 @@ DENY INSERT, UPDATE, DELETE TO [dbreader];
 Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
               -Credential $Cred `
               -Database "{{ db }}" `
-              -Query $userSql
+              -Query $userSql `
+              -TrustServerCertificate `
+              -Timeout 0
 
 {% endfor %}
 
@@ -139,7 +145,7 @@ reg import D:\RegFiles\an_service_connection.reg
 reg import D:\RegFiles\user_connection.reg
 
 {% if not ProductIsExpress%}
-reg import D:\RegFiles\AlloyDiscoevry.reg
+reg import D:\RegFiles\AlloyDiscovery.reg
 reg import D:\RegFiles\ad_service_connection.reg
 {% endif %}
 
