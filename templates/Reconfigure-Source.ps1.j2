@@ -120,7 +120,7 @@ Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
 
 {% endfor %}
 
-reg import D:\RegFiles\{{ db }}.reg
+reg import ("D:\RegFiles\" + $AN_SQLDatabase + ".reg")
 reg import D:\RegFiles\an_service_connection.reg
 reg import D:\RegFiles\user_connection.reg
 
