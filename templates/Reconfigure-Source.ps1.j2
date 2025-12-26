@@ -149,6 +149,19 @@ reg import D:\RegFiles\AlloyDiscovery.reg
 reg import D:\RegFiles\ad_service_connection.reg
 {% endif %}
 
+$AutomationServerReplacementQuery = @"
+BEGIN TRAN UPDATE Automation_Servers SET [Last_Response] = NULL DELETE Automation_Servers INSERT Automation_Servers ([Host_Name], [Primary]) VALUES (N'{{ computer_name | trim }}', 1) COMMIT TRAN
+"@
+
+Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
+              -Credential $Cred `
+              -Database $AN_SQLDatabase `
+              -Query $AutomationServerReplacementQuery `
+              -TrustServerCertificate `
+              -QueryTimeout 0
+
+Restart-Service AlloyAutomationServer
+
 Invoke-Command -ArgumentList ($AN_AccessKeyName, $SQLServerInstance, $AN_SQLDatabase)  {
   param($AN_AccessKeyName, $SQLServerInstance, $AN_SQLDatabase)
 
