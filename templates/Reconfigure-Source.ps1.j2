@@ -75,7 +75,7 @@ Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
               -Database master `
               -Query $restoreSql `
               -TrustServerCertificate `
-              -Timeout 0
+              -QueryTimeout 0
 
 # -------------------------------
 # Create / update logins
@@ -109,7 +109,7 @@ Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
               -Database master `
               -Query $loginSql `
               -TrustServerCertificate `
-              -Timeout 0
+              -QueryTimeout 0
 
 # -------------------------------
 # Create database users + perms
@@ -136,7 +136,7 @@ Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
               -Database "{{ db }}" `
               -Query $userSql `
               -TrustServerCertificate `
-              -Timeout 0
+              -QueryTimeout 0
 
 {% endfor %}
 

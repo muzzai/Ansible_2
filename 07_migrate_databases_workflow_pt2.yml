@@ -158,7 +158,7 @@
 
     - name: Change computer name
       ansible.windows.win_hostname:
-        name: "{{ computer_name }}"
+        name: "{{ computer_name | trim }}"
 
     - name: Reboot destination
       ansible.windows.win_reboot:
