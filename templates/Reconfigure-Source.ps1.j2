@@ -2,9 +2,9 @@
 #                  CONFIGURATION SECTION                       #
 ################################################################
 
-$AN_SQLDatabase      = "{{ AN_Database }}"
+$AN_SQLDatabase      = "{{ database_list | select('search', 'Navigator') | first }}"
 $SQLServerInstance   = "{{ new_hostname }},51967"
-$AN_AccessKeyName    = "{{ an_access_key_name }}"
+$AN_AccessKeyName    = "$SQLServerInstance : $AN_SQLDatabase"
 $SaUser              = "{{ dest_SaUserName }}"
 $SaPassword          = "{{ dest_SaPassword }}"
 
@@ -14,7 +14,6 @@ $SaPassword          = "{{ dest_SaPassword }}"
 ################################################################
 
 Import-Module SqlServer -ErrorAction Stop
-
 
 $SecurePass = ConvertTo-SecureString $SaPassword -AsPlainText -Force
 $Cred       = New-Object System.Management.Automation.PSCredential ($SaUser, $SecurePass)
@@ -121,7 +120,7 @@ Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
 
 {% endfor %}
 
-reg import D:\RegFiles\AlloyNavigator.reg
+reg import D:\RegFiles\{{ db }}.reg
 reg import D:\RegFiles\an_service_connection.reg
 reg import D:\RegFiles\user_connection.reg
 
