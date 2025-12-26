@@ -27,6 +27,10 @@
       ansible.builtin.debug:
         var: new_hostname
 
+    - name: Debug new hostname
+      ansible.builtin.debug:
+        var: database_list
+
     # - name: Bring disk online
     #   ansible.windows.win_shell: |
     #     $disk = Get-Disk -Number 1
