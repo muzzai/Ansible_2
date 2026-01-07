@@ -64,6 +64,7 @@
     mssql_backup_path: :\Backups
     reg_file_path: :\Regfiles
     AN_RegistryName: "{{ hostvars['localhost']['AN_RegistryName'] }}"
+    site_name: "{{ site_name | default('Default Web Site') }}"
   tasks:
     - name: Add Disk
       ansible.builtin.include_role:
@@ -102,11 +103,11 @@
             reg export $key.Name.Replace('HKEY_LOCAL_MACHINE', 'HKLM') $outputFile /y
           }
 
-    - name: Export Default Web Site bindings to JSON
+    - name: Export {{ site_name }} bindings to JSON
       ansible.windows.win_shell: |
         Import-Module WebAdministration
 
-        $siteName = 'Default Web Site'
+        $siteName = '{{ site_name }}'
 
         $bindings = Get-WebBinding -Name $siteName | ForEach-Object {
             [PSCustomObject]@{

@@ -26,8 +26,14 @@ if (-not (Get-Module -ListAvailable -Name SqlServer)) {
     Install-Module -Name SqlServer -Scope AllUsers -Force -AllowClobber
 }
 
+if (-not (Get-Module -ListAvailable -Name WebAdministration)) {
+    Install-Module -Name WebAdministration -Scope AllUsers -Force -AllowClobber
+}
+
 
 Import-Module SqlServer -ErrorAction Stop
+Import-Module WebAdministration -ErrorAction Stop
+
 
 $SecurePass = ConvertTo-SecureString $SaPassword -AsPlainText -Force
 $Cred       = New-Object System.Management.Automation.PSCredential ($SaUser, $SecurePass)
@@ -149,6 +155,26 @@ reg import D:\RegFiles\AlloyDiscovery.reg
 reg import D:\RegFiles\ad_service_connection.reg
 {% endif %}
 
+$rebuildFTSCatalogQuery = @"
+DECLARE @sql nvarchar(max) = N'';
+
+SELECT @sql +=
+    N'ALTER FULLTEXT CATALOG '
+    + c.name
+    + N' REBUILD'
+    + CHAR(13) + CHAR(10)
+FROM sys.fulltext_catalogs c
+
+EXEC sys.sp_executesql @sql;
+"@
+
+Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
+              -Credential $Cred `
+              -Database AN_SQLDatabase `
+              -Query $rebuildFTSCatalogQuery `
+              -TrustServerCertificate `
+              -QueryTimeout 0
+
 $AutomationServerReplacementQuery = @"
 BEGIN TRAN UPDATE Automation_Servers SET [Last_Response] = NULL DELETE Automation_Servers INSERT Automation_Servers ([Host_Name], [Primary]) VALUES (N'{{ computer_name | trim }}', 1) COMMIT TRAN
 "@
@@ -161,6 +187,70 @@ Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
               -QueryTimeout 0
 
 Restart-Service AlloyAutomationServer
+
+Import-Module WebAdministration
+
+$siteName = "Alloy Navigator Site"
+
+function Get-AlloyPortalIdFromWebConfig {
+    param (
+        [string]$WebConfigPath
+    )
+
+    try {
+        [xml]$xml = Get-Content $WebConfigPath -ErrorAction Stop
+
+        $node = $xml.configuration.appSettings.add |
+            Where-Object { $_.key -eq 'AlloyPortalID' }
+
+        return $node.value
+    }
+    catch {
+        return $null
+    }
+}
+
+$queriesToChangeIds = @{
+    "/" = "update cfgApiSettings set ID = '{0}' where [Name] != 'default' and ID = (select top 1 ID from cfgSSPSettings order by Last_Used_Date desc)"
+    "/wp" = "update cfgWebAppSettings set ID = '{0}'"
+    "/hd" = "update cfgApiSettings set ID = '{0}' where [Name] != 'default' and ID = (select top 1 ID from cfgSSPSettings order by Last_Used_Date desc)"
+    "/api" = "update cfgApiSettings set ID = '{0}'"
+}
+
+# Get applications + root
+$apps = Get-WebApplication -Site $siteName
+$site = Get-Website -Name $siteName
+
+$allApps = $apps + [PSCustomObject]@{
+    Path = "/"
+    PhysicalPath = $site.PhysicalPath
+} | ForEach-Object {
+
+    $resolvedPath = [Environment]::ExpandEnvironmentVariables($_.PhysicalPath)
+    $webConfigPath = Join-Path $resolvedPath "web.config"
+
+    if (Test-Path $webConfigPath) {
+
+        $portalId = Get-AlloyPortalIdFromWebConfig -WebConfigPath $webConfigPath
+        if ($null -ne $portalId) {
+
+        [PSCustomObject]@{
+            Application   = $_.Path
+            AlloyPortalID = $portalId
+        }
+        }
+    }
+}
+
+$allApps | % {
+  $portalQuery = ($queriesToChangeIds[$_.Application] -f $_.AlloyPortalID)
+  Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
+              -Credential $Cred `
+              -Database $AN_SQLDatabase `
+              -Query $portalQuery `
+              -TrustServerCertificate `
+              -QueryTimeout 0
+}
 
 Invoke-Command -ArgumentList ($AN_AccessKeyName, $SQLServerInstance, $AN_SQLDatabase)  {
   param($AN_AccessKeyName, $SQLServerInstance, $AN_SQLDatabase)

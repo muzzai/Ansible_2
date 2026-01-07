@@ -21,7 +21,7 @@
 
     - name: Return information about an existing website
       microsoft.iis.website_info:
-        name: 'Default Web Site'
+        name: 'site_name'
       register: stored_info
 
     # - name: Check if win-acme is already installed

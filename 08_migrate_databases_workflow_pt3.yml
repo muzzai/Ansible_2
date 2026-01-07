@@ -20,11 +20,11 @@
             https = 443
         }
 
-        Get-WebBinding -Name "Default Web Site" | Where-Object {
+        Get-WebBinding -Name "site_name" | Where-Object {
             $_.bindingInformation -like "*$oldHostname"
         } | ForEach-Object {
-            Remove-WebBinding -Name "Default Web Site" -BindingInformation $_.bindingInformation
-            New-WebBinding -Name "Default Web Site" -Protocol $_.protocol -Port $portsByProtocols[$_.protocol] -HostHeader $newHostname -IPAddress "*"
+            Remove-WebBinding -Name "site_name" -BindingInformation $_.bindingInformation
+            New-WebBinding -Name "site_name" -Protocol $_.protocol -Port $portsByProtocols[$_.protocol] -HostHeader $newHostname -IPAddress "*"
         }
       args:
         executable: powershell
