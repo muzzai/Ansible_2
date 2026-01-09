@@ -207,7 +207,7 @@ Restart-Service AlloyAutomationServer
 
 Import-Module WebAdministration
 
-$siteName = "Alloy Navigator Site"
+$siteName = "{{ site_name }}"
 
 function Get-AlloyPortalIdFromWebConfig {
     param (
