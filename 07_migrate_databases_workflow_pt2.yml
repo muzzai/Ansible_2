@@ -7,7 +7,7 @@
     is_initialized: true
     sql_s3_object: "ScriptHelper.exe"
     sql_s3_url_expiry: 3600
-    domain_name: "{{ domain_name | default('alloyservice.com')}}"
+    domain_name: "alloyservice.com"
     new_hostname: "{{
         (
           default_site_bindings
