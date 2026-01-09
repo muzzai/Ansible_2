@@ -15,11 +15,13 @@
         name: DefaultShell
         data: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
         type: string
+      ignore_errors: true
 
     - name: Restart SSH service
       ansible.windows.win_service:
         name: sshd
         state: restarted
+      ignore_errors: true
 
 - name: Adjust sshd_config
   hosts: aws_ec2
