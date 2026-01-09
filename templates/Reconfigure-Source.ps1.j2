@@ -170,7 +170,7 @@ EXEC sys.sp_executesql @sql;
 
 Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
               -Credential $Cred `
-              -Database AN_SQLDatabase `
+              -Database $AN_SQLDatabase `
               -Query $rebuildFTSCatalogQuery `
               -TrustServerCertificate `
               -QueryTimeout 0
