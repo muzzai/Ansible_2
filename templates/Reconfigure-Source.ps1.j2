@@ -2,7 +2,7 @@
 #                  CONFIGURATION SECTION                       #
 ################################################################
 
-$AN_SQLDatabase      = "{{ nav_db_name }}"
+$AN_SQLDatabase      = "{{ database_list | select('search', 'Navigator') | first }}"
 $SQLServerInstance   = "{{ new_hostname }},51967"
 $AN_AccessKeyName    = "$SQLServerInstance : $AN_SQLDatabase"
 $SaUser              = "{{ dest_SaUserName }}"
