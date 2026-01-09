@@ -2,7 +2,7 @@
 #                  CONFIGURATION SECTION                       #
 ################################################################
 
-$AN_SQLDatabase      = "{{ database_list | select('search', 'Navigator') | first }}"
+$AN_SQLDatabase      = "{{ nav_db_name }}"
 $SQLServerInstance   = "{{ new_hostname }},51967"
 $AN_AccessKeyName    = "$SQLServerInstance : $AN_SQLDatabase"
 $SaUser              = "{{ dest_SaUserName }}"
@@ -39,6 +39,7 @@ $SecurePass = ConvertTo-SecureString $SaPassword -AsPlainText -Force
 $Cred       = New-Object System.Management.Automation.PSCredential ($SaUser, $SecurePass)
 
 {% for db in database_list %}
+
 Write-Host "=== Dropping database: {{ db }} ==="
 $dbDropQuery = @"
 DROP DATABASE [{{db}}]
