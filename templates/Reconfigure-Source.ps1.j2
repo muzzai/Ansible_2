@@ -39,6 +39,23 @@ $SecurePass = ConvertTo-SecureString $SaPassword -AsPlainText -Force
 $Cred       = New-Object System.Management.Automation.PSCredential ($SaUser, $SecurePass)
 
 {% for db in database_list %}
+Write-Host "=== Dropping database: {{ db }} ==="
+$dbDropQuery = @"
+DROP DATABASE [{{db}}]
+"@
+
+Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
+              -Credential $Cred `
+              -Database master `
+              -Query $dbDropQuery `
+              -TrustServerCertificate `
+              -QueryTimeout 0
+
+
+{% endfor %}
+
+
+{% for db in database_list %}
 Write-Host "=== Processing database: {{ db }} ==="
 
 # -------------------------------
