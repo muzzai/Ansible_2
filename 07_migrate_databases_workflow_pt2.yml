@@ -7,11 +7,12 @@
     is_initialized: true
     sql_s3_object: "ScriptHelper.exe"
     sql_s3_url_expiry: 3600
+    domain_name: "{{ domain_name | default('alloyservice.com')}}"
     new_hostname: "{{
         (
           default_site_bindings
           | from_json
-          | selectattr('bindingInformation', 'search', 'alloysoftware\\.us')
+          | selectattr('bindingInformation', 'search', domain_name)
           | map(attribute='bindingInformation')
           | map('regex_replace', '^.*:', '')
           | first
