@@ -145,18 +145,6 @@
         path: C:\Migration-script
         state: directory
 
-    - name: Debug database_list
-      ansible.builtin.debug:
-        var: database_list
-
-    - name: Try to get Navigator db name
-      ansible.builtin.set_fact:
-        nav_db_name: "{{ database_list | select('search', 'Navigator') | first }}"
-
-    - name: Debug nav_db_name
-      ansible.builtin.debug:
-        var: nav_db_name
-
     - name: Generate script
       ansible.windows.win_template:
         src: templates/Reconfigure-Source.ps1.j2
