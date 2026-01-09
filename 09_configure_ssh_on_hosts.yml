@@ -16,14 +16,21 @@
         data: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
         type: string
 
-- name: Adjust sshd_config
-  hosts: aws_ec2
-  gather_facts: false
-  tasks:
     - name: Restart SSH service
       ansible.windows.win_service:
         name: sshd
         state: restarted
+
+- name: Adjust sshd_config
+  hosts: aws_ec2
+  gather_facts: false
+  vars:
+    ansible_user: Administrator
+    ansible_connection: ssh
+    ansible_shell_type: powershell
+    ansible_ssh_transfer_method: scp
+    ansible_shell_executable: powershell.exe
+  tasks:
 
     - name: Remove chroot for all users
       community.windows.win_lineinfile:
