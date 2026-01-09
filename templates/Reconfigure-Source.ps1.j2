@@ -42,6 +42,7 @@ $Cred       = New-Object System.Management.Automation.PSCredential ($SaUser, $Se
 
 Write-Host "=== Dropping database: {{ db }} ==="
 $dbDropQuery = @"
+alter database [{{db}}] set single_user with rollback immediate
 DROP DATABASE [{{db}}]
 "@
 
