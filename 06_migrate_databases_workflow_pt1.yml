@@ -27,104 +27,104 @@
           - "{{ AN_Database }}"
           - "{{ AD_Database }}"
 
-    - name: Get device name
-      ansible.builtin.set_fact:
-          new_volume_device_name: >-
-            {{
-            (
-              ['f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
-              | map('regex_replace', '(.)', '/dev/sd\1')
-              | list
-              | difference(
-                  hostvars[dest].block_device_mappings
-                    | map(attribute='device_name')
-                    | list
-                )
-              )[0]
-            }}
+    # - name: Get device name
+    #   ansible.builtin.set_fact:
+    #       new_volume_device_name: >-
+    #         {{
+    #         (
+    #           ['f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+    #           | map('regex_replace', '(.)', '/dev/sd\1')
+    #           | list
+    #           | difference(
+    #               hostvars[dest].block_device_mappings
+    #                 | map(attribute='device_name')
+    #                 | list
+    #             )
+    #           )[0]
+    #         }}
 
-    - name: Attach new volume to source
-      amazon.aws.ec2_vol:
-        device_name: "{{ new_volume_device_name }}"
-        instance: "{{ hostvars[source]['instance_id'] }}"
-        region: "{{ hostvars[source]['placement']['region'] }}"
-        state: present
-        volume_size: "{{ volume_size }}"
-        volume_type: gp2
-        resource_tags:
-          Name: "{{ prefix }}-migration_volume"
-      register: volume_for_backups
+    # - name: Attach new volume to source
+    #   amazon.aws.ec2_vol:
+    #     device_name: "{{ new_volume_device_name }}"
+    #     instance: "{{ hostvars[source]['instance_id'] }}"
+    #     region: "{{ hostvars[source]['placement']['region'] }}"
+    #     state: present
+    #     volume_size: "{{ volume_size }}"
+    #     volume_type: gp2
+    #     resource_tags:
+    #       Name: "{{ prefix }}-migration_volume"
+    #   register: volume_for_backups
 
-- name: Prepare disk and backup registry
-  gather_facts: false
-  hosts: "{{ source }}"
-  vars:
-    is_initialized: false
-    source: "{{ source | default('skip') }}"
-    mssql_backup_path: :\Backups
-    reg_file_path: :\Regfiles
-    AN_RegistryName: "{{ hostvars['localhost']['AN_RegistryName'] }}"
-    site_name: "{{ site_name | default('Default Web Site') }}"
-  tasks:
-    - name: Add Disk
-      ansible.builtin.include_role:
-        name: prepare_disk
+# - name: Prepare disk and backup registry
+#   gather_facts: false
+#   hosts: "{{ source }}"
+#   vars:
+#     is_initialized: false
+#     source: "{{ source | default('skip') }}"
+#     mssql_backup_path: :\Backups
+#     reg_file_path: :\Regfiles
+#     AN_RegistryName: "{{ hostvars['localhost']['AN_RegistryName'] }}"
+#     site_name: "{{ site_name | default('Default Web Site') }}"
+#   tasks:
+#     - name: Add Disk
+#       ansible.builtin.include_role:
+#         name: prepare_disk
 
-    - name: Set backup path
-      ansible.builtin.set_fact:
-        source_mssql_backup_path: "{{ next_drive_letter }}{{ mssql_backup_path }}"
-        source_reg_file_path: "{{ next_drive_letter }}{{ reg_file_path }}"
+#     - name: Set backup path
+#       ansible.builtin.set_fact:
+#         source_mssql_backup_path: "{{ next_drive_letter }}{{ mssql_backup_path }}"
+#         source_reg_file_path: "{{ next_drive_letter }}{{ reg_file_path }}"
 
-    - name: Create Migration folder
-      ansible.windows.win_file:
-        path: "{{ item }}"
-        state: directory
-      loop:
-        - "{{ source_mssql_backup_path }}"
-        - "{{ source_reg_file_path }}"
+#     - name: Create Migration folder
+#       ansible.windows.win_file:
+#         path: "{{ item }}"
+#         state: directory
+#       loop:
+#         - "{{ source_mssql_backup_path }}"
+#         - "{{ source_reg_file_path }}"
 
-    - name: Export Registry Keys
-      ansible.windows.win_shell: |
-        $outputDir = "{{ source_reg_file_path }}"
-        reg export "HKCU\Software\Alloy Software\{{ AN_RegistryName }}\Connections" `
-            "$outputDir\user_connection.reg" /y
-        reg export "HKLM\SOFTWARE\Alloy Software\{{ AN_RegistryName }}\Service Connection" `
-            "$outputDir\an_service_connection.reg" /y
-        {% if not ProductIsExpress %}
-        reg export "HKLM\SOFTWARE\Alloy Software\Alloy Discovery\Service Connection" `
-            "$outputDir\ad_service_connection.reg" /y
-        {% endif %}
-        $AccessKeysRootPath = "HKLM:\SOFTWARE\Alloy Software\Access Keys"
-        $subKeys = Get-ChildItem -Path $AccessKeysRootPath
-        foreach ($key in $subKeys) {
-            $keyName = Split-Path $key.PSPath -Leaf
-            $fileName = (($keyName -split ':') | % {$_.trim() })[1]
-            $outputFile = Join-Path $outputDir "$fileName.reg"
-            reg export $key.Name.Replace('HKEY_LOCAL_MACHINE', 'HKLM') $outputFile /y
-          }
+#     - name: Export Registry Keys
+#       ansible.windows.win_shell: |
+#         $outputDir = "{{ source_reg_file_path }}"
+#         reg export "HKCU\Software\Alloy Software\{{ AN_RegistryName }}\Connections" `
+#             "$outputDir\user_connection.reg" /y
+#         reg export "HKLM\SOFTWARE\Alloy Software\{{ AN_RegistryName }}\Service Connection" `
+#             "$outputDir\an_service_connection.reg" /y
+#         {% if not ProductIsExpress %}
+#         reg export "HKLM\SOFTWARE\Alloy Software\Alloy Discovery\Service Connection" `
+#             "$outputDir\ad_service_connection.reg" /y
+#         {% endif %}
+#         $AccessKeysRootPath = "HKLM:\SOFTWARE\Alloy Software\Access Keys"
+#         $subKeys = Get-ChildItem -Path $AccessKeysRootPath
+#         foreach ($key in $subKeys) {
+#             $keyName = Split-Path $key.PSPath -Leaf
+#             $fileName = (($keyName -split ':') | % {$_.trim() })[1]
+#             $outputFile = Join-Path $outputDir "$fileName.reg"
+#             reg export $key.Name.Replace('HKEY_LOCAL_MACHINE', 'HKLM') $outputFile /y
+#           }
 
-    - name: Export {{ site_name }} bindings to JSON
-      ansible.windows.win_shell: |
-        Import-Module WebAdministration
+#     - name: Export {{ site_name }} bindings to JSON
+#       ansible.windows.win_shell: |
+#         Import-Module WebAdministration
 
-        $siteName = '{{ site_name }}'
+#         $siteName = '{{ site_name }}'
 
-        $bindings = Get-WebBinding -Name $siteName | ForEach-Object {
-            [PSCustomObject]@{
-                protocol = $_.protocol
-                bindingInformation = $_.bindingInformation
-            }
-        }
+#         $bindings = Get-WebBinding -Name $siteName | ForEach-Object {
+#             [PSCustomObject]@{
+#                 protocol = $_.protocol
+#                 bindingInformation = $_.bindingInformation
+#             }
+#         }
 
-        $bindings | ConvertTo-Json -Depth 3 -Compress
-      register: default_site_bindings
+#         $bindings | ConvertTo-Json -Depth 3 -Compress
+#       register: default_site_bindings
 
 - name: Create backups
   hosts: localhost
   vars:
     region: "{{ hostvars[dest]['placement']['region'] }}"
-    volume_id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
-    default_site_bindings: "{{ hostvars[source]['default_site_bindings']['stdout'] }}"
+    # volume_id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+    # default_site_bindings: "{{ hostvars[source]['default_site_bindings']['stdout'] }}"
     mssql_backup_path: :\Backups
   tasks:
 
@@ -243,6 +243,6 @@
       ansible.builtin.set_stats:
         data:
           database_list: "{{ hostvars['localhost']['database_list'] }}"
-          volume_id: "{{ volume_id}}"
-          default_site_bindings: "{{ default_site_bindings }}"
+          volume_id: "{{ volume_id }}"
           mssql_backup_path: "{{ mssql_backup_path }}"
+          default_site_bindings: "{{ default_site_bindings }}"
