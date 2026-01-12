@@ -17,7 +17,6 @@
           | first
         )
       }}"
-"[{\"protocol\":\"http\",\"bindingInformation\":\"*:80:\"},{\"protocol\":\"http\",\"bindingInformation\":\"*:80:an-migration-test-1.alloyservice.com\"},{\"protocol\":\"https\",\"bindingInformation\":\"*:443:an-migration-test-1.alloyservice.com\"}]"
 
   tasks:
     - name: Add Disk To Destination
