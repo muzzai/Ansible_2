@@ -140,7 +140,7 @@
           ALTER DATABASE [{{ item }}]
           SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 
-          DECLARE @BackupPath NVARCHAR(500) = N'{{ hostvars[source]['source_mssql_backup_path'] }}\{{ item }}.bak'
+          DECLARE @BackupPath NVARCHAR(500) = N'D\{{ item }}.bak'
 
           BACKUP DATABASE [{{ item }}]
           TO DISK = @BackupPath
