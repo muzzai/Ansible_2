@@ -27,21 +27,21 @@
           - "{{ AN_Database }}"
           - "{{ AD_Database }}"
 
-    # - name: Get device name
-    #   ansible.builtin.set_fact:
-    #       new_volume_device_name: >-
-    #         {{
-    #         (
-    #           ['f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
-    #           | map('regex_replace', '(.)', '/dev/sd\1')
-    #           | list
-    #           | difference(
-    #               hostvars[dest].block_device_mappings
-    #                 | map(attribute='device_name')
-    #                 | list
-    #             )
-    #           )[0]
-    #         }}
+    - name: Get device name
+      ansible.builtin.set_fact:
+          new_volume_device_name: >-
+            {{
+            (
+              ['f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+              | map('regex_replace', '(.)', '/dev/sd\1')
+              | list
+              | difference(
+                  hostvars[dest].block_device_mappings
+                    | map(attribute='device_name')
+                    | list
+                )
+              )[0]
+            }}
 
     # - name: Attach new volume to source
     #   amazon.aws.ec2_vol:
@@ -119,62 +119,62 @@
 #         $bindings | ConvertTo-Json -Depth 3 -Compress
 #       register: default_site_bindings
 
-- name: Create backups
-  hosts: localhost
-  vars:
-    region: "{{ hostvars[dest]['placement']['region'] }}"
-    # volume_id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
-    # default_site_bindings: "{{ hostvars[source]['default_site_bindings']['stdout'] }}"
-    mssql_backup_path: D:\Backups
-  tasks:
+# - name: Create backups
+#   hosts: localhost
+#   vars:
+#     region: "{{ hostvars[dest]['placement']['region'] }}"
+#     # volume_id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
+#     # default_site_bindings: "{{ hostvars[source]['default_site_bindings']['stdout'] }}"
+#     mssql_backup_path: D:\Backups
+#   tasks:
 
-    - name: Create database backups on Windows
-      community.general.mssql_script:
-        login_host: "{{ hostvars[source]['ansible_host'] }}"
-        login_user: "{{ source_SaUserName }}"
-        login_password: "{{ source_SaPassword }}"
-        login_port: 51967
-        name: master
-        script: |
-          ALTER DATABASE [{{ item }}] SET ONLINE;
-          ALTER DATABASE [{{ item }}]
-          SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+#     - name: Create database backups on Windows
+#       community.general.mssql_script:
+#         login_host: "{{ hostvars[source]['ansible_host'] }}"
+#         login_user: "{{ source_SaUserName }}"
+#         login_password: "{{ source_SaPassword }}"
+#         login_port: 51967
+#         name: master
+#         script: |
+#           ALTER DATABASE [{{ item }}] SET ONLINE;
+#           ALTER DATABASE [{{ item }}]
+#           SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 
-          DECLARE @BackupPath NVARCHAR(500) = N'D:\Backups\{{ item }}.bak'
+#           DECLARE @BackupPath NVARCHAR(500) = N'D:\Backups\{{ item }}.bak'
 
-          BACKUP DATABASE [{{ item }}]
-          TO DISK = @BackupPath
-          WITH FORMAT,
-                MEDIANAME = '{{ item }}_Backup',
-                NAME = 'Full Backup of {{ item }}';
+#           BACKUP DATABASE [{{ item }}]
+#           TO DISK = @BackupPath
+#           WITH FORMAT,
+#                 MEDIANAME = '{{ item }}_Backup',
+#                 NAME = 'Full Backup of {{ item }}';
 
-          PRINT 'Backup created successfully: ' + @BackupPath
+#           PRINT 'Backup created successfully: ' + @BackupPath
 
-          --ALTER DATABASE [{{ item }}] SET OFFLINE;
-      loop: "{{ database_list }}"
-      register: backup_result
+#           --ALTER DATABASE [{{ item }}] SET OFFLINE;
+#       loop: "{{ database_list }}"
+#       register: backup_result
 
-    - name: Show backup results
-      ansible.builtin.debug:
-        var: backup_result.results
+#     - name: Show backup results
+#       ansible.builtin.debug:
+#         var: backup_result.results
 
-    - name: Detach volume from the source
-      amazon.aws.ec2_vol:
-        id: "{{ volume_id}}"
-        instance: "None"
-        region: "{{ region }}"
-        modify_volume: true
+#     - name: Detach volume from the source
+#       amazon.aws.ec2_vol:
+#         id: "{{ volume_id}}"
+#         instance: "None"
+#         region: "{{ region }}"
+#         modify_volume: true
 
-    - name: Wait for volume to be available
-      amazon.aws.ec2_vol_info:
-        filters:
-          volume-id: "{{ volume_id}}"
-          status: "available"
-        region: "{{ region }}"
-      register: result
-      until: result | length > 0
-      retries: 5
-      delay: 10
+#     - name: Wait for volume to be available
+#       amazon.aws.ec2_vol_info:
+#         filters:
+#           volume-id: "{{ volume_id}}"
+#           status: "available"
+#         region: "{{ region }}"
+#       register: result
+#       until: result | length > 0
+#       retries: 5
+#       delay: 10
 
     - name: Attach new volume to dest
       amazon.aws.ec2_vol:
@@ -244,5 +244,5 @@
         data:
           database_list: "{{ hostvars['localhost']['database_list'] }}"
           volume_id: "{{ volume_id }}"
-          mssql_backup_path: "{{ mssql_backup_path }}"
+          mssql_backup_path: "D:\Backups"
           default_site_bindings: "{{ default_site_bindings }}"
