@@ -125,7 +125,7 @@
     region: "{{ hostvars[dest]['placement']['region'] }}"
     # volume_id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
     # default_site_bindings: "{{ hostvars[source]['default_site_bindings']['stdout'] }}"
-    mssql_backup_path: :\Backups
+    mssql_backup_path: D:\Backups
   tasks:
 
     - name: Create database backups on Windows
@@ -140,7 +140,7 @@
           ALTER DATABASE [{{ item }}]
           SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 
-          DECLARE @BackupPath NVARCHAR(500) = N'D\{{ item }}.bak'
+          DECLARE @BackupPath NVARCHAR(500) = N'D:\Backups\{{ item }}.bak'
 
           BACKUP DATABASE [{{ item }}]
           TO DISK = @BackupPath
