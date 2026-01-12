@@ -119,11 +119,6 @@
         $bindings | ConvertTo-Json -Depth 3 -Compress
       register: default_site_bindings
 
-    - name: Export Computer Name
-      ansible.windows.win_shell:
-        $env:COMPUTERNAME
-      register: computer_name
-
 - name: Create backups
   hosts: localhost
   vars:
@@ -132,10 +127,6 @@
     default_site_bindings: "{{ hostvars[source]['default_site_bindings']['stdout'] }}"
     mssql_backup_path: :\Backups
   tasks:
-
-    - name: Debug hostvars
-      ansible.builtin.debug:
-        var: hostvars[source]
 
     - name: Create database backups on Windows
       community.general.mssql_script:
@@ -203,50 +194,50 @@
       retries: 5
       delay: 10
 
-    - name: Extract IP address from record
-      ansible.builtin.set_fact:
-        record_ip: "{{ hostvars[source]['ansible_host'] }}"
+    # - name: Extract IP address from record
+    #   ansible.builtin.set_fact:
+    #     record_ip: "{{ hostvars[source]['ansible_host'] }}"
 
-    - name: Get EIP allocation ID by IP address
-      amazon.aws.ec2_eip_info:
-        region: "{{ region }}"
-        filters:
-          "public-ip": "{{ record_ip }}"
-      register: eip_info
+    # - name: Get EIP allocation ID by IP address
+    #   amazon.aws.ec2_eip_info:
+    #     region: "{{ region }}"
+    #     filters:
+    #       "public-ip": "{{ record_ip }}"
+    #   register: eip_info
 
-    - name: Release current association
-      amazon.aws.ec2_eip:
-        region: "{{ region }}"
-        device_id: "{{ hostvars[source]['instance_id'] }}"
-        ip: "{{ record_ip }}"
-        state: absent
-      register: release_result
+    # - name: Release current association
+    #   amazon.aws.ec2_eip:
+    #     region: "{{ region }}"
+    #     device_id: "{{ hostvars[source]['instance_id'] }}"
+    #     ip: "{{ record_ip }}"
+    #     state: absent
+    #   register: release_result
 
-    - name: Associate to new instance
-      amazon.aws.ec2_eip:
-        region: "{{ region }}"
-        device_id: "{{ hostvars[dest]['instance_id'] }}"
-        ip: "{{ record_ip }}"
-        state: present
-      register: association_result
+    # - name: Associate to new instance
+    #   amazon.aws.ec2_eip:
+    #     region: "{{ region }}"
+    #     device_id: "{{ hostvars[dest]['instance_id'] }}"
+    #     ip: "{{ record_ip }}"
+    #     state: present
+    #   register: association_result
 
-    - name: Verify association
-      amazon.aws.ec2_eip_info:
-        region: "{{ region }}"
-        filters:
-          "public-ip": "{{ record_ip }}"
-      register: verification
-      until: verification.addresses[0].instance_id == hostvars[dest]['instance_id']
-      retries: 5
-      delay: 5
+    # - name: Verify association
+    #   amazon.aws.ec2_eip_info:
+    #     region: "{{ region }}"
+    #     filters:
+    #       "public-ip": "{{ record_ip }}"
+    #   register: verification
+    #   until: verification.addresses[0].instance_id == hostvars[dest]['instance_id']
+    #   retries: 5
+    #   delay: 5
 
-    - name: Stop source
-      amazon.aws.ec2_instance:
-        instance_ids:
-          - "{{ hostvars[source]['instance_id'] }}"
-        region: "{{ hostvars[source]['placement']['region'] }}"
-        state: stopped
-        wait: true
+    # - name: Stop source
+    #   amazon.aws.ec2_instance:
+    #     instance_ids:
+    #       - "{{ hostvars[source]['instance_id'] }}"
+    #     region: "{{ hostvars[source]['placement']['region'] }}"
+    #     state: stopped
+    #     wait: true
 
     - name: Set stats for later
       ansible.builtin.set_stats:
@@ -254,5 +245,4 @@
           database_list: "{{ hostvars['localhost']['database_list'] }}"
           volume_id: "{{ volume_id}}"
           default_site_bindings: "{{ default_site_bindings }}"
-          computer_name: "{{ hostvars[source]['computer_name']['stdout'] }}"
           mssql_backup_path: "{{ mssql_backup_path }}"
