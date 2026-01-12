@@ -244,5 +244,5 @@
         data:
           database_list: "{{ hostvars['localhost']['database_list'] }}"
           volume_id: "{{ volume_id }}"
-          mssql_backup_path: "D:\Backups"
+          mssql_backup_path: D:\Backups
           default_site_bindings: "{{ default_site_bindings }}"
