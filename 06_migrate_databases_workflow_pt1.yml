@@ -55,6 +55,11 @@
           Name: "{{ prefix }}-migration_volume"
       register: volume_for_backups
 
+    - name: Set stats for later
+      ansible.builtin.set_stats:
+        data:
+          volume_id: "{{ volume_for_backups['volume']['id'] }}"
+
 - name: Prepare disk and backup registry
   gather_facts: false
   hosts: "{{ source }}"
@@ -136,7 +141,6 @@
       ansible.builtin.set_stats:
         data:
           database_list: "{{ hostvars['localhost']['database_list'] }}"
-          volume_id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
           region: "{{ hostvars[source]['placement']['region'] }}"
           mssql_backup_path: "{{ hostvars[source]['source_mssql_backup_path'] }}"
           default_site_bindings: "{{ default_site_bindings.stdout }}"
