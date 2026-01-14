@@ -63,6 +63,7 @@
     source: "{{ source | default('skip') }}"
     mssql_backup_path: :\Backups
     reg_file_path: :\Regfiles
+    downloads_path: :\Downloads
     AN_RegistryName: "{{ hostvars['localhost']['AN_RegistryName'] }}"
     site_name: "{{ site_name | default('Default Web Site') }}"
   tasks:
@@ -74,6 +75,7 @@
       ansible.builtin.set_fact:
         source_mssql_backup_path: "{{ next_drive_letter }}{{ mssql_backup_path }}"
         source_reg_file_path: "{{ next_drive_letter }}{{ reg_file_path }}"
+        source_downloads_path: "{{ next_drive_letter }}{{ downloads_path }}"
 
     - name: Create Migration folder
       ansible.windows.win_file:
@@ -82,6 +84,7 @@
       loop:
         - "{{ source_mssql_backup_path }}"
         - "{{ source_reg_file_path }}"
+
 
     - name: Export Registry Keys
       ansible.windows.win_shell: |
@@ -118,6 +121,17 @@
 
         $bindings | ConvertTo-Json -Depth 3 -Compress
       register: default_site_bindings
+
+    - name: Copy folder only if destination is missing
+      ansible.windows.win_shell: |
+        $src = 'C:\ProgramData\Alloy Software\Downloads'
+        $dst = '{{ source_downloads_path }}'
+
+        if (-not (Test-Path $dst)) {
+            Copy-Item -Path $src -Destination $dst -Recurse -Force
+            Write-Output "CHANGED"
+        }
+
 
 - name: Create backups
   hosts: localhost
@@ -196,55 +210,55 @@
       retries: 5
       delay: 10
 
-    - name: Extract IP address from record
-      ansible.builtin.set_fact:
-        record_ip: "{{ hostvars[source]['ansible_host'] }}"
+    # - name: Extract IP address from record
+    #   ansible.builtin.set_fact:
+    #     record_ip: "{{ hostvars[source]['ansible_host'] }}"
 
-    - name: Get EIP allocation ID by IP address
-      amazon.aws.ec2_eip_info:
-        region: "{{ region }}"
-        filters:
-          "public-ip": "{{ record_ip }}"
-      register: eip_info
+    # - name: Get EIP allocation ID by IP address
+    #   amazon.aws.ec2_eip_info:
+    #     region: "{{ region }}"
+    #     filters:
+    #       "public-ip": "{{ record_ip }}"
+    #   register: eip_info
 
-    - name: Release current association
-      amazon.aws.ec2_eip:
-        region: "{{ region }}"
-        device_id: "{{ hostvars[source]['instance_id'] }}"
-        ip: "{{ record_ip }}"
-        state: absent
-      register: release_result
+    # - name: Release current association
+    #   amazon.aws.ec2_eip:
+    #     region: "{{ region }}"
+    #     device_id: "{{ hostvars[source]['instance_id'] }}"
+    #     ip: "{{ record_ip }}"
+    #     state: absent
+    #   register: release_result
 
-    - name: Associate to new instance
-      amazon.aws.ec2_eip:
-        region: "{{ region }}"
-        device_id: "{{ hostvars[dest]['instance_id'] }}"
-        ip: "{{ record_ip }}"
-        state: present
-      register: association_result
+    # - name: Associate to new instance
+    #   amazon.aws.ec2_eip:
+    #     region: "{{ region }}"
+    #     device_id: "{{ hostvars[dest]['instance_id'] }}"
+    #     ip: "{{ record_ip }}"
+    #     state: present
+    #   register: association_result
 
-    - name: Verify association
-      amazon.aws.ec2_eip_info:
-        region: "{{ region }}"
-        filters:
-          "public-ip": "{{ record_ip }}"
-      register: verification
-      until: verification.addresses[0].instance_id == hostvars[dest]['instance_id']
-      retries: 5
-      delay: 5
+    # - name: Verify association
+    #   amazon.aws.ec2_eip_info:
+    #     region: "{{ region }}"
+    #     filters:
+    #       "public-ip": "{{ record_ip }}"
+    #   register: verification
+    #   until: verification.addresses[0].instance_id == hostvars[dest]['instance_id']
+    #   retries: 5
+    #   delay: 5
 
-    - name: Stop source
-      amazon.aws.ec2_instance:
-        instance_ids:
-          - "{{ hostvars[source]['instance_id'] }}"
-        region: "{{ hostvars[source]['placement']['region'] }}"
-        state: stopped
-        wait: true
+    # - name: Stop source
+    #   amazon.aws.ec2_instance:
+    #     instance_ids:
+    #       - "{{ hostvars[source]['instance_id'] }}"
+    #     region: "{{ hostvars[source]['placement']['region'] }}"
+    #     state: stopped
+    #     wait: true
 
     - name: Set stats for later
       ansible.builtin.set_stats:
         data:
           database_list: "{{ hostvars['localhost']['database_list'] }}"
           volume_id: "{{ volume_id }}"
-          mssql_backup_path: "{{ source_mssql_backup_path }}"
-          default_site_bindings: "{{ default_site_bindings }}"
+          mssql_backup_path: "{{ hostvars[source]['source_mssql_backup_path'] }}"
+          default_site_bindings: "{{ hostvars[source]['default_site_bindings'] }}"
