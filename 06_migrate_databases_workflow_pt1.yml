@@ -120,7 +120,7 @@
         }
 
         $bindings | ConvertTo-Json -Depth 3 -Compress
-      register:
+      register: default_site_bindings
 
     - name: Copy folder only if destination is missing
       ansible.windows.win_shell: |
