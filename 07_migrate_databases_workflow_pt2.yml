@@ -32,6 +32,11 @@
         $env:COMPUTERNAME
       register: computer_name
 
+    - name: Show target computer name
+      ansible.builtin.debug:
+        var: computer_name
+
+
     - name: Bring disk online
       ansible.windows.win_shell: |
         $disk = Get-Disk -Number 1
@@ -170,6 +175,13 @@
         & C:\Migration-script\Reconfigure-Source.ps1
       args:
         executable: powershell.exe
+
+    - name: Mirror D:\Downloads to ProgramData Alloy Downloads
+      ansible.windows.win_shell: >
+        robocopy "D:\Downloads" "C:\ProgramData\Alloy Software\Downloads"
+        /MIR /R:1 /W:1 /NFL /NDL
+      register: robocopy_result
+      changed_when: robocopy_result.rc in [1,2,3]
 
     - name: Reboot destination
       ansible.windows.win_reboot:
