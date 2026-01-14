@@ -27,9 +27,10 @@
       ansible.builtin.debug:
         var: new_hostname
 
-    - name: Debug new hostname
-      ansible.builtin.debug:
-        var: database_list
+    - name: Get target computer name
+      ansible.windows.win_shell:
+        $env:COMPUTERNAME
+      register: computer_name
 
     - name: Bring disk online
       ansible.windows.win_shell: |
@@ -61,9 +62,17 @@
 
     - name: Add new hostname to hosts
       community.windows.win_lineinfile:
-        path: C:\ProgramData\ssh\sshd_config
+        path: C:\Windows\System32\etc\drivers\etc\hosts
         line: "127.0.0.1 {{ new_hostname }}"
 
+    - name: Remove all subkeys under Alloy Software Access Keys
+      ansible.windows.win_shell: |
+        $baseKey = 'HKLM:\SOFTWARE\Alloy Software\Access Keys'
+        if (Test-Path $baseKey) {
+            Get-ChildItem -Path $baseKey | ForEach-Object {
+                Remove-Item -Path $_.PsPath -Recurse -Force
+            }
+        }
 
     - name: Remove all bindings from Default Web Site
       ansible.windows.win_shell: |
@@ -176,18 +185,3 @@
         id: "{{ volume_id }}"
         state: absent
         region: "{{ region }}"
-
-#TODO:
-#-------SQL side-------------------------------------------
-#DONE Perform Rebuild all for Navigator
-# Clean up all script folders (Commented)
-#-------BEFORE STARTING ANY WEB APP------------------------
-#DONE Replace IDs for wp and API from Web.Config in cfgWebAppSettings
-#DONE Update SSP portal IDs
-#DONE SSP might not be in the root of the Site
-
-
-
-
-#TODO
-#review variables names and Adjust if needed
