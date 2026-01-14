@@ -138,7 +138,6 @@
   vars:
     region: "{{ hostvars[dest]['placement']['region'] }}"
     volume_id: "{{ hostvars['localhost']['volume_for_backups']['volume']['id'] }}"
-    default_site_bindings: "{{ hostvars[source]['default_site_bindings']['stdout'] }}"
     mssql_backup_path: "{{ hostvars[source]['source_mssql_backup_path'] }}"
   tasks:
 
@@ -261,4 +260,4 @@
           database_list: "{{ hostvars['localhost']['database_list'] }}"
           volume_id: "{{ volume_id }}"
           mssql_backup_path: "{{ hostvars[source]['source_mssql_backup_path'] }}"
-          default_site_bindings: "{{ hostvars[source]['default_site_bindings'] }}"
+          default_site_bindings: "{{ hostvars[source]['default_site_bindings']['stdout'] }}"
