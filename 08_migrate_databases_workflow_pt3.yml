@@ -12,6 +12,9 @@
 - name: Reboot hosts
   gather_facts: false
   hosts: "{{ source }}, {{ dest }}"
+  vars:
+    dest: "{{ dest | default('skip') }}"
+    source: "{{ source | default('skip') }}"
   tasks:
     - name: Reboot hosts
       ansible.windows.win_reboot:
