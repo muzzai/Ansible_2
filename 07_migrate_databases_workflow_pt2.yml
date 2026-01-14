@@ -62,7 +62,7 @@
 
     - name: Add new hostname to hosts
       community.windows.win_lineinfile:
-        path: C:\Windows\System32\etc\drivers\etc\hosts
+        path: C:\Windows\System32\drivers\etc\hosts
         line: "127.0.0.1 {{ new_hostname }}"
 
     - name: Remove all subkeys under Alloy Software Access Keys
