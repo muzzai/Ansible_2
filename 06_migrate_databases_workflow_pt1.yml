@@ -120,7 +120,7 @@
         }
 
         $bindings | ConvertTo-Json -Depth 3 -Compress
-      register: default_site_bindings
+      register:
 
     - name: Copy folder only if destination is missing
       ansible.windows.win_shell: |
@@ -132,6 +132,13 @@
             Write-Output "CHANGED"
         }
 
+    - name: Set stats for later
+      ansible.builtin.set_stats:
+        data:
+          database_list: "{{ hostvars['localhost']['database_list'] }}"
+          volume_id: "{{ volume_id }}"
+          mssql_backup_path: "{{ hostvars[source]['source_mssql_backup_path'] }}"
+          default_site_bindings: "{{ default_site_bindings.stdout }}"
 
 - name: Create backups
   hosts: localhost
@@ -254,10 +261,3 @@
     #     state: stopped
     #     wait: true
 
-    - name: Set stats for later
-      ansible.builtin.set_stats:
-        data:
-          database_list: "{{ hostvars['localhost']['database_list'] }}"
-          volume_id: "{{ volume_id }}"
-          mssql_backup_path: "{{ hostvars[source]['source_mssql_backup_path'] }}"
-          default_site_bindings: "{{ hostvars[source]['default_site_bindings']['stdout'] }}"
