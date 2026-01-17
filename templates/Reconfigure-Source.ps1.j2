@@ -63,10 +63,6 @@ Write-Host "=== Processing database: {{ db }} ==="
 # -------------------------------
 # Restore database
 # -------------------------------
-$decrypted = C:\Install\ScriptHelper.exe DecryptAccessKey "D:\RegFiles\{{ db }}.reg"
-
-$password = (($decrypted -split '`n' | where {$_ -like "Password*"}) -split 'Password: ')[1]
-
 $restoreSql = @"
 DECLARE @DataPath NVARCHAR(260);
 DECLARE @LogPath  NVARCHAR(260);
@@ -105,6 +101,17 @@ Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
 # -------------------------------
 # Create / update logins
 # -------------------------------
+Write-Host "Creating/Updating logins for {{ db }}"
+
+$decrypted = C:\Install\ScriptHelper.exe DecryptAccessKey "D:\RegFiles\{{ db }}.reg"
+
+$password = (($decrypted -split '`n' | where {$_ -like "Password*"}) -split 'Password: ')[1]
+$login = (($decrypted -split '`n' | where {$_ -like "Login*"}) -split 'Login: ')[1]
+
+
+Write-Host "Login from key is: $login"
+Write-Host "Password from key is $password"
+
 $loginSql = @"
 IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = 'dbreader')
     CREATE LOGIN [dbreader]
@@ -115,19 +122,22 @@ ELSE
 
 GRANT CONNECT SQL TO [dbreader];
 
-IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = '{{ db }}Access')
-    CREATE LOGIN [{{ db }}Access]
+IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = '$loginSql')
+    CREATE LOGIN [$loginSql]
         WITH PASSWORD = '$password',
              CHECK_POLICY = OFF;
 ELSE
-    ALTER LOGIN [{{ db }}Access]
+    ALTER LOGIN [$loginSql]
         WITH PASSWORD = '$password',
              CHECK_POLICY = OFF;
 
-GRANT CONNECT SQL TO [{{ db }}Access];
-GRANT VIEW ANY DEFINITION TO [{{ db }}Access];
-GRANT VIEW SERVER STATE TO [{{ db }}Access];
+GRANT CONNECT SQL TO [$loginSql];
+GRANT VIEW ANY DEFINITION TO [$loginSql];
+GRANT VIEW SERVER STATE TO [$loginSql];
 "@
+
+Write-Host "The login update/create query is:"
+Write-Host $loginSql
 
 Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
               -Credential $Cred `
@@ -142,15 +152,15 @@ Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
 $userSql = @"
 USE [{{ db }}];
 
-IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'{{ db }}Access')
-    DROP USER [{{ db }}Access];
-CREATE USER [{{ db }}Access] FOR LOGIN [{{ db }}Access];
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'$loginSql')
+    DROP USER [$loginSql];
+CREATE USER [$loginSql] FOR LOGIN [$loginSql];
 
 IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'dbreader')
     DROP USER [dbreader];
 CREATE USER [dbreader] FOR LOGIN [dbreader];
 
-ALTER ROLE [db_owner]      ADD MEMBER [{{ db }}Access];
+ALTER ROLE [db_owner]      ADD MEMBER [$loginSql];
 ALTER ROLE [db_datareader] ADD MEMBER [dbreader];
 
 DENY INSERT, UPDATE, DELETE TO [dbreader];

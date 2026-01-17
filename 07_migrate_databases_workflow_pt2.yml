@@ -181,7 +181,6 @@
         robocopy "D:\Downloads" "C:\ProgramData\Alloy Software\Downloads"
         /MIR /R:1 /W:1 /NFL /NDL
       register: robocopy_result
-      changed_when: robocopy_result.rc in [1,2,3]
 
     - name: Reboot destination
       ansible.windows.win_reboot:
