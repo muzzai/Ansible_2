@@ -30,12 +30,15 @@
     - name: Get target computer name
       ansible.windows.win_shell:
         $env:COMPUTERNAME
-      register: computer_name
+      register: computer_name_cmd
+
+    - name: Share computer name
+      ansible.builtin.set_fact:
+        computer_name: computer_name_cmd.stdout
 
     - name: Show target computer name
       ansible.builtin.debug:
         var: computer_name
-
 
     - name: Bring disk online
       ansible.windows.win_shell: |
