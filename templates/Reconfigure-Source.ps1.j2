@@ -204,8 +204,10 @@ Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
               -TrustServerCertificate `
               -QueryTimeout 0
 
+$ComputerName = $env:COMPUTERNAME
+
 $AutomationServerReplacementQuery = @"
-BEGIN TRAN UPDATE Automation_Servers SET [Last_Response] = NULL DELETE Automation_Servers INSERT Automation_Servers ([Host_Name], [Primary]) VALUES (N'{{ computer_name | trim }}', 1) COMMIT TRAN
+BEGIN TRAN UPDATE Automation_Servers SET [Last_Response] = NULL DELETE Automation_Servers INSERT Automation_Servers ([Host_Name], [Primary]) VALUES (N'$ComputerName', 1) COMMIT TRAN
 "@
 
 
