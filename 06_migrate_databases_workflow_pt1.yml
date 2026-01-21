@@ -189,9 +189,7 @@
 
           PRINT 'Backup created successfully: ' + @BackupPath
 
-          --ALTER DATABASE [{{ item }}] SET OFFLINE;
-          ALTER DATABASE [{{ item }}]
-          SET MULTI_USER WITH ROLLBACK IMMEDIATE;
+          ALTER DATABASE [{{ item }}] SET OFFLINE;
       loop: "{{ database_list }}"
       register: backup_result
 
