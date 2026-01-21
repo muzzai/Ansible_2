@@ -26,4 +26,3 @@
     - name: Debug query results
       ansible.builtin.debug:
         var: db_list
-

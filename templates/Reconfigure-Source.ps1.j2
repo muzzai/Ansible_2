@@ -34,6 +34,16 @@ if (-not (Get-Module -ListAvailable -Name WebAdministration)) {
 Import-Module SqlServer -ErrorAction Stop
 Import-Module WebAdministration -ErrorAction Stop
 
+$ComputerName = $env:COMPUTERNAME
+
+$AutomationServersQueries = @{
+    AlloyNavigator = "BEGIN TRAN UPDATE Automation_Servers SET [Last_Response] = NULL DELETE Automation_Servers INSERT Automation_Servers ([Host_Name], [Primary]) VALUES (N'{0}', 1) COMMIT TRAN"
+    AlloyDiscovery = "update cfgInvCollectionServers set [Name] = '{0}' where [Primary] = 1"
+    AlloyNavigatorExpress = "BEGIN TRAN UPDATE Automation_Servers SET [Last_Response] = NULL DELETE Automation_Servers INSERT Automation_Servers ([Host_Name], [Primary]) VALUES (N'{0}', 1) COMMIT TRAN"
+    "AlloyNavigatorExpress.ad" = $null
+
+}
+
 
 $SecurePass = ConvertTo-SecureString $SaPassword -AsPlainText -Force
 $Cred       = New-Object System.Management.Automation.PSCredential ($SaUser, $SecurePass)
@@ -149,6 +159,7 @@ Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
 # -------------------------------
 # Create database users + perms
 # -------------------------------
+
 $userSql = @"
 USE [{{ db }}];
 
@@ -173,16 +184,28 @@ Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
               -TrustServerCertificate `
               -QueryTimeout 0
 
+$AutomationServerQuery = $AutomationServersQueries['{{ db }}']
+
+if ($null -ne $AutomationServerQuery) {
+
+    $AutomationServerQueryFinal = $AutomationServerQuery -f $ComputerName
+
+    Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
+              -Credential $Cred `
+              -Database "{{ db }}" `
+              -Query $AutomationServerQueryFinal `
+              -TrustServerCertificate `
+              -QueryTimeout 0
+}
+
 {% endfor %}
 
-reg import ("D:\RegFiles\" + $AN_SQLDatabase + ".reg")
-reg import D:\RegFiles\an_service_connection.reg
-reg import D:\RegFiles\user_connection.reg
 
-{% if not ProductIsExpress%}
-reg import D:\RegFiles\AlloyDiscovery.reg
-reg import D:\RegFiles\ad_service_connection.reg
-{% endif %}
+$regPath = "D:\RegFiles"
+
+Get-ChildItem $regPath -Filter *.reg | ForEach-Object {
+    reg import "$($_.FullName)"  | Out-Null
+}
 
 $rebuildFTSCatalogQuery = @"
 DECLARE @sql nvarchar(max) = N'';
@@ -203,8 +226,6 @@ Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
               -Query $rebuildFTSCatalogQuery `
               -TrustServerCertificate `
               -QueryTimeout 0
-
-$ComputerName = $env:COMPUTERNAME
 
 $AutomationServerReplacementQuery = @"
 BEGIN TRAN UPDATE Automation_Servers SET [Last_Response] = NULL DELETE Automation_Servers INSERT Automation_Servers ([Host_Name], [Primary]) VALUES (N'$ComputerName', 1) COMMIT TRAN

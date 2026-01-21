@@ -7,8 +7,6 @@
   tasks:
     - name: Set databases names when express
       ansible.builtin.set_fact:
-        AN_Database: "AlloyNavigatorExpress"
-        AD_Database: "AlloyNavigatorExpress.ad"
         AN_RegistryName: "Alloy Navigator Express"
         AN_ProductName: "Alloy Navigator Express"
       when: ProductIsExpress
@@ -17,15 +15,25 @@
       ansible.builtin.set_fact:
         AN_RegistryName: "Alloy Navigator"
         AN_ProductName: "Alloy Navigator"
-        AN_Database: "AlloyNavigator"
-        AD_Database: "AlloyDiscovery"
       when: not ProductIsExpress
 
-    - name: Set database list
+    - name: Get non system databases
+      community.general.mssql_script:
+        login_host: "{{ hostvars[source]['ansible_host'] }}"
+        login_user: "{{ source_SaUserName }}"
+        login_password: "{{ source_SaPassword }}"
+        login_port: 51967
+        name: master
+        script: |
+          SELECT name
+          FROM sys.databases
+          WHERE name NOT IN ('master', 'model', 'msdb', 'tempdb')
+          ORDER BY name;
+      register: query_result
+
+    - name: Extract database names into a simple list
       ansible.builtin.set_fact:
-        database_list:
-          - "{{ AN_Database }}"
-          - "{{ AD_Database }}"
+        database_list: "{{ query_result.query_results[0][0] | map('first') | list }}"
 
     - name: Get device name
       ansible.builtin.set_fact:
@@ -59,6 +67,8 @@
       ansible.builtin.set_stats:
         data:
           volume_id: "{{ volume_for_backups['volume']['id'] }}"
+          AN_RegistryName: "{{ AN_RegistryName }}"
+          AN_ProductName: "{{ AN_ProductName }}"
 
 - name: Prepare disk and backup registry
   gather_facts: false

@@ -23,23 +23,6 @@
       ansible.builtin.include_role:
         name: prepare_disk
 
-    # - name: Debug new hostname
-    #   ansible.builtin.debug:
-    #     var: new_hostname
-
-    # - name: Get target computer name
-    #   ansible.windows.win_shell:
-    #     $env:COMPUTERNAME
-    #   register: computer_name_cmd
-
-    # - name: Share computer name
-    #   ansible.builtin.set_fact:
-    #     computer_name: computer_name_cmd.stdout
-
-    # - name: Show target computer name
-    #   ansible.builtin.debug:
-    #     var: computer_name
-
     - name: Bring disk online
       ansible.windows.win_shell: |
         $disk = Get-Disk -Number 1
@@ -81,6 +64,27 @@
                 Remove-Item -Path $_.PsPath -Recurse -Force
             }
         }
+
+    - name: Remove all subkeys from Alloy Navigator Connections (HKCU)
+      ansible.windows.win_shell: |
+        $baseKey = 'HKCU:\Software\Alloy Software\{{ AN_RegistryName }}\Connections'
+
+        if (Test-Path $baseKey) {
+            Get-ChildItem $baseKey | ForEach-Object {
+                Remove-Item $_.PsPath -Recurse -Force
+            }
+        }
+
+    - name: Remove all subkeys from Alloy Discovery Connections (HKCU)
+      ansible.windows.win_shell: |
+        $baseKey = 'HKCU:\Software\Alloy Software\Alloy Discovery\Connections'
+
+        if (Test-Path $baseKey) {
+            Get-ChildItem $baseKey | ForEach-Object {
+                Remove-Item $_.PsPath -Recurse -Force
+            }
+        }
+      when: not ProductIsExpress
 
     - name: Remove all bindings from Default Web Site
       ansible.windows.win_shell: |
@@ -202,6 +206,5 @@
 
 
 #TODO
-#Разобраться с Computer Name:
 #delete all from HCU
 #Для AN может не быть дискавери
