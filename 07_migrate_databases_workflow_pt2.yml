@@ -200,6 +200,14 @@
     region: "{{ hostvars[dest]['placement']['region'] }}"
   tasks:
 
+    - name: Stop source
+      amazon.aws.ec2_instance:
+        instance_ids:
+          - "{{ hostvars[source]['instance_id'] }}"
+        region: "{{ hostvars[source]['placement']['region'] }}"
+        state: stopped
+        wait: true
+
     - name: Delete volume
       amazon.aws.ec2_vol:
         id: "{{ volume_id }}"

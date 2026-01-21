@@ -232,12 +232,3 @@
       until: result | length > 0
       retries: 5
       delay: 10
-
-    - name: Stop source
-      amazon.aws.ec2_instance:
-        instance_ids:
-          - "{{ hostvars[source]['instance_id'] }}"
-        region: "{{ hostvars[source]['placement']['region'] }}"
-        state: stopped
-        wait: true
-
