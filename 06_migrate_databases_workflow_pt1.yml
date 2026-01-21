@@ -35,6 +35,10 @@
       ansible.builtin.set_fact:
         database_list: "{{ query_result.query_results[0][0] | map('first') | list }}"
 
+    - name: Show database list
+      ansible.builtin.debug:
+        var: database_list
+
     - name: Get device name
       ansible.builtin.set_fact:
         new_volume_device_name: >-
