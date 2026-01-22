@@ -218,9 +218,10 @@
     - name: Attach new volume to dest
       amazon.aws.ec2_vol:
         id: "{{ volume_id}}"
-        device_name: "{{ hostvars['localhost']['new_volume_device_name'] }}"
+        device_name: "/dev/sdf"
         instance: "{{ hostvars[dest]['instance_id'] }}"
         region: "{{ region }}"
+        volume_type: gp3
 
     - name: Wait for volume to be in-use
       amazon.aws.ec2_vol_info:
