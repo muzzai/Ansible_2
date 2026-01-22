@@ -202,7 +202,7 @@ if ('{{ db }}' -in @('AlloyNavigator', 'AlloyNavigatorExpress')) {
     Restart-Service AlloyAutomationServer
 }
 
-if ('{{ db }}' -eq 'AlloyDiscovery')) {
+if ('{{ db }}' -eq 'AlloyDiscovery') {
     Restart-Service AlloyInventoryServer
 }
 
