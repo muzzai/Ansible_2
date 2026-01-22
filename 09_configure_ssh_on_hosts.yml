@@ -1,5 +1,5 @@
 ---
-- name: Reconfigure ssh to us powershell.exe
+- name: Reconfigure ssh to use powershell.exe (only if needed)
   hosts: aws_ec2
   gather_facts: false
   vars:
@@ -8,15 +8,29 @@
     ansible_shell_type: cmd
     ansible_ssh_transfer_method: scp
     ansible_shell_executable: cmd
+
+    desired_shell: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+
   tasks:
-    - name: Set PowerShell as default shell
+    - name: Check current OpenSSH DefaultShell
+      ansible.windows.win_reg_stat:
+        path: HKLM:\SOFTWARE\OpenSSH
+        name: DefaultShell
+      register: default_shell
+
+    - name: Set PowerShell as default shell (only if different)
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\OpenSSH
         name: DefaultShell
-        data: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+        data: "{{ desired_shell }}"
         type: string
+      when: >
+        not default_shell.exists or
+        default_shell.value != desired_shell
+      notify: Restart sshd
 
-    - name: Restart SSH service
+  handlers:
+    - name: Restart sshd
       ansible.windows.win_service:
         name: sshd
         state: restarted
