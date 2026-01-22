@@ -15,40 +15,6 @@
         name: DefaultShell
         data: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
         type: string
-      ignore_errors: true
-
-    - name: Restart SSH service
-      ansible.windows.win_service:
-        name: sshd
-        state: restarted
-      ignore_errors: true
-
-- name: Adjust sshd_config
-  hosts: aws_ec2
-  gather_facts: false
-  vars:
-    ansible_user: Administrator
-    ansible_connection: ssh
-    ansible_shell_type: powershell
-    ansible_ssh_transfer_method: scp
-    ansible_shell_executable: powershell.exe
-  tasks:
-
-    - name: Remove chroot for all users
-      community.windows.win_lineinfile:
-        path: C:\ProgramData\ssh\sshd_config
-        line: ChrootDirectory "C:\inetpub\ftproot\Audits"
-        state: absent
-
-    - name: Add chroot for FTP user
-      community.windows.win_lineinfile:
-        path: C:\ProgramData\ssh\sshd_config
-        state: present
-        create: false
-        insertafter: EOF
-        line: |
-          Match User FTPUser
-              ChrootDirectory  "C:\inetpub\ftproot\Audits"
 
     - name: Restart SSH service
       ansible.windows.win_service:
