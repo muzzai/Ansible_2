@@ -10,4 +10,5 @@
 
     - name: Set stats for later
       ansible.builtin.set_stats:
-        cn: "{{ cn_cmd.stdout }}"
+        data:
+          cn: "{{ cn_cmd.stdout }}"
