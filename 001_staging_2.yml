@@ -1,0 +1,8 @@
+---
+- name: Job 2
+  gather_facts: false
+  hosts: aws_ec2
+  tasks:
+    - name: Show computer name
+      ansible.builtin.debug:
+        var: cn

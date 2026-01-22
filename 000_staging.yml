@@ -1,28 +1,13 @@
 ---
-- name: Prepare ebs_vol
+- name: Job 1
   gather_facts: false
-  hosts: localhost
-  vars:
-    source: "{{ source | default('skip') }}"
+  hosts: aws_ec2
   tasks:
-    - name: Get non system databases
-      community.general.mssql_script:
-        login_host: "{{ hostvars[source]['ansible_host'] }}"
-        login_user: "{{ source_SaUserName }}"
-        login_password: "{{ source_SaPassword }}"
-        login_port: 51967
-        name: master
-        script: |
-          SELECT name
-          FROM sys.databases
-          WHERE name NOT IN ('master', 'model', 'msdb', 'tempdb')
-          ORDER BY name;
-      register: query_result
+    - name: Get computer name
+      ansible.windows.win_shell:
+        $env:COMPUTERNAME
+      register: cn_cmd
 
-    - name: Extract database names into a simple list
-      ansible.builtin.set_fact:
-        db_list: "{{ query_result.query_results[0][0] | map('first') | list }}"
-
-    - name: Debug query results
-      ansible.builtin.debug:
-        var: db_list
+    - name: Set stats for later
+      ansible.builtin.set_stats:
+        cn: "{{ cn_cmd.stdout }}"
