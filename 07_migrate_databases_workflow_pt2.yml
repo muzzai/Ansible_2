@@ -151,20 +151,33 @@
       args:
         executable: powershell.exe
 
-    - name: Get Script Helper URL
+    # - name: Get Script Helper URL
+    #   delegate_to: localhost
+    #   amazon.aws.s3_object:
+    #     mode: geturl
+    #     bucket: "{{ sql_s3_bucket }}"
+    #     object: "{{ sql_s3_object }}"
+    #     expiry: "{{ sql_s3_url_expiry }}"
+    #     region: "{{ hostvars[dest]['placement']['region'] }}"
+    #   register: helper_url
+
+    # - name: Download script "ScriptHelper.exe"
+    #   ansible.windows.win_get_url:
+    #     url: "{{ helper_url.url }}"
+    #     dest: C:\Install
+
+    - name: Download helper locally
       delegate_to: localhost
       amazon.aws.s3_object:
-        mode: geturl
         bucket: "{{ sql_s3_bucket }}"
         object: "{{ sql_s3_object }}"
-        expiry: "{{ sql_s3_url_expiry }}"
-        region: "{{ hostvars[dest]['placement']['region'] }}"
-      register: helper_url
+        dest: /tmp/ScriptHelper.exe
+        mode: get
 
-    - name: Download script "ScriptHelper.exe"
-      ansible.windows.win_get_url:
-        url: "{{ helper_url.url }}"
-        dest: C:\Install
+    - name: Copy helper to Windows
+      ansible.windows.win_copy:
+        src: /tmp/ScriptHelper.exe
+        dest: C:\Install\ScriptHelper.exe
 
     - name: Ensure script folder
       ansible.builtin.win_file:

@@ -198,6 +198,14 @@ if ($null -ne $AutomationServerQuery) {
               -QueryTimeout 0
 }
 
+if ('{{ db }}' -in @('AlloyNavigator', 'AlloyNavigatorExpress')) {
+    Restart-Service AlloyAutomationServer
+}
+
+if ('{{ db }}' -eq 'AlloyDiscovery')) {
+    Restart-Service AlloyInventoryServer
+}
+
 {% endfor %}
 
 
@@ -227,19 +235,6 @@ Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
               -TrustServerCertificate `
               -QueryTimeout 0
 
-$AutomationServerReplacementQuery = @"
-BEGIN TRAN UPDATE Automation_Servers SET [Last_Response] = NULL DELETE Automation_Servers INSERT Automation_Servers ([Host_Name], [Primary]) VALUES (N'$ComputerName', 1) COMMIT TRAN
-"@
-
-
-Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
-              -Credential $Cred `
-              -Database $AN_SQLDatabase `
-              -Query $AutomationServerReplacementQuery `
-              -TrustServerCertificate `
-              -QueryTimeout 0
-
-Restart-Service AlloyAutomationServer
 
 $siteName = "{{ site_name }}"
 
