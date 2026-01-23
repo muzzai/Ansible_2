@@ -1,5 +1,5 @@
 ---
-- name: Prepare media
+- name: Restore databases
   gather_facts: false
   hosts: "{{ dest }}"
   vars:
@@ -134,22 +134,6 @@
           }
         }
 
-    - name: Ensure script folder
-      ansible.builtin.win_file:
-        path: C:\Remove-Old-Renewals-Install-New-Certs
-        state: directory
-
-    - name: Generate script
-      ansible.windows.win_template:
-        src: templates/Remove-Old-Renewals-Install-New-Certs.ps1.j2
-        dest: C:\Remove-Old-Renewals-Install-New-Certs\Remove-Old-Renewals-Install-New-Certs.ps1
-        force: true
-
-    - name: Execute renewals script
-      ansible.windows.win_shell: |
-        & C:\Remove-Old-Renewals-Install-New-Certs\Remove-Old-Renewals-Install-New-Certs.ps1
-      args:
-        executable: powershell.exe
 
     # - name: Get Script Helper URL
     #   delegate_to: localhost
@@ -203,9 +187,6 @@
       register: robocopy_result
       ignore_errors: true
 
-    # - name: Reboot destination
-    #   ansible.windows.win_reboot:
-
 - name: Reconfigure AWS side
   gather_facts: false
   hosts: localhost
@@ -226,6 +207,13 @@
         id: "{{ volume_id }}"
         state: absent
         region: "{{ region }}"
+
+    - name: Delete restored volume
+      amazon.aws.ec2_vol:
+        id: "{{ restored_volume_id }}"
+        state: absent
+        region: "{{ region }}"
+      when: restored_volume_id is defined
 
     - name: Extract IP address from record
       ansible.builtin.set_fact:
@@ -263,3 +251,24 @@
       until: verification.addresses[0].instance_id == hostvars[dest]['instance_id']
       retries: 5
       delay: 5
+
+- name: Issue new certs
+  gather_facts: false
+  hosts: "{{ dest }}"
+  tasks:
+    - name: Ensure script folder
+      ansible.builtin.win_file:
+        path: C:\Remove-Old-Renewals-Install-New-Certs
+        state: directory
+
+    - name: Generate script
+      ansible.windows.win_template:
+        src: templates/Remove-Old-Renewals-Install-New-Certs.ps1.j2
+        dest: C:\Remove-Old-Renewals-Install-New-Certs\Remove-Old-Renewals-Install-New-Certs.ps1
+        force: true
+
+    - name: Execute renewals script
+      ansible.windows.win_shell: |
+        & C:\Remove-Old-Renewals-Install-New-Certs\Remove-Old-Renewals-Install-New-Certs.ps1
+      args:
+        executable: powershell.exe
