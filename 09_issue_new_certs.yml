@@ -1,6 +1,8 @@
 - name: Issue new certs
   gather_facts: false
   hosts: "{{ dest }}"
+  vars:
+    dest: "{{ dest | default('skip') }}"
   tasks:
     - name: Ensure script folder
       ansible.builtin.win_file:
