@@ -145,7 +145,7 @@ if ('{{ db }}' -ne 'AlloyNavigatorExpress.ad') {
     GRANT CONNECT SQL TO [$login];
     GRANT VIEW ANY DEFINITION TO [$login];
     GRANT VIEW SERVER STATE TO [$login];
-    "@
+"@
 
     Write-Host "The login update/create query is:"
     Write-Host $loginSql
