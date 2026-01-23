@@ -238,8 +238,6 @@
         region: "{{ region }}"
         description: "Backup transfer snapshot {{ volume_id }}"
         wait: true
-        tags:
-          Purpose: backup-transfer
       register: snapshot
       when: source_az != dest_az
 
