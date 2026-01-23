@@ -202,6 +202,11 @@ if ($null -ne $AutomationServerQuery) {
               -QueryTimeout 0
 }
 
+
+{% endfor %}
+
+{% for db in database_list %}
+
 if ('{{ db }}' -in @('AlloyNavigator', 'AlloyNavigatorExpress')) {
     Restart-Service AlloyAutomationServer
 }
@@ -209,9 +214,7 @@ if ('{{ db }}' -in @('AlloyNavigator', 'AlloyNavigatorExpress')) {
 if ('{{ db }}' -eq 'AlloyDiscovery') {
     Restart-Service AlloyInventoryServer
 }
-
 {% endfor %}
-
 
 $regPath = "D:\RegFiles"
 
