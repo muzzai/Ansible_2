@@ -5,9 +5,7 @@
   vars:
     ansible_user: Administrator
     ansible_connection: ssh
-    ansible_shell_type: cmd
     ansible_ssh_transfer_method: scp
-    ansible_shell_executable: cmd
     desired_shell: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
 
   tasks:
