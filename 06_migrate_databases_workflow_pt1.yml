@@ -260,6 +260,7 @@
       ansible.builtin.set_stats:
         data:
           restored_volume_id: "{{ new_volume.volume_id }}"
+      when: source_az != dest_az
 
     - name: Attach cloned volume to dest (cross-AZ)
       amazon.aws.ec2_vol:
