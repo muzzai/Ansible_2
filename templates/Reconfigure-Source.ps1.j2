@@ -40,10 +40,9 @@ $AutomationServersQueries = @{
     AlloyNavigator = "BEGIN TRAN UPDATE Automation_Servers SET [Last_Response] = NULL DELETE Automation_Servers INSERT Automation_Servers ([Host_Name], [Primary]) VALUES (N'{0}', 1) COMMIT TRAN"
     AlloyDiscovery = "update cfgInvCollectionServers set [Name] = '{0}' where [Primary] = 1"
     AlloyNavigatorExpress = "BEGIN TRAN UPDATE Automation_Servers SET [Last_Response] = NULL DELETE Automation_Servers INSERT Automation_Servers ([Host_Name], [Primary]) VALUES (N'{0}', 1) COMMIT TRAN"
-    "AlloyNavigatorExpress.ad" = $null
+    "AlloyNavigatorExpress.ad" = "update cfgInvCollectionServers set [Name] = '{0}' where [Primary] = 1"
 
 }
-
 
 $SecurePass = ConvertTo-SecureString $SaPassword -AsPlainText -Force
 $Cred       = New-Object System.Management.Automation.PSCredential ($SaUser, $SecurePass)
@@ -205,6 +204,13 @@ if ($null -ne $AutomationServerQuery) {
 
 {% endfor %}
 
+$regPath = "D:\RegFiles"
+
+Get-ChildItem $regPath -Filter *.reg | ForEach-Object {
+    reg import "$($_.FullName)"  | Out-Null
+}
+
+
 {% for db in database_list %}
 
 if ('{{ db }}' -in @('AlloyNavigator', 'AlloyNavigatorExpress')) {
@@ -216,11 +222,6 @@ if ('{{ db }}' -eq 'AlloyDiscovery') {
 }
 {% endfor %}
 
-$regPath = "D:\RegFiles"
-
-Get-ChildItem $regPath -Filter *.reg | ForEach-Object {
-    reg import "$($_.FullName)"  | Out-Null
-}
 
 $rebuildFTSCatalogQuery = @"
 DECLARE @sql nvarchar(max) = N'';

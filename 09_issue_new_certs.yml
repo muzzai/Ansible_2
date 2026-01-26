@@ -1,3 +1,4 @@
+---
 - name: Issue new certs
   gather_facts: false
   hosts: "{{ dest }}"

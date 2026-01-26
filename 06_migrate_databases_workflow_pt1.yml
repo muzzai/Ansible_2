@@ -96,6 +96,8 @@
             "$outputDir\user_connection.reg" /y
         reg export "HKLM\SOFTWARE\Alloy Software\{{ AN_RegistryName }}\Service Connection" `
             "$outputDir\an_service_connection.reg" /y
+        reg export "HKLM\SOFTWARE\Alloy Software\Collection Server" `
+            "$outputDir\collection_server.reg" /y
         {% if not ProductIsExpress %}
         reg export "HKLM\SOFTWARE\Alloy Software\Alloy Discovery\Service Connection" `
             "$outputDir\ad_service_connection.reg" /y
