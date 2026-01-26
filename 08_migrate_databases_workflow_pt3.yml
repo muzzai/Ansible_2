@@ -25,3 +25,11 @@
   tasks:
     - name: Reboot hosts
       ansible.windows.win_reboot:
+
+- name: Fail
+  gather_facts: false
+  hosts: localhost
+  tasks:
+    - name: Set status failed
+      ansible.builtin.fail:
+        msg: Something went wrong during the migration. Please review the log above
