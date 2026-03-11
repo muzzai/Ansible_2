@@ -30,13 +30,13 @@
     - name: Display C drive sizes
       ansible.builtin.debug:
         msg: >-
-          Source ({{ source }}): {{ (s ource_c_size | int / 1073741824) | round(1) }} GB |
+          Source ({{ source }}): {{ (source_c_size | int / 1073741824) | round(1) }} GB |
           Dest ({{ dest }}): {{ (dest_c_size | int / 1073741824) | round(1) }} GB
 
     - name: Fail if dest C drive is smaller than source C drive
       ansible.builtin.fail:
         msg: >-
-          Source C: drive ({{ (source_c_size | int / 1073741824) | round(1) }} GB) is smaller
+          Source C: drive ({{ (source_c_size | int / 1073741824) | round(1) }} GB) is larger
           than dest C: drive ({{ (dest_c_size | int / 1073741824) | round(1) }} GB).
           Migration cannot proceed.
       when: source_c_size | int > dest_c_size | int
