@@ -209,10 +209,13 @@ Get-ChildItem $regPath -Filter *.reg | ForEach-Object {
     reg import "$($_.FullName)"  | Out-Null
 }
 
+$AN_AccessKeyName = (($decryptedName -split '`n' | where {$_ -like "Name*"}) -split 'Name: ')[1]
 
 {% for db in database_list %}
 
 if ('{{ db }}' -in @('AlloyNavigator', 'AlloyNavigatorExpress')) {
+    $decryptedName = C:\Install\ScriptHelper.exe DecryptAccessKey "D:\RegFiles\{{ db }}.reg"
+    $AN_AccessKeyName = (($decryptedName -split '`n' | where {$_ -like "Name*"}) -split 'Name: ')[1]
     Restart-Service AlloyAutomationServer
 }
 
@@ -304,9 +307,6 @@ $allApps | % {
               -TrustServerCertificate `
               -QueryTimeout 0
 }
-
-$decryptedName = C:\Install\ScriptHelper.exe DecryptAccessKey "D:\RegFiles\{{ db }}.reg"
-$AN_AccessKeyName = (($decryptedName -split '`n' | where {$_ -like "Name*"}) -split 'Name: ')[1]
 
 Invoke-Command -ArgumentList ($AN_AccessKeyName, $SQLServerInstance, $AN_SQLDatabase)  {
   param($AN_AccessKeyName, $SQLServerInstance, $AN_SQLDatabase)
