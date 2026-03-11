@@ -1,0 +1,42 @@
+---
+- name: "Preflight: gather C: drive size on source and dest"
+  hosts: "{{ source }}, {{ dest }}"
+  gather_facts: false
+  vars:
+    source: "{{ source | default('skip') }}"
+    dest: "{{ dest | default('skip') }}"
+  tasks:
+    - name: Gather disk facts
+      community.windows.win_disk_facts:
+
+    - name: Extract total size of the disk containing C partition
+      ansible.builtin.set_fact:
+        c_drive_total_size: >-
+          {% for disk in ansible_facts.disks %}
+          {% if disk.partitions | default([]) | selectattr('drive_letter', 'defined') | selectattr('drive_letter', 'equalto', 'C') | list | length > 0 %}
+          {{ disk.size }}
+          {% endif %}
+          {% endfor %}
+
+- name: "Preflight: compare C: drive sizes"
+  hosts: localhost
+  gather_facts: false
+  vars:
+    source: "{{ source | default('skip') }}"
+    dest: "{{ dest | default('skip') }}"
+    source_c_size: "{{ hostvars[source]['c_drive_total_size'] | int }}"
+    dest_c_size: "{{ hostvars[dest]['c_drive_total_size'] | int }}"
+  tasks:
+    - name: Display C drive sizes
+      ansible.builtin.debug:
+        msg: >-
+          Source ({{ source }}): {{ (source_c_size | int / 1073741824) | round(1) }} GB |
+          Dest ({{ dest }}): {{ (dest_c_size | int / 1073741824) | round(1) }} GB
+
+    - name: Fail if source C drive is smaller than dest C drive
+      ansible.builtin.fail:
+        msg: >-
+          Source C: drive ({{ (source_c_size | int / 1073741824) | round(1) }} GB) is smaller
+          than dest C: drive ({{ (dest_c_size | int / 1073741824) | round(1) }} GB).
+          Migration cannot proceed.
+      when: source_c_size | int < dest_c_size | int
