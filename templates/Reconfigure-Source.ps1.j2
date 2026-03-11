@@ -4,7 +4,6 @@
 
 $AN_SQLDatabase      = "{{ database_list | select('search', 'Navigator') | first }}"
 $SQLServerInstance   = "{{ new_hostname }},51967"
-$AN_AccessKeyName    = "$SQLServerInstance : $AN_SQLDatabase"
 $SaUser              = "{{ dest_SaUserName }}"
 $SaPassword          = "{{ dest_SaPassword }}"
 
@@ -305,6 +304,9 @@ $allApps | % {
               -TrustServerCertificate `
               -QueryTimeout 0
 }
+
+$decryptedName = C:\Install\ScriptHelper.exe DecryptAccessKey "D:\RegFiles\{{ db }}.reg"
+$AN_AccessKeyName = (($decryptedName -split '`n' | where {$_ -like "Name*"}) -split 'Name: ')[1]
 
 Invoke-Command -ArgumentList ($AN_AccessKeyName, $SQLServerInstance, $AN_SQLDatabase)  {
   param($AN_AccessKeyName, $SQLServerInstance, $AN_SQLDatabase)
