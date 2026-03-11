@@ -8,14 +8,14 @@
     sql_s3_object: "ScriptHelper.exe"
     sql_s3_url_expiry: 3600
     new_hostname: "{{
-        (
-          default_site_bindings
-          | from_json
-          | selectattr('bindingInformation', 'search', domain_name)
-          | map(attribute='bindingInformation')
-          | map('regex_replace', '^.*:', '')
-          | first
-        )
+      (
+      default_site_bindings
+      | from_json
+      | selectattr('bindingInformation', 'search', domain_name)
+      | map(attribute='bindingInformation')
+      | map('regex_replace', '^.*:', '')
+      | first
+      )
       }}"
 
   tasks:
@@ -42,6 +42,7 @@
     - name: Ensure backup file
       ansible.windows.win_stat:
         path: "{{ target_mssql_backup_path }}\\{{ item }}.bak"
+        get_checksum: false
       loop: "{{ database_list }}"
       register: files
 
@@ -134,7 +135,6 @@
           }
         }
 
-
     # - name: Get Script Helper URL
     #   delegate_to: localhost
     #   amazon.aws.s3_object:
@@ -193,7 +193,6 @@
   vars:
     region: "{{ hostvars[dest]['placement']['region'] }}"
   tasks:
-
     - name: Stop source
       amazon.aws.ec2_instance:
         instance_ids:
