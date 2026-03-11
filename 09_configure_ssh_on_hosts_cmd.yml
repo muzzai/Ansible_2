@@ -1,0 +1,51 @@
+---
+# Fallback-версия: использует raw-модуль с CMD-командами.
+# Запускать, если 09_configure_ssh_on_hosts.yml падает из-за того,
+# что DefaultShell на хостах — CMD, а не PowerShell.
+#
+# raw-модуль отправляет команды напрямую в SSH-шелл,
+# минуя module subsystem Ansible, поэтому работает с любым шеллом.
+
+- name: "Reconfigure SSH default shell to PowerShell (CMD fallback)"
+  hosts: aws_ec2
+  gather_facts: false
+  vars:
+    ansible_user: Administrator
+    ansible_connection: ssh
+    ansible_shell_type: cmd
+    ansible_ssh_transfer_method: scp
+    desired_shell: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+
+  tasks:
+    - name: Check current OpenSSH DefaultShell via registry
+      ansible.builtin.raw: >
+        reg query "HKLM\SOFTWARE\OpenSSH" /v DefaultShell
+      register: reg_query
+      changed_when: false
+      failed_when: false
+
+    - name: Show current DefaultShell value
+      ansible.builtin.debug:
+        var: reg_query.stdout_lines
+
+    - name: Determine if shell change is needed
+      ansible.builtin.set_fact:
+        shell_needs_update: >-
+          {{ desired_shell not in (reg_query.stdout | default('')) }}
+
+    - name: Set PowerShell as default OpenSSH shell
+      ansible.builtin.raw: >
+        reg add "HKLM\SOFTWARE\OpenSSH" /v DefaultShell /t REG_SZ
+        /d "{{ desired_shell }}" /f
+      when: shell_needs_update | bool
+      register: reg_set
+      failed_when: reg_set.rc != 0
+
+    - name: Restart sshd service to apply new shell
+      ansible.builtin.raw: >
+        net stop sshd & net start sshd
+      when: shell_needs_update | bool
+      register: sshd_restart
+      failed_when: >
+        sshd_restart.rc != 0 and
+        'is not started' not in (sshd_restart.stderr | default(''))
