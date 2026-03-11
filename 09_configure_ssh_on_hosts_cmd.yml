@@ -67,13 +67,20 @@
       register: reg_set
       failed_when: reg_set.rc != 0
 
-    - name: Restart sshd service to apply new shell
-      ansible.builtin.raw: >
-        net stop sshd & net start sshd
+    - name: Stop sshd service
+      ansible.builtin.raw: net stop sshd
       vars:
         ansible_shell_type: "{{ detected_shell }}"
       when: shell_needs_update | bool
-      register: sshd_restart
+      register: sshd_stop
       failed_when: >
-        sshd_restart.rc != 0 and
-        'is not started' not in (sshd_restart.stderr | default(''))
+        sshd_stop.rc != 0 and
+        'is not started' not in (sshd_stop.stderr | default(''))
+
+    - name: Start sshd service
+      ansible.builtin.raw: net start sshd
+      vars:
+        ansible_shell_type: "{{ detected_shell }}"
+      when: shell_needs_update | bool
+      register: sshd_start
+      failed_when: sshd_start.rc != 0
