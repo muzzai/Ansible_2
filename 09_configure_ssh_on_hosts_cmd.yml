@@ -1,25 +1,48 @@
 ---
-# Fallback-версия: использует raw-модуль с CMD-командами.
+# Fallback-версия: использует raw-модуль с автодетектом шелла.
 # Запускать, если 09_configure_ssh_on_hosts.yml падает из-за того,
-# что DefaultShell на хостах — CMD, а не PowerShell.
+# что ansible_shell_type не совпадает с реальным DefaultShell на хосте.
 #
-# raw-модуль отправляет команды напрямую в SSH-шелл,
-# минуя module subsystem Ansible, поэтому работает с любым шеллом.
+# Логика:
+#   1. Пробный вызов с ansible_shell_type=cmd (Ansible добавит CMD-обёртку).
+#      Если хост в CMD — пройдёт. Если в PowerShell — упадёт (&&  не валиден в PS 5).
+#   2. По результату выбирается правильный shell_type для остальных задач.
+#   3. Все последующие raw-команды (reg query / reg add / net stop|start)
+#      работают одинаково и в CMD, и в PowerShell — меняется только обёртка Ansible.
 
-- name: "Reconfigure SSH default shell to PowerShell (CMD fallback)"
+- name: "Reconfigure SSH default shell to PowerShell (auto-detect fallback)"
   hosts: aws_ec2
   gather_facts: false
   vars:
     ansible_user: Administrator
     ansible_connection: ssh
-    ansible_shell_type: cmd
     ansible_ssh_transfer_method: scp
     desired_shell: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
 
   tasks:
+    # ── 1. Detect remote shell type ──────────────────────────────
+    - name: "Probe remote shell (try CMD wrapping)"
+      ansible.builtin.raw: echo CMD_OK
+      vars:
+        ansible_shell_type: cmd
+      register: shell_probe
+      changed_when: false
+      failed_when: false
+
+    - name: "Set detected shell type"
+      ansible.builtin.set_fact:
+        detected_shell: "{{ 'cmd' if (shell_probe.rc | default(1)) == 0 else 'powershell' }}"
+
+    - name: "Show detected shell type"
+      ansible.builtin.debug:
+        msg: "Remote default shell detected as: {{ detected_shell }}"
+
+    # ── 2. Check current DefaultShell in the registry ────────────
     - name: Check current OpenSSH DefaultShell via registry
       ansible.builtin.raw: >
         reg query "HKLM\SOFTWARE\OpenSSH" /v DefaultShell
+      vars:
+        ansible_shell_type: "{{ detected_shell }}"
       register: reg_query
       changed_when: false
       failed_when: false
@@ -33,10 +56,13 @@
         shell_needs_update: >-
           {{ desired_shell not in (reg_query.stdout | default('')) }}
 
+    # ── 3. Update registry & restart sshd ────────────────────────
     - name: Set PowerShell as default OpenSSH shell
       ansible.builtin.raw: >
         reg add "HKLM\SOFTWARE\OpenSSH" /v DefaultShell /t REG_SZ
         /d "{{ desired_shell }}" /f
+      vars:
+        ansible_shell_type: "{{ detected_shell }}"
       when: shell_needs_update | bool
       register: reg_set
       failed_when: reg_set.rc != 0
@@ -44,6 +70,8 @@
     - name: Restart sshd service to apply new shell
       ansible.builtin.raw: >
         net stop sshd & net start sshd
+      vars:
+        ansible_shell_type: "{{ detected_shell }}"
       when: shell_needs_update | bool
       register: sshd_restart
       failed_when: >
