@@ -72,21 +72,64 @@ Write-Host "=== Processing database: {{ db }} ==="
 # Restore database
 # -------------------------------
 $restoreSql = @"
-DECLARE @DataPath NVARCHAR(260);
-DECLARE @LogPath  NVARCHAR(260);
-DECLARE @Sql NVARCHAR(MAX);
+DECLARE @DataPath    NVARCHAR(260);
+DECLARE @LogPath     NVARCHAR(260);
+DECLARE @Sql         NVARCHAR(MAX);
+DECLARE @BackupPath  NVARCHAR(260) = N'{{ target_mssql_backup_path }}\{{ db }}.bak';
 
 SELECT
     @DataPath = CAST(SERVERPROPERTY('InstanceDefaultDataPath') AS NVARCHAR(260)),
     @LogPath  = CAST(SERVERPROPERTY('InstanceDefaultLogPath')  AS NVARCHAR(260));
 
+-- Read logical file names from the backup
+CREATE TABLE #FileList (
+    LogicalName          NVARCHAR(128),
+    PhysicalName         NVARCHAR(260),
+    [Type]               CHAR(1),
+    FileGroupName        NVARCHAR(128) NULL,
+    Size                 NUMERIC(20,0),
+    MaxSize              NUMERIC(20,0),
+    FileId               BIGINT,
+    CreateLSN            NUMERIC(25,0),
+    DropLSN              NUMERIC(25,0) NULL,
+    UniqueId             UNIQUEIDENTIFIER,
+    ReadOnlyLSN          NUMERIC(25,0) NULL,
+    ReadWriteLSN         NUMERIC(25,0) NULL,
+    BackupSizeInBytes    BIGINT,
+    SourceBlockSize      INT,
+    FileGroupId          INT,
+    LogGroupGUID         UNIQUEIDENTIFIER NULL,
+    DifferentialBaseLSN  NUMERIC(25,0) NULL,
+    DifferentialBaseGUID UNIQUEIDENTIFIER NULL,
+    IsReadOnly           BIT,
+    IsPresent            BIT,
+    TDEThumbprint        VARBINARY(32) NULL,
+    SnapshotUrl          NVARCHAR(360) NULL
+);
+
+INSERT INTO #FileList
+EXEC(N'RESTORE FILELISTONLY FROM DISK = N''' + @BackupPath + N'''');
+
+-- Build MOVE clauses dynamically from actual logical names
+DECLARE @MoveClause NVARCHAR(MAX) = N'';
+
+SELECT @MoveClause = @MoveClause +
+    N'    MOVE N''' + LogicalName + N''' TO N''' +
+    CASE [Type]
+        WHEN 'D' THEN @DataPath + '{{ db }}.mdf'
+        WHEN 'L' THEN @LogPath  + '{{ db }}_log.ldf'
+    END +
+    N''',' + CHAR(13) + CHAR(10)
+FROM #FileList
+WHERE [Type] IN ('D', 'L');
+
+DROP TABLE #FileList;
+
 SET @Sql = N'
 RESTORE DATABASE [{{ db }}]
-FROM DISK = ''{{ target_mssql_backup_path }}\{{ db }}.bak''
+FROM DISK = N''' + @BackupPath + N'''
 WITH
-    MOVE ''{{ db }}''     TO ''' + @DataPath + '{{ db }}.mdf'',
-    MOVE ''{{ db }}_log'' TO ''' + @LogPath  + '{{ db }}_log.ldf'',
-    REPLACE,
+' + @MoveClause + N'    REPLACE,
     STATS = 5;
 ';
 
