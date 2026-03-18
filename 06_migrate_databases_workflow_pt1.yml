@@ -170,7 +170,7 @@
         name: master
         script: |
           ALTER DATABASE [{{ item }}] SET ONLINE;
-          --ALTER DATABASE [{{ item }}]
+          ALTER DATABASE [{{ item }}]
           SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 
           DECLARE @BackupPath NVARCHAR(500) = N'{{ mssql_backup_path }}\{{ item }}.bak'
