@@ -238,6 +238,7 @@
         region: "{{ region }}"
         description: "Backup transfer snapshot {{ volume_id }}"
         wait: true
+        wait_timeout: 3600
       register: snapshot
       when: source_az != dest_az
 
