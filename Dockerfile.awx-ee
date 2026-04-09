@@ -1,0 +1,7 @@
+FROM muzzai/awx-ee:nmap
+
+USER 0
+
+RUN /usr/bin/python3 -m pip install --no-cache-dir --root-user-action=ignore pymssql
+
+USER 1000

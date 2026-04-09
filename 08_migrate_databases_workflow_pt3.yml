@@ -3,20 +3,20 @@
   gather_facts: false
   hosts: localhost
   tasks:
-    - name: Restore multiuser
-      community.general.mssql_script:
-        login_host: "{{ hostvars[source]['ansible_host'] }}"
-        login_user: "{{ source_SaUserName }}"
-        login_password: "{{ source_SaPassword }}"
-        login_port: 51967
-        name: master
-        script: |
-          ALTER DATABASE [{{ item }}] SET ONLINE;
-          ALTER DATABASE [{{ item }}]
-          SET MULTI_USER WITH ROLLBACK IMMEDIATE;
+    # - name: Restore multiuser
+    #   community.general.mssql_script:
+    #     login_host: "{{ hostvars[source]['ansible_host'] }}"
+    #     login_user: "{{ source_SaUserName }}"
+    #     login_password: "{{ source_SaPassword }}"
+    #     login_port: 51967
+    #     name: master
+    #     script: |
+    #       ALTER DATABASE [{{ item }}] SET ONLINE;
+    #       ALTER DATABASE [{{ item }}]
+    #       SET MULTI_USER WITH ROLLBACK IMMEDIATE;
 
-      loop: "{{ database_list }}"
-      register: backup_result
+    #   loop: "{{ database_list }}"
+    #   register: backup_result
 
     - name: Delete volume
       amazon.aws.ec2_vol:

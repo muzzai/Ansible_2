@@ -3,7 +3,25 @@
   gather_facts: false
   hosts: localhost
   vars:
+    ansible_python_interpreter: "{{ localhost_python_interpreter | default(ansible_playbook_python) }}"
     prefix: "{{ source.split('.')[0] }}"
+  pre_tasks:
+    - name: Check pymssql availability in controller Python
+      ansible.builtin.raw: >
+        {{ ansible_python_interpreter | quote }} -c "import pymssql"
+      changed_when: false
+      failed_when: false
+      register: pymssql_check
+
+    - name: Fail when controller Python does not have pymssql
+      ansible.builtin.fail:
+        msg: >-
+          community.general.mssql_script runs on localhost and requires pymssql in the same Python interpreter.
+          Ansible is using {{ ansible_python_interpreter }}, but pymssql import failed.
+          Set localhost_python_interpreter to the Python that has pymssql installed
+          (for example via AWX job vars or inventory) and rerun the workflow.
+          stderr={{ pymssql_check.stderr | default('') | trim }}
+      when: pymssql_check.rc != 0
   tasks:
     - name: Set databases names when express
       ansible.builtin.set_fact:
@@ -147,6 +165,7 @@
 - name: Create backups and move volume if needed
   hosts: localhost
   vars:
+    ansible_python_interpreter: "{{ localhost_python_interpreter | default(ansible_playbook_python) }}"
     region: "{{ hostvars[dest]['placement']['region'] }}"
     source_az: "{{ hostvars[source]['placement']['availability_zone'] }}"
     dest_az: "{{ hostvars[dest]['placement']['availability_zone'] }}"
