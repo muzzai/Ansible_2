@@ -4,8 +4,7 @@
   hosts: aws_ec2
   tasks:
     - name: List all drives
-      ansible.windows.win_powershell:
-        script: Get-PSDrive -PSProvider FileSystem | Format-Table Name, Used, Free, Provider, Root -AutoSize
+      ansible.windows.win_shell: Get-PSDrive -PSProvider FileSystem | Format-Table Name, Used, Free, Root -AutoSize | Out-String
       register: drives
 
     - name: Show drives
@@ -13,8 +12,7 @@
         var: drives.stdout_lines
 
     - name: Get D drive contents
-      ansible.windows.win_powershell:
-        script: Get-ChildItem -Path D:\ -Force | Format-Table Mode, LastWriteTime, Length, Name -AutoSize
+      ansible.windows.win_shell: Get-ChildItem -Path D:\ -Force | Format-Table Mode, LastWriteTime, Length, Name -AutoSize | Out-String
       register: result
 
     - name: Show output
