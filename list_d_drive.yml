@@ -3,6 +3,14 @@
   gather_facts: false
   hosts: aws_ec2
   tasks:
+    - name: List all physical disks with numbers and status
+      ansible.windows.win_shell: Get-Disk | Format-Table Number, FriendlyName, OperationalStatus, PartitionStyle, Size -AutoSize | Out-String
+      register: disks
+
+    - name: Show disks
+      ansible.builtin.debug:
+        var: disks.stdout_lines
+
     - name: List all drives
       ansible.windows.win_shell: Get-PSDrive -PSProvider FileSystem | Format-Table Name, Used, Free, Root -AutoSize | Out-String
       register: drives
