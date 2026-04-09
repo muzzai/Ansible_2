@@ -1,7 +1,7 @@
 ---
 - name: List D drive contents
   gather_facts: false
-  hosts: "{{ target }}"
+  hosts: aws_ec2
   tasks:
     - name: Get D drive contents
       ansible.windows.win_powershell:
