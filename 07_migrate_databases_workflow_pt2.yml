@@ -102,37 +102,31 @@
 
     - name: Restore Default Web Site bindings from exported JSON
       ansible.windows.win_powershell:
-      script: |
-        Import-Module WebAdministration
-
-        $siteName = 'Default Web Site'
-
-        $json = @'
-        {{ default_site_bindings }}
-        '@
-
-        $bindings = $json | ConvertFrom-Json
-
-        foreach ($b in $bindings) {
-          $parts = $b.bindingInformation -split ':', 3
-          $ip = $parts[0]
-          $port = [int]$parts[1]
-          $hostname = $parts[2]
-
-          $exists = Get-WebBinding -Name $siteName -Protocol $b.protocol |
-            Where-Object {
-              $_.bindingInformation -eq $b.bindingInformation
-            }
-
-          if (-not $exists) {
-            New-WebBinding `
-              -Name $siteName `
-              -Protocol $b.protocol `
-              -Port $port `
-              -IPAddress $ip `
-              -HostHeader $hostname
+        script: |
+          Import-Module WebAdministration
+          $siteName = 'Default Web Site'
+          $json = @'
+          {{ default_site_bindings }}
+          '@
+          $bindings = $json | ConvertFrom-Json
+          foreach ($b in $bindings) {
+              $parts = $b.bindingInformation -split ':', 3
+              $ip = $parts[0]
+              $port = [int]$parts[1]
+              $hostname = $parts[2]
+              $exists = Get-WebBinding -Name $siteName -Protocol $b.protocol |
+                  Where-Object {
+                      $_.bindingInformation -eq $b.bindingInformation
+                  }
+              if (-not $exists) {
+                  New-WebBinding `
+                      -Name $siteName `
+                      -Protocol $b.protocol `
+                      -Port $port `
+                      -IPAddress $ip `
+                      -HostHeader $hostname
+              }
           }
-        }
 
     # - name: Get Script Helper URL
     #   delegate_to: localhost
