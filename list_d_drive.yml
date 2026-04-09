@@ -4,7 +4,8 @@
   hosts: "{{ target }}"
   tasks:
     - name: Get D drive contents
-      ansible.windows.win_powershell: Get-ChildItem -Path D:\ -Force | Format-Table Mode, LastWriteTime, Length, Name -AutoSize
+      ansible.windows.win_powershell:
+        script: Get-ChildItem -Path D:\ -Force | Format-Table Mode, LastWriteTime, Length, Name -AutoSize
       register: result
 
     - name: Show output
