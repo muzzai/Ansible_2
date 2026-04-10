@@ -6,23 +6,32 @@
   ansible.builtin.debug:
     var: ansible_facts.disks
 
-- name: Get max disk number
+- name: Get RAW disk number (the new unformatted volume)
   ansible.builtin.set_fact:
-    physical_disk_number:
-      "{{ ansible_facts.disks
-        | map(attribute='number')
-        | max
-        | trim
-        | int }}"
+    physical_disk_number: >-
+      {{ ansible_facts.disks
+         | selectattr('partition_style', 'equalto', 'raw')
+         | sort(attribute='size', reverse=true)
+         | map(attribute='number')
+         | first
+         | int }}
+
+- name: Fail if no RAW disk found
+  ansible.builtin.fail:
+    msg: >-
+      No RAW disk found. The new EBS volume may not be attached yet,
+      or it was already initialized. Disk facts: {{ ansible_facts.disks | map(attribute='number') | list }}
+  when:
+    ansible_facts.disks | selectattr('partition_style', 'equalto', 'raw') | list | length == 0
+    and not is_initialized
 
 - name: Get partitions
   ansible.builtin.set_fact:
-    existing_partitions:
-      "{{ ansible_facts.disks
-        | map(attribute='partitions', default=[])
-        | flatten(2)
-        | selectattr('drive_letter', 'defined')
-        | map(attribute='drive_letter') | select | unique | sort | list }}"
+    existing_partitions: "{{ ansible_facts.disks
+      | map(attribute='partitions', default=[])
+      | flatten(2)
+      | selectattr('drive_letter', 'defined')
+      | map(attribute='drive_letter') | select | unique | sort | list }}"
 
 - name: Fail when less than 2 partitions
   ansible.builtin.fail:
