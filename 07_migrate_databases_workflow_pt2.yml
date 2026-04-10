@@ -10,10 +10,10 @@
     new_hostname: "{{
       (
       default_site_bindings
-      | from_json
       | selectattr('bindingInformation', 'search', domain_name)
       | map(attribute='bindingInformation')
-      | map('regex_replace', '^.*:', '')
+      | map('regex_replace', '^[^:]*:[^:]*:', '')
+      | select
       | first
       )
       }}"
@@ -106,7 +106,7 @@
           Import-Module WebAdministration
           $siteName = 'Default Web Site'
           $json = @'
-          {{ default_site_bindings }}
+          {{ default_site_bindings | to_json }}
           '@
           $bindings = $json | ConvertFrom-Json
           foreach ($b in $bindings) {
