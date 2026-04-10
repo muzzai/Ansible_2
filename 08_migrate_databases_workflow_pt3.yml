@@ -22,13 +22,13 @@
       amazon.aws.ec2_vol:
         id: "{{ volume_id }}"
         state: absent
-        region: "{{ region }}"
+        region: "{{ hostvars[source].placement.region }}"
 
     - name: Delete restored volume
       amazon.aws.ec2_vol:
         id: "{{ restored_volume_id }}"
         state: absent
-        region: "{{ region }}"
+        region: "{{ hostvars[dest].placement.region }}"
       when: restored_volume_id is defined
 
 - name: Reboot hosts
