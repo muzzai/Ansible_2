@@ -6,24 +6,27 @@
   ansible.builtin.debug:
     var: ansible_facts.disks
 
-- name: Get RAW disk number (the new unformatted volume)
-  ansible.builtin.set_fact:
-    physical_disk_number: >-
-      {{ ansible_facts.disks
-         | selectattr('partition_style', 'equalto', 'raw')
-         | sort(attribute='size', reverse=true)
-         | map(attribute='number')
-         | first
-         | int }}
-
 - name: Fail if no RAW disk found
   ansible.builtin.fail:
     msg: >-
       No RAW disk found. The new EBS volume may not be attached yet,
-      or it was already initialized. Disk facts: {{ ansible_facts.disks | map(attribute='number') | list }}
+      or it was already initialized.
+      Disks: {{ ansible_facts.disks | map(attribute='number') | list }}
+      Partition styles: {{ ansible_facts.disks | map(attribute='partition_style') | list }}
   when:
-    ansible_facts.disks | selectattr('partition_style', 'equalto', 'raw') | list | length == 0
-    and not is_initialized
+    - not is_initialized
+    - ansible_facts.disks | selectattr('partition_style', 'search', '(?i)^raw$') | list | length == 0
+
+- name: Get RAW disk number (the new unformatted volume)
+  ansible.builtin.set_fact:
+    physical_disk_number: >-
+      {{ ansible_facts.disks
+         | selectattr('partition_style', 'search', '(?i)^raw$')
+         | sort(attribute='size', reverse=true)
+         | map(attribute='number')
+         | first
+         | int }}
+  when: not is_initialized
 
 - name: Get partitions
   ansible.builtin.set_fact:
