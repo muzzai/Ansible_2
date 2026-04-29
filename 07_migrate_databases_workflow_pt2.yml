@@ -177,66 +177,66 @@
         /MIR /R:1 /W:1 /NFL /NDL
       register: robocopy_result
       ignore_errors: true
-# - name: Reconfigure AWS side
-#   gather_facts: false
-#   hosts: localhost
-#   vars:
-#     region: "{{ hostvars[dest]['placement']['region'] }}"
-#   tasks:
-#     - name: Stop source
-#       amazon.aws.ec2_instance:
-#         instance_ids:
-#           - "{{ hostvars[source]['instance_id'] }}"
-#         region: "{{ hostvars[source]['placement']['region'] }}"
-#         state: stopped
-#         wait: true
+- name: Reconfigure AWS side
+  gather_facts: false
+  hosts: localhost
+  vars:
+    region: "{{ hostvars[dest]['placement']['region'] }}"
+  tasks:
+    - name: Stop source
+      amazon.aws.ec2_instance:
+        instance_ids:
+          - "{{ hostvars[source]['instance_id'] }}"
+        region: "{{ hostvars[source]['placement']['region'] }}"
+        state: stopped
+        wait: true
 
-#     - name: Delete volume
-#       amazon.aws.ec2_vol:
-#         id: "{{ volume_id }}"
-#         state: absent
-#         region: "{{ region }}"
+    - name: Delete volume
+      amazon.aws.ec2_vol:
+        id: "{{ volume_id }}"
+        state: absent
+        region: "{{ region }}"
 
-#     - name: Delete restored volume
-#       amazon.aws.ec2_vol:
-#         id: "{{ restored_volume_id }}"
-#         state: absent
-#         region: "{{ region }}"
-#       when: restored_volume_id is defined
+    - name: Delete restored volume
+      amazon.aws.ec2_vol:
+        id: "{{ restored_volume_id }}"
+        state: absent
+        region: "{{ region }}"
+      when: restored_volume_id is defined
 
-#     - name: Extract IP address from record
-#       ansible.builtin.set_fact:
-#         record_ip: "{{ hostvars[source]['ansible_host'] }}"
+    - name: Extract IP address from record
+      ansible.builtin.set_fact:
+        record_ip: "{{ hostvars[source]['ansible_host'] }}"
 
-#     - name: Get EIP allocation ID by IP address
-#       amazon.aws.ec2_eip_info:
-#         region: "{{ region }}"
-#         filters:
-#           "public-ip": "{{ record_ip }}"
-#       register: eip_info
+    - name: Get EIP allocation ID by IP address
+      amazon.aws.ec2_eip_info:
+        region: "{{ region }}"
+        filters:
+          "public-ip": "{{ record_ip }}"
+      register: eip_info
 
-#     - name: Release current association
-#       amazon.aws.ec2_eip:
-#         region: "{{ region }}"
-#         device_id: "{{ hostvars[source]['instance_id'] }}"
-#         ip: "{{ record_ip }}"
-#         state: absent
-#       register: release_result
+    - name: Release current association
+      amazon.aws.ec2_eip:
+        region: "{{ region }}"
+        device_id: "{{ hostvars[source]['instance_id'] }}"
+        ip: "{{ record_ip }}"
+        state: absent
+      register: release_result
 
-#     - name: Associate to new instance
-#       amazon.aws.ec2_eip:
-#         region: "{{ region }}"
-#         device_id: "{{ hostvars[dest]['instance_id'] }}"
-#         ip: "{{ record_ip }}"
-#         state: present
-#       register: association_result
+    - name: Associate to new instance
+      amazon.aws.ec2_eip:
+        region: "{{ region }}"
+        device_id: "{{ hostvars[dest]['instance_id'] }}"
+        ip: "{{ record_ip }}"
+        state: present
+      register: association_result
 
-#     - name: Verify association
-#       amazon.aws.ec2_eip_info:
-#         region: "{{ region }}"
-#         filters:
-#           "public-ip": "{{ record_ip }}"
-#       register: verification
-#       until: verification.addresses[0].instance_id == hostvars[dest]['instance_id']
-#       retries: 5
-#       delay: 5
+    - name: Verify association
+      amazon.aws.ec2_eip_info:
+        region: "{{ region }}"
+        filters:
+          "public-ip": "{{ record_ip }}"
+      register: verification
+      until: verification.addresses[0].instance_id == hostvars[dest]['instance_id']
+      retries: 5
+      delay: 5
