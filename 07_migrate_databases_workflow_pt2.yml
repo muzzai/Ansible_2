@@ -10,6 +10,7 @@
     new_hostname: "{{
       (
       default_site_bindings
+      | from_json
       | selectattr('bindingInformation', 'search', domain_name)
       | map(attribute='bindingInformation')
       | map('regex_replace', '^[^:]*:[^:]*:', '')
