@@ -33,6 +33,36 @@ if (-not (Get-Module -ListAvailable -Name WebAdministration)) {
 Import-Module SqlServer -ErrorAction Stop
 Import-Module WebAdministration -ErrorAction Stop
 
+function Stop-ServiceIfPresent {
+    param(
+        [string]$Name
+    )
+
+    $service = Get-Service -Name $Name -ErrorAction SilentlyContinue
+    if ($null -ne $service -and $service.Status -ne 'Stopped') {
+        Write-Host "Stopping service: $Name"
+        Stop-Service -Name $Name -Force -ErrorAction Stop
+        $service.WaitForStatus('Stopped', [TimeSpan]::FromMinutes(2))
+    }
+}
+
+function Start-ServiceIfPresent {
+    param(
+        [string]$Name
+    )
+
+    $service = Get-Service -Name $Name -ErrorAction SilentlyContinue
+    if ($null -ne $service -and $service.Status -ne 'Running') {
+        Write-Host "Starting service: $Name"
+        Start-Service -Name $Name -ErrorAction Stop
+        $service.WaitForStatus('Running', [TimeSpan]::FromMinutes(2))
+    }
+}
+
+foreach ($serviceName in @('W3SVC', 'AlloyAutomationServer', 'AlloyInventoryServer')) {
+    Stop-ServiceIfPresent -Name $serviceName
+}
+
 $ComputerName = $env:COMPUTERNAME
 
 $AutomationServersQueries = @{
@@ -50,6 +80,18 @@ $Cred       = New-Object System.Management.Automation.PSCredential ($SaUser, $Se
 
 Write-Host "=== Dropping database: {{ db }} ==="
 $dbDropQuery = @"
+DECLARE @KillSql NVARCHAR(MAX) = N'';
+
+SELECT @KillSql = @KillSql + N'KILL ' + CONVERT(NVARCHAR(11), s.session_id) + N';'
+FROM sys.dm_exec_sessions s
+WHERE s.database_id = DB_ID(N'{{db}}')
+    AND s.session_id <> @@SPID;
+
+IF @KillSql <> N''
+BEGIN
+        EXEC(@KillSql);
+END
+
 alter database [{{db}}] set single_user with rollback immediate
 DROP DATABASE [{{db}}]
 "@
@@ -57,7 +99,7 @@ DROP DATABASE [{{db}}]
 Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
               -Credential $Cred `
               -Database master `
-              -Query $dbDropQuery `
+              -Query $dbDropQuery ` 
               -TrustServerCertificate `
               -QueryTimeout 0
 
@@ -76,6 +118,17 @@ DECLARE @DataPath    NVARCHAR(260);
 DECLARE @LogPath     NVARCHAR(260);
 DECLARE @Sql         NVARCHAR(MAX);
 DECLARE @BackupPath  NVARCHAR(260) = N'{{ target_mssql_backup_path }}\{{ db }}.bak';
+DECLARE @KillSql     NVARCHAR(MAX) = N'';
+
+SELECT @KillSql = @KillSql + N'KILL ' + CONVERT(NVARCHAR(11), s.session_id) + N';'
+FROM sys.dm_exec_sessions s
+WHERE s.database_id = DB_ID(N'{{ db }}')
+    AND s.session_id <> @@SPID;
+
+IF @KillSql <> N''
+BEGIN
+        EXEC(@KillSql);
+END
 
 SELECT
     @DataPath = CAST(SERVERPROPERTY('InstanceDefaultDataPath') AS NVARCHAR(260)),
@@ -288,6 +341,7 @@ Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
               -TrustServerCertificate `
               -QueryTimeout 0
 
+Start-ServiceIfPresent -Name 'W3SVC'
 
 $siteName = "{{ site_name }}"
 
