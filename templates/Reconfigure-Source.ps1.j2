@@ -12,6 +12,7 @@ $SaPassword          = "{{ dest_SaPassword }}"
 #                      MAIN SCRIPT                             #
 ################################################################
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+$ErrorActionPreference = 'Stop'
 
 if (-not (Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue)) {
     Install-PackageProvider -Name NuGet -Force
@@ -32,6 +33,8 @@ if (-not (Get-Module -ListAvailable -Name WebAdministration)) {
 
 Import-Module SqlServer -ErrorAction Stop
 Import-Module WebAdministration -ErrorAction Stop
+
+try {
 
 function Stop-ServiceIfPresent {
     param(
@@ -101,6 +104,7 @@ Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
               -Database master `
               -Query $dbDropQuery ` 
               -TrustServerCertificate `
+              -ErrorAction Stop `
               -QueryTimeout 0
 
 
@@ -200,6 +204,7 @@ Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
               -Database master `
               -Query $restoreSql `
               -TrustServerCertificate `
+              -ErrorAction Stop `
               -QueryTimeout 0
 
 if ('{{ db }}' -ne 'AlloyNavigatorExpress.ad') {
@@ -249,6 +254,7 @@ if ('{{ db }}' -ne 'AlloyNavigatorExpress.ad') {
                 -Database master `
                 -Query $loginSql `
                 -TrustServerCertificate `
+                -ErrorAction Stop `
                 -QueryTimeout 0
 
 } else {
@@ -280,6 +286,7 @@ Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
             -Database "{{ db }}" `
             -Query $userSql `
             -TrustServerCertificate `
+            -ErrorAction Stop `
             -QueryTimeout 0
 
 $AutomationServerQuery = $AutomationServersQueries['{{ db }}']
@@ -293,6 +300,7 @@ if ($null -ne $AutomationServerQuery) {
               -Database "{{ db }}" `
               -Query $AutomationServerQueryFinal `
               -TrustServerCertificate `
+              -ErrorAction Stop `
               -QueryTimeout 0
 }
 
@@ -339,6 +347,7 @@ Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
               -Database $AN_SQLDatabase `
               -Query $rebuildFTSCatalogQuery `
               -TrustServerCertificate `
+              -ErrorAction Stop `
               -QueryTimeout 0
 
 Start-ServiceIfPresent -Name 'W3SVC'
@@ -402,6 +411,7 @@ $allApps | % {
               -Database $AN_SQLDatabase `
               -Query $portalQuery `
               -TrustServerCertificate `
+              -ErrorAction Stop `
               -QueryTimeout 0
 }
 
@@ -448,4 +458,8 @@ Invoke-Command -ArgumentList ($AN_AccessKeyName, $SQLServerInstance, $AN_SQLData
   Get-ChildItem "HKLM:\SOFTWARE\Alloy Software\Web Config Tech" |
       Where-Object { $DefaultsID -notcontains $_.PSChildName } |
       ForEach-Object { UpdateWebConfig $_.GetValue("InstallPath") }
+}
+catch {
+    Write-Error $_
+    exit 1
 }
