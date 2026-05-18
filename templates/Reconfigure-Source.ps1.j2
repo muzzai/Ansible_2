@@ -12,7 +12,6 @@ $SaPassword          = "{{ dest_SaPassword }}"
 #                      MAIN SCRIPT                             #
 ################################################################
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-$ErrorActionPreference = 'Stop'
 
 if (-not (Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue)) {
     Install-PackageProvider -Name NuGet -Force
