@@ -159,6 +159,7 @@
       args:
         executable: powershell.exe
       register: restore_result
+      failed_when: restore_result.rc not in [0, 1]
 
     - name: Show restore stderr
       when: restore_result.stderr is defined and restore_result.stderr | length > 0
