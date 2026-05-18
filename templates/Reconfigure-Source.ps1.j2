@@ -459,6 +459,7 @@ Invoke-Command -ArgumentList ($AN_AccessKeyName, $SQLServerInstance, $AN_SQLData
       Where-Object { $DefaultsID -notcontains $_.PSChildName } |
       ForEach-Object { UpdateWebConfig $_.GetValue("InstallPath") }
 }
+}
 catch {
     Write-Error $_
     exit 1
