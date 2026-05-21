@@ -4,6 +4,7 @@
 
 $AN_SQLDatabase      = "{{ database_list | select('search', 'Navigator') | first }}"
 $SQLServerInstance   = "{{ new_hostname }},51967"
+$SQLServerLocal      = "localhost,51967"
 $SaUser              = "{{ dest_SaUserName }}"
 $SaPassword          = "{{ dest_SaPassword }}"
 
@@ -96,7 +97,7 @@ alter database [{{db}}] set single_user with rollback immediate
 DROP DATABASE [{{db}}]
 "@
 
-Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
+Invoke-Sqlcmd -ServerInstance $SQLServerLocal `
               -Credential $Cred `
               -Database master `
               -Query $dbDropQuery `
@@ -196,7 +197,7 @@ BEGIN
 END
 "@
 
-Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
+Invoke-Sqlcmd -ServerInstance $SQLServerLocal `
               -Credential $Cred `
               -Database master `
               -Query $restoreSql `
@@ -246,7 +247,7 @@ if ('{{ db }}' -ne 'AlloyNavigatorExpress.ad') {
     Write-Host "The login update/create query is:"
     Write-Host $loginSql
 
-    Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
+    Invoke-Sqlcmd -ServerInstance $SQLServerLocal `
                 -Credential $Cred `
                 -Database master `
                 -Query $loginSql `
@@ -278,7 +279,7 @@ ALTER ROLE [db_datareader] ADD MEMBER [dbreader];
 DENY INSERT, UPDATE, DELETE TO [dbreader];
 "@
 
-Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
+Invoke-Sqlcmd -ServerInstance $SQLServerLocal `
             -Credential $Cred `
             -Database "{{ db }}" `
             -Query $userSql `
@@ -292,7 +293,7 @@ if ($null -ne $AutomationServerQuery) {
 
     $AutomationServerQueryFinal = $AutomationServerQuery -f $ComputerName
 
-    Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
+    Invoke-Sqlcmd -ServerInstance $SQLServerLocal `
               -Credential $Cred `
               -Database "{{ db }}" `
               -Query $AutomationServerQueryFinal `
@@ -339,7 +340,7 @@ FROM sys.fulltext_catalogs c
 EXEC sys.sp_executesql @sql;
 "@
 
-Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
+Invoke-Sqlcmd -ServerInstance $SQLServerLocal `
               -Credential $Cred `
               -Database $AN_SQLDatabase `
               -Query $rebuildFTSCatalogQuery `
@@ -403,7 +404,7 @@ $allApps = $apps + [PSCustomObject]@{
 
 $allApps | % {
   $portalQuery = ($queriesToChangeIds[$_.Application] -f $_.AlloyPortalID)
-  Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
+  Invoke-Sqlcmd -ServerInstance $SQLServerLocal `
               -Credential $Cred `
               -Database $AN_SQLDatabase `
               -Query $portalQuery `
