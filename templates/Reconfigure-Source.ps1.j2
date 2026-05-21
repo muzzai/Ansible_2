@@ -99,7 +99,7 @@ DROP DATABASE [{{db}}]
 Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
               -Credential $Cred `
               -Database master `
-              -Query $dbDropQuery ` 
+              -Query $dbDropQuery `
               -TrustServerCertificate `
               -ErrorAction Stop `
               -QueryTimeout 0
