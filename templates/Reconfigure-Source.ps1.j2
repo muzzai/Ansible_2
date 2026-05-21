@@ -33,8 +33,6 @@ if (-not (Get-Module -ListAvailable -Name WebAdministration)) {
 Import-Module SqlServer -ErrorAction Stop
 Import-Module WebAdministration -ErrorAction Stop
 
-try {
-
 function Stop-ServiceIfPresent {
     param(
         [string]$Name
