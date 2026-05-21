@@ -8,15 +8,12 @@
     sql_s3_object: "ScriptHelper.exe"
     sql_s3_url_expiry: 3600
     default_site_bindings_list: "{{ default_site_bindings | from_json if default_site_bindings is string else default_site_bindings }}"
+    site_hostnames_list: "{{ default_site_bindings_list | map(attribute='bindingInformation') | map('regex_replace', '^[^:]*:[^:]*:', '') | select | list }}"
+    matching_site_hostnames_list: "{{ site_hostnames_list | select('search', domain_name) | list }}"
     new_hostname: "{{
-      (
-      default_site_bindings_list
-      | selectattr('bindingInformation', 'search', domain_name)
-      | map(attribute='bindingInformation')
-      | map('regex_replace', '^[^:]*:[^:]*:', '')
-      | select
-      | first
-      )
+      matching_site_hostnames_list[0]
+      if matching_site_hostnames_list | length > 0
+      else (site_hostnames_list[0] if site_hostnames_list | length > 0 else '')
       }}"
 
   tasks:
@@ -57,6 +54,7 @@
       community.windows.win_lineinfile:
         path: C:\Windows\System32\drivers\etc\hosts
         line: "127.0.0.1 {{ new_hostname }}"
+      when: new_hostname | length > 0
 
     - name: Remove all subkeys under Alloy Software Access Keys
       ansible.windows.win_shell: |
