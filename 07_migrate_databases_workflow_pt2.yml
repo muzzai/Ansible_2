@@ -173,8 +173,9 @@
 
     - name: Show restore stderr
       when: restore_result.stderr is defined and restore_result.stderr | length > 0
-      ansible.builtin.debug:
-        var: restore_result.stderr
+      ansible.builtin.fail:
+        msg: "{{ restore_result.stderr }}"
+      ignore_errors: true
 
     - name: Mirror D:\Downloads to ProgramData Alloy Downloads
       ansible.windows.win_shell: >
