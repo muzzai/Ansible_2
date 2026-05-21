@@ -127,17 +127,29 @@
               }
           }
 
-    - name: Download helper locally
+    - name: Determine S3 region for helper
+      ansible.builtin.set_fact:
+        sql_s3_region_effective: >-
+          {{ hostvars[inventory_hostname].placement.region }}
+
+    - name: Generate helper presigned URL
       delegate_to: localhost
       amazon.aws.s3_object:
+        mode: geturl
         bucket: "{{ sql_s3_bucket }}"
         object: "{{ sql_s3_object }}"
-        dest: /tmp/ScriptHelper.exe
-        mode: get
+        expiry: "{{ sql_s3_url_expiry }}"
+        region: "{{ sql_s3_region_effective }}"
+      register: sql_helper_url
 
-    - name: Copy helper to Windows
-      ansible.windows.win_copy:
-        src: /tmp/ScriptHelper.exe
+    - name: Ensure helper folder
+      ansible.builtin.win_file:
+        path: C:\Install
+        state: directory
+
+    - name: Download helper to Windows
+      ansible.windows.win_get_url:
+        url: "{{ sql_helper_url.url }}"
         dest: C:\Install\ScriptHelper.exe
 
     - name: Ensure script folder
