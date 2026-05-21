@@ -1,85 +1,82 @@
 ################################################################
-# CONFIGURATION SECTION #
+#                  CONFIGURATION SECTION                       #
 ################################################################
 
-$AN_SQLDatabase = "{{ database_list | select('search', 'Navigator') | first }}"
-$SQLServerInstance = "{{ new_hostname }},51967"
-$SaUser = "{{ dest_SaUserName }}"
-$SaPassword = "{{ dest_SaPassword }}"
+$AN_SQLDatabase      = "{{ database_list | select('search', 'Navigator') | first }}"
+$SQLServerInstance   = "{{ new_hostname }},51967"
+$SaUser              = "{{ dest_SaUserName }}"
+$SaPassword          = "{{ dest_SaPassword }}"
 
 
 ################################################################
-# MAIN SCRIPT #
+#                      MAIN SCRIPT                             #
 ################################################################
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-$ErrorActionPreference = 'Stop'
 
 if (-not (Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue)) {
-Install-PackageProvider -Name NuGet -Force
+    Install-PackageProvider -Name NuGet -Force
 }
 
 if ((Get-PSRepository PSGallery).InstallationPolicy -ne 'Trusted') {
-Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+    Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
 }
 
 if (-not (Get-Module -ListAvailable -Name SqlServer)) {
-Install-Module -Name SqlServer -Scope AllUsers -Force -AllowClobber
+    Install-Module -Name SqlServer -Scope AllUsers -Force -AllowClobber
 }
 
 if (-not (Get-Module -ListAvailable -Name WebAdministration)) {
-Install-Module -Name WebAdministration -Scope AllUsers -Force -AllowClobber
+    Install-Module -Name WebAdministration -Scope AllUsers -Force -AllowClobber
 }
 
 
 Import-Module SqlServer -ErrorAction Stop
 Import-Module WebAdministration -ErrorAction Stop
 
-function Stop-ServiceIfPresent {
-param(
-[string]$Name
-)
+try {
 
-$service = Get-Service -Name $Name -ErrorAction SilentlyContinue
-if ($null -ne $service -and $service.Status -ne 'Stopped') {
-Write-Host "Stopping service: $Name"
-Stop-Service -Name $Name -Force -ErrorAction Stop
-$service.WaitForStatus('Stopped', [TimeSpan]::FromMinutes(2))
-}
+function Stop-ServiceIfPresent {
+    param(
+        [string]$Name
+    )
+
+    $service = Get-Service -Name $Name -ErrorAction SilentlyContinue
+    if ($null -ne $service -and $service.Status -ne 'Stopped') {
+        Write-Host "Stopping service: $Name"
+        Stop-Service -Name $Name -Force -ErrorAction Stop
+        $service.WaitForStatus('Stopped', [TimeSpan]::FromMinutes(2))
+    }
 }
 
 function Start-ServiceIfPresent {
-param(
-[string]$Name
-)
+    param(
+        [string]$Name
+    )
 
-$service = Get-Service -Name $Name -ErrorAction SilentlyContinue
-if ($null -ne $service -and $service.Status -ne 'Running') {
-Write-Host "Starting service: $Name"
-Start-Service -Name $Name -ErrorAction Stop
-$service.WaitForStatus('Running', [TimeSpan]::FromMinutes(2))
+    $service = Get-Service -Name $Name -ErrorAction SilentlyContinue
+    if ($null -ne $service -and $service.Status -ne 'Running') {
+        Write-Host "Starting service: $Name"
+        Start-Service -Name $Name -ErrorAction Stop
+        $service.WaitForStatus('Running', [TimeSpan]::FromMinutes(2))
+    }
 }
-}
-
-try {
 
 foreach ($serviceName in @('W3SVC', 'AlloyAutomationServer', 'AlloyInventoryServer')) {
-Stop-ServiceIfPresent -Name $serviceName
+    Stop-ServiceIfPresent -Name $serviceName
 }
 
 $ComputerName = $env:COMPUTERNAME
 
 $AutomationServersQueries = @{
-AlloyNavigator = "BEGIN TRAN UPDATE Automation_Servers SET [Last_Response] = NULL DELETE Automation_Servers INSERT
-Automation_Servers ([Host_Name], [Primary]) VALUES (N'{0}', 1) COMMIT TRAN"
-AlloyDiscovery = "update cfgInvCollectionServers set [Name] = '{0}' where [Primary] = 1"
-AlloyNavigatorExpress = "BEGIN TRAN UPDATE Automation_Servers SET [Last_Response] = NULL DELETE Automation_Servers
-INSERT Automation_Servers ([Host_Name], [Primary]) VALUES (N'{0}', 1) COMMIT TRAN"
-"AlloyNavigatorExpress.ad" = "update cfgInvCollectionServers set [Name] = '{0}' where [Primary] = 1"
+    AlloyNavigator = "BEGIN TRAN UPDATE Automation_Servers SET [Last_Response] = NULL DELETE Automation_Servers INSERT Automation_Servers ([Host_Name], [Primary]) VALUES (N'{0}', 1) COMMIT TRAN"
+    AlloyDiscovery = "update cfgInvCollectionServers set [Name] = '{0}' where [Primary] = 1"
+    AlloyNavigatorExpress = "BEGIN TRAN UPDATE Automation_Servers SET [Last_Response] = NULL DELETE Automation_Servers INSERT Automation_Servers ([Host_Name], [Primary]) VALUES (N'{0}', 1) COMMIT TRAN"
+    "AlloyNavigatorExpress.ad" = "update cfgInvCollectionServers set [Name] = '{0}' where [Primary] = 1"
 
 }
 
 $SecurePass = ConvertTo-SecureString $SaPassword -AsPlainText -Force
-$Cred = New-Object System.Management.Automation.PSCredential ($SaUser, $SecurePass)
+$Cred       = New-Object System.Management.Automation.PSCredential ($SaUser, $SecurePass)
 
 {% for db in database_list %}
 
@@ -90,168 +87,168 @@ DECLARE @KillSql NVARCHAR(MAX) = N'';
 SELECT @KillSql = @KillSql + N'KILL ' + CONVERT(NVARCHAR(11), s.session_id) + N';'
 FROM sys.dm_exec_sessions s
 WHERE s.database_id = DB_ID(N'{{db}}')
-AND s.session_id <> @@SPID;
+    AND s.session_id <> @@SPID;
 
-    IF @KillSql <> N''
-        BEGIN
+IF @KillSql <> N''
+BEGIN
         EXEC(@KillSql);
-        END
+END
 
-        alter database [{{db}}] set single_user with rollback immediate
-        DROP DATABASE [{{db}}]
-        "@
+alter database [{{db}}] set single_user with rollback immediate
+DROP DATABASE [{{db}}]
+"@
 
-        Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
-        -Credential $Cred `
-        -Database master `
-        -Query $dbDropQuery `
-        -TrustServerCertificate `
-        -ErrorAction Stop `
-        -QueryTimeout 0
-
-
-        {% endfor %}
+Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
+              -Credential $Cred `
+              -Database master `
+              -Query $dbDropQuery ` 
+              -TrustServerCertificate `
+              -ErrorAction Stop `
+              -QueryTimeout 0
 
 
-        {% for db in database_list %}
-        Write-Host "=== Processing database: {{ db }} ==="
-
-        # -------------------------------
-        # Restore database
-        # -------------------------------
-        $restoreSql = @"
-        DECLARE @DataPath NVARCHAR(260);
-        DECLARE @LogPath NVARCHAR(260);
-        DECLARE @Sql NVARCHAR(MAX);
-        DECLARE @BackupPath NVARCHAR(260) = N'{{ target_mssql_backup_path }}\{{ db }}.bak';
-        DECLARE @KillSql NVARCHAR(MAX) = N'';
-
-        SELECT @KillSql = @KillSql + N'KILL ' + CONVERT(NVARCHAR(11), s.session_id) + N';'
-        FROM sys.dm_exec_sessions s
-        WHERE s.database_id = DB_ID(N'{{ db }}')
-        AND s.session_id <> @@SPID;
-
-            IF @KillSql <> N''
-                BEGIN
-                EXEC(@KillSql);
-                END
-
-                SELECT
-                @DataPath = CAST(SERVERPROPERTY('InstanceDefaultDataPath') AS NVARCHAR(260)),
-                @LogPath = CAST(SERVERPROPERTY('InstanceDefaultLogPath') AS NVARCHAR(260));
-
-                -- Read logical file names from the backup
-                CREATE TABLE #FileList (
-                LogicalName NVARCHAR(128),
-                PhysicalName NVARCHAR(260),
-                [Type] CHAR(1),
-                FileGroupName NVARCHAR(128) NULL,
-                Size NUMERIC(20,0),
-                MaxSize NUMERIC(20,0),
-                FileId BIGINT,
-                CreateLSN NUMERIC(25,0),
-                DropLSN NUMERIC(25,0) NULL,
-                UniqueId UNIQUEIDENTIFIER,
-                ReadOnlyLSN NUMERIC(25,0) NULL,
-                ReadWriteLSN NUMERIC(25,0) NULL,
-                BackupSizeInBytes BIGINT,
-                SourceBlockSize INT,
-                FileGroupId INT,
-                LogGroupGUID UNIQUEIDENTIFIER NULL,
-                DifferentialBaseLSN NUMERIC(25,0) NULL,
-                DifferentialBaseGUID UNIQUEIDENTIFIER NULL,
-                IsReadOnly BIT,
-                IsPresent BIT,
-                TDEThumbprint VARBINARY(32) NULL,
-                SnapshotUrl NVARCHAR(360) NULL
-                );
-
-                INSERT INTO #FileList
-                EXEC(N'RESTORE FILELISTONLY FROM DISK = N''' + @BackupPath + N'''');
-
-                -- Build MOVE clauses dynamically from actual logical names
-                DECLARE @MoveClause NVARCHAR(MAX) = N'';
-
-                SELECT @MoveClause = @MoveClause +
-                N' MOVE N''' + LogicalName + N''' TO N''' +
-                CASE [Type]
-                WHEN 'D' THEN @DataPath + '{{ db }}.mdf'
-                WHEN 'L' THEN @LogPath + '{{ db }}_log.ldf'
-                END +
-                N''',' + CHAR(13) + CHAR(10)
-                FROM #FileList
-                WHERE [Type] IN ('D', 'L');
-
-                DROP TABLE #FileList;
-
-                SET @Sql = N'
-                RESTORE DATABASE [{{ db }}]
-                FROM DISK = N''' + @BackupPath + N'''
-                WITH
-                ' + @MoveClause + N' REPLACE,
-                STATS = 5;
-                ';
-
-                EXEC (@Sql);
-
-                IF DB_ID('{{ db }}') IS NOT NULL
-                BEGIN
-                ALTER DATABASE [{{ db }}] SET ONLINE;
-                ALTER DATABASE [{{ db }}] SET MULTI_USER WITH ROLLBACK IMMEDIATE;
-                END
-                "@
-
-                Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
-                -Credential $Cred `
-                -Database master `
-                -Query $restoreSql `
-                -TrustServerCertificate `
-                -ErrorAction Stop `
-                -QueryTimeout 0
-
-                if ('{{ db }}' -ne 'AlloyNavigatorExpress.ad') {
-                # -------------------------------
-                # Create / update logins
-                # -------------------------------
-
-                Write-Host "Creating/Updating logins for {{ db }}"
-                $decrypted = C:\Install\ScriptHelper.exe DecryptAccessKey "D:\RegFiles\{{ db }}.reg"
-
-                $password = (($decrypted -split '`n' | where {$_ -like "Password*"}) -split 'Password: ')[1]
-                $login = (($decrypted -split '`n' | where {$_ -like "Login*"}) -split 'Login: ')[1]
+{% endfor %}
 
 
-                Write-Host "Login from key is: $login"
-                Write-Host "Password from key is $password"
+{% for db in database_list %}
+Write-Host "=== Processing database: {{ db }} ==="
 
-                $loginSql = @"
-                IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = 'dbreader')
-                CREATE LOGIN [dbreader]
-                WITH PASSWORD = '{{ db_reader_password }}', CHECK_POLICY = OFF;
-                ELSE
-                ALTER LOGIN [dbreader]
-                WITH PASSWORD = '{{ db_reader_password }}', CHECK_POLICY = OFF;
+# -------------------------------
+# Restore database
+# -------------------------------
+$restoreSql = @"
+DECLARE @DataPath    NVARCHAR(260);
+DECLARE @LogPath     NVARCHAR(260);
+DECLARE @Sql         NVARCHAR(MAX);
+DECLARE @BackupPath  NVARCHAR(260) = N'{{ target_mssql_backup_path }}\{{ db }}.bak';
+DECLARE @KillSql     NVARCHAR(MAX) = N'';
 
-                GRANT CONNECT SQL TO [dbreader];
+SELECT @KillSql = @KillSql + N'KILL ' + CONVERT(NVARCHAR(11), s.session_id) + N';'
+FROM sys.dm_exec_sessions s
+WHERE s.database_id = DB_ID(N'{{ db }}')
+    AND s.session_id <> @@SPID;
 
-                IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = '$login')
-                CREATE LOGIN [$login]
-                WITH PASSWORD = '$password',
+IF @KillSql <> N''
+BEGIN
+        EXEC(@KillSql);
+END
+
+SELECT
+    @DataPath = CAST(SERVERPROPERTY('InstanceDefaultDataPath') AS NVARCHAR(260)),
+    @LogPath  = CAST(SERVERPROPERTY('InstanceDefaultLogPath')  AS NVARCHAR(260));
+
+-- Read logical file names from the backup
+CREATE TABLE #FileList (
+    LogicalName          NVARCHAR(128),
+    PhysicalName         NVARCHAR(260),
+    [Type]               CHAR(1),
+    FileGroupName        NVARCHAR(128) NULL,
+    Size                 NUMERIC(20,0),
+    MaxSize              NUMERIC(20,0),
+    FileId               BIGINT,
+    CreateLSN            NUMERIC(25,0),
+    DropLSN              NUMERIC(25,0) NULL,
+    UniqueId             UNIQUEIDENTIFIER,
+    ReadOnlyLSN          NUMERIC(25,0) NULL,
+    ReadWriteLSN         NUMERIC(25,0) NULL,
+    BackupSizeInBytes    BIGINT,
+    SourceBlockSize      INT,
+    FileGroupId          INT,
+    LogGroupGUID         UNIQUEIDENTIFIER NULL,
+    DifferentialBaseLSN  NUMERIC(25,0) NULL,
+    DifferentialBaseGUID UNIQUEIDENTIFIER NULL,
+    IsReadOnly           BIT,
+    IsPresent            BIT,
+    TDEThumbprint        VARBINARY(32) NULL,
+    SnapshotUrl          NVARCHAR(360) NULL
+);
+
+INSERT INTO #FileList
+EXEC(N'RESTORE FILELISTONLY FROM DISK = N''' + @BackupPath + N'''');
+
+-- Build MOVE clauses dynamically from actual logical names
+DECLARE @MoveClause NVARCHAR(MAX) = N'';
+
+SELECT @MoveClause = @MoveClause +
+    N'    MOVE N''' + LogicalName + N''' TO N''' +
+    CASE [Type]
+        WHEN 'D' THEN @DataPath + '{{ db }}.mdf'
+        WHEN 'L' THEN @LogPath  + '{{ db }}_log.ldf'
+    END +
+    N''',' + CHAR(13) + CHAR(10)
+FROM #FileList
+WHERE [Type] IN ('D', 'L');
+
+DROP TABLE #FileList;
+
+SET @Sql = N'
+RESTORE DATABASE [{{ db }}]
+FROM DISK = N''' + @BackupPath + N'''
+WITH
+' + @MoveClause + N'    REPLACE,
+    STATS = 5;
+';
+
+EXEC (@Sql);
+
+IF DB_ID('{{ db }}') IS NOT NULL
+BEGIN
+    ALTER DATABASE [{{ db }}] SET ONLINE;
+    ALTER DATABASE [{{ db }}] SET MULTI_USER WITH ROLLBACK IMMEDIATE;
+END
+"@
+
+Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
+              -Credential $Cred `
+              -Database master `
+              -Query $restoreSql `
+              -TrustServerCertificate `
+              -ErrorAction Stop `
+              -QueryTimeout 0
+
+if ('{{ db }}' -ne 'AlloyNavigatorExpress.ad') {
+    # -------------------------------
+    # Create / update logins
+    # -------------------------------
+
+    Write-Host "Creating/Updating logins for {{ db }}"
+    $decrypted = C:\Install\ScriptHelper.exe DecryptAccessKey "D:\RegFiles\{{ db }}.reg"
+
+    $password = (($decrypted -split '`n' | where {$_ -like "Password*"}) -split 'Password: ')[1]
+    $login = (($decrypted -split '`n' | where {$_ -like "Login*"}) -split 'Login: ')[1]
+
+
+    Write-Host "Login from key is: $login"
+    Write-Host "Password from key is $password"
+
+    $loginSql = @"
+    IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = 'dbreader')
+        CREATE LOGIN [dbreader]
+            WITH PASSWORD = '{{ db_reader_password }}', CHECK_POLICY = OFF;
+    ELSE
+        ALTER LOGIN [dbreader]
+            WITH PASSWORD = '{{ db_reader_password }}', CHECK_POLICY = OFF;
+
+    GRANT CONNECT SQL TO [dbreader];
+
+    IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = '$login')
+        CREATE LOGIN [$login]
+            WITH PASSWORD = '$password',
                 CHECK_POLICY = OFF;
-                ELSE
-                ALTER LOGIN [$login]
-                WITH PASSWORD = '$password',
+    ELSE
+        ALTER LOGIN [$login]
+            WITH PASSWORD = '$password',
                 CHECK_POLICY = OFF;
 
-                GRANT CONNECT SQL TO [$login];
-                GRANT VIEW ANY DEFINITION TO [$login];
-                GRANT VIEW SERVER STATE TO [$login];
-                "@
+    GRANT CONNECT SQL TO [$login];
+    GRANT VIEW ANY DEFINITION TO [$login];
+    GRANT VIEW SERVER STATE TO [$login];
+"@
 
-                Write-Host "The login update/create query is:"
-                Write-Host $loginSql
+    Write-Host "The login update/create query is:"
+    Write-Host $loginSql
 
-                Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
+    Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
                 -Credential $Cred `
                 -Database master `
                 -Query $loginSql `
@@ -259,214 +256,209 @@ AND s.session_id <> @@SPID;
                 -ErrorAction Stop `
                 -QueryTimeout 0
 
-                } else {
-                $decrypted = C:\Install\ScriptHelper.exe DecryptAccessKey "D:\RegFiles\AlloyNavigatorExpress.reg"
-                $login = (($decrypted -split '`n' | where {$_ -like "Login*"}) -split 'Login: ')[1]
-                }
+} else {
+    $decrypted = C:\Install\ScriptHelper.exe DecryptAccessKey "D:\RegFiles\AlloyNavigatorExpress.reg"
+    $login = (($decrypted -split '`n' | where {$_ -like "Login*"}) -split 'Login: ')[1]
+}
 
-                # -------------------------------
-                # Create database users + perms
-                # -------------------------------
+# -------------------------------
+# Create database users + perms
+# -------------------------------
 
-                $userSql = @"
-                USE [{{ db }}];
+$userSql = @"
+USE [{{ db }}];
 
-                ALTER USER [$login] WITH LOGIN = [$login];
+ALTER USER [$login] WITH LOGIN = [$login];
 
-                IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'dbreader')
-                DROP USER [dbreader];
-                CREATE USER [dbreader] FOR LOGIN [dbreader];
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'dbreader')
+    DROP USER [dbreader];
+CREATE USER [dbreader] FOR LOGIN [dbreader];
 
-                ALTER ROLE [db_owner] ADD MEMBER [$login];
-                ALTER ROLE [db_datareader] ADD MEMBER [dbreader];
+ALTER ROLE [db_owner]      ADD MEMBER [$login];
+ALTER ROLE [db_datareader] ADD MEMBER [dbreader];
 
-                DENY INSERT, UPDATE, DELETE TO [dbreader];
-                "@
+DENY INSERT, UPDATE, DELETE TO [dbreader];
+"@
 
-                Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
-                -Credential $Cred `
-                -Database "{{ db }}" `
-                -Query $userSql `
-                -TrustServerCertificate `
-                -ErrorAction Stop `
-                -QueryTimeout 0
+Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
+            -Credential $Cred `
+            -Database "{{ db }}" `
+            -Query $userSql `
+            -TrustServerCertificate `
+            -ErrorAction Stop `
+            -QueryTimeout 0
 
-                $AutomationServerQuery = $AutomationServersQueries['{{ db }}']
+$AutomationServerQuery = $AutomationServersQueries['{{ db }}']
 
-                if ($null -ne $AutomationServerQuery) {
+if ($null -ne $AutomationServerQuery) {
 
-                $AutomationServerQueryFinal = $AutomationServerQuery -f $ComputerName
+    $AutomationServerQueryFinal = $AutomationServerQuery -f $ComputerName
 
-                Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
-                -Credential $Cred `
-                -Database "{{ db }}" `
-                -Query $AutomationServerQueryFinal `
-                -TrustServerCertificate `
-                -ErrorAction Stop `
-                -QueryTimeout 0
-                }
-
-
-                {% endfor %}
-
-                $regPath = "D:\RegFiles"
-
-                Get-ChildItem $regPath -Filter *.reg | ForEach-Object {
-                reg import "$($_.FullName)" | Out-Null
-                }
-
-                $AN_AccessKeyName = (($decryptedName -split '`n' | where {$_ -like "Name*"}) -split 'Name: ')[1]
-
-                {% for db in database_list %}
-
-                if ('{{ db }}' -in @('AlloyNavigator', 'AlloyNavigatorExpress')) {
-                $decryptedName = C:\Install\ScriptHelper.exe DecryptAccessKey "D:\RegFiles\{{ db }}.reg"
-                $AN_AccessKeyName = (($decryptedName -split '`n' | where {$_ -like "Name*"}) -split 'Name: ')[1]
-                Restart-Service AlloyAutomationServer
-                }
-
-                if ('{{ db }}' -eq 'AlloyDiscovery') {
-                Restart-Service AlloyInventoryServer
-                }
-                {% endfor %}
+    Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
+              -Credential $Cred `
+              -Database "{{ db }}" `
+              -Query $AutomationServerQueryFinal `
+              -TrustServerCertificate `
+              -ErrorAction Stop `
+              -QueryTimeout 0
+}
 
 
-                $rebuildFTSCatalogQuery = @"
-                DECLARE @sql nvarchar(max) = N'';
+{% endfor %}
 
-                SELECT @sql +=
-                N'ALTER FULLTEXT CATALOG '
-                + c.name
-                + N' REBUILD'
-                + CHAR(13) + CHAR(10)
-                FROM sys.fulltext_catalogs c
+$regPath = "D:\RegFiles"
 
-                EXEC sys.sp_executesql @sql;
-                "@
+Get-ChildItem $regPath -Filter *.reg | ForEach-Object {
+    reg import "$($_.FullName)"  | Out-Null
+}
 
-                Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
-                -Credential $Cred `
-                -Database $AN_SQLDatabase `
-                -Query $rebuildFTSCatalogQuery `
-                -TrustServerCertificate `
-                -ErrorAction Stop `
-                -QueryTimeout 0
+$AN_AccessKeyName = (($decryptedName -split '`n' | where {$_ -like "Name*"}) -split 'Name: ')[1]
 
-                Start-ServiceIfPresent -Name 'W3SVC'
+{% for db in database_list %}
 
-                $siteName = "{{ site_name }}"
+if ('{{ db }}' -in @('AlloyNavigator', 'AlloyNavigatorExpress')) {
+    $decryptedName = C:\Install\ScriptHelper.exe DecryptAccessKey "D:\RegFiles\{{ db }}.reg"
+    $AN_AccessKeyName = (($decryptedName -split '`n' | where {$_ -like "Name*"}) -split 'Name: ')[1]
+    Restart-Service AlloyAutomationServer
+}
 
-                function Get-AlloyPortalIdFromWebConfig {
-                param (
-                [string]$WebConfigPath
-                )
+if ('{{ db }}' -eq 'AlloyDiscovery') {
+    Restart-Service AlloyInventoryServer
+}
+{% endfor %}
 
-                try {
-                [xml]$xml = Get-Content $WebConfigPath -ErrorAction Stop
 
-                $node = $xml.configuration.appSettings.add |
-                Where-Object { $_.key -eq 'AlloyPortalID' }
+$rebuildFTSCatalogQuery = @"
+DECLARE @sql nvarchar(max) = N'';
 
-                return $node.value
-                }
-                catch {
-                return $null
-                }
-                }
+SELECT @sql +=
+    N'ALTER FULLTEXT CATALOG '
+    + c.name
+    + N' REBUILD'
+    + CHAR(13) + CHAR(10)
+FROM sys.fulltext_catalogs c
 
-                $queriesToChangeIds = @{
-                "/" = "update cfgSSPSettings set ID = '{0}' where [Name] != 'default' and ID = (select top 1 ID from
-                cfgSSPSettings order by Last_Used_Date desc)"
-                "/wp" = "update cfgWebAppSettings set ID = '{0}'"
-                "/hd" = "update cfgSSPSettings set ID = '{0}' where [Name] != 'default' and ID = (select top 1 ID from
-                cfgSSPSettings order by Last_Used_Date desc)"
-                "/api" = "update cfgApiSettings set ID = '{0}'"
-                }
+EXEC sys.sp_executesql @sql;
+"@
 
-                # Get applications + root
-                $apps = Get-WebApplication -Site $siteName
-                $site = Get-Website -Name $siteName
+Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
+              -Credential $Cred `
+              -Database $AN_SQLDatabase `
+              -Query $rebuildFTSCatalogQuery `
+              -TrustServerCertificate `
+              -ErrorAction Stop `
+              -QueryTimeout 0
 
-                $allApps = $apps + [PSCustomObject]@{
-                Path = "/"
-                PhysicalPath = $site.PhysicalPath
-                } | ForEach-Object {
+Start-ServiceIfPresent -Name 'W3SVC'
 
-                $resolvedPath = [Environment]::ExpandEnvironmentVariables($_.PhysicalPath)
-                $webConfigPath = Join-Path $resolvedPath "web.config"
+$siteName = "{{ site_name }}"
 
-                if (Test-Path $webConfigPath) {
+function Get-AlloyPortalIdFromWebConfig {
+    param (
+        [string]$WebConfigPath
+    )
 
-                $portalId = Get-AlloyPortalIdFromWebConfig -WebConfigPath $webConfigPath
-                if ($null -ne $portalId) {
+    try {
+        [xml]$xml = Get-Content $WebConfigPath -ErrorAction Stop
 
-                [PSCustomObject]@{
-                Application = $_.Path
-                AlloyPortalID = $portalId
-                }
-                }
-                }
-                }
+        $node = $xml.configuration.appSettings.add |
+            Where-Object { $_.key -eq 'AlloyPortalID' }
 
-                $allApps | % {
-                $portalQuery = ($queriesToChangeIds[$_.Application] -f $_.AlloyPortalID)
-                Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
-                -Credential $Cred `
-                -Database $AN_SQLDatabase `
-                -Query $portalQuery `
-                -TrustServerCertificate `
-                -ErrorAction Stop `
-                -QueryTimeout 0
-                }
+        return $node.value
+    }
+    catch {
+        return $null
+    }
+}
 
-                Invoke-Command -ArgumentList ($AN_AccessKeyName, $SQLServerInstance, $AN_SQLDatabase) {
-                param($AN_AccessKeyName, $SQLServerInstance, $AN_SQLDatabase)
+$queriesToChangeIds = @{
+    "/" = "update cfgSSPSettings set ID = '{0}' where [Name] != 'default' and ID = (select top 1 ID from cfgSSPSettings order by Last_Used_Date desc)"
+    "/wp" = "update cfgWebAppSettings set ID = '{0}'"
+    "/hd" = "update cfgSSPSettings set ID = '{0}' where [Name] != 'default' and ID = (select top 1 ID from cfgSSPSettings order by Last_Used_Date desc)"
+    "/api" = "update cfgApiSettings set ID = '{0}'"
+}
 
-                function UpdateWebConfig($InstallPath) {
-                $FileName = "$InstallPath\Web.config"
-                [xml]$xml = Get-Content -Path $FileName
-                ($xml.configuration.appSettings.add | Where-Object { $_.key -eq "KeyName" }).value = $AN_AccessKeyName
-                ($xml.configuration.appSettings.add | Where-Object { $_.key -eq "SQLServer" }).value =
-                $SQLServerInstance
-                ($xml.configuration.appSettings.add | Where-Object { $_.key -eq "Database" }).value = $AN_SQLDatabase
-                $xml.Save($FileName)
-                }
+# Get applications + root
+$apps = Get-WebApplication -Site $siteName
+$site = Get-Website -Name $siteName
 
-                function UpdateAppSettings($InstallPath) {
-                $FileName = "$InstallPath\appsettings.json"
-                $json = Get-Content -Path $FileName -Raw | ConvertFrom-Json
-                $json.Anit."KeyName" = $AN_AccessKeyName
-                $json.Anit."SQLServer" = $SQLServerInstance
-                $json.Anit."Database" = $AN_SQLDatabase
-                $json | ConvertTo-Json -Depth 10 | Set-Content -Path $FileName -Encoding UTF8
-                }
+$allApps = $apps + [PSCustomObject]@{
+    Path = "/"
+    PhysicalPath = $site.PhysicalPath
+} | ForEach-Object {
 
-                $DefaultsID = @(
-                '{E850F970-051E-4B64-82CC-A1BF5324C370}',
-                '{1766B1CF-887E-46C7-A9A0-4E204BEBC4F3}',
-                '{031C27A5-6012-41B6-9EE0-459CF920A3DF}',
-                '{C685B83D-C7C5-48F2-A509-CB4B048E7F1D}',
-                '{85FFA55B-C1CE-454C-B111-F83EFAE376FE}',
-                '{DD41C119-1E29-4814-9024-AB5B0D3AD00C}')
+    $resolvedPath = [Environment]::ExpandEnvironmentVariables($_.PhysicalPath)
+    $webConfigPath = Join-Path $resolvedPath "web.config"
 
-                Write-Output "Configuring web-portal SSP"
-                Get-ChildItem "HKLM:\SOFTWARE\Alloy Software\Web Config" |
-                Where-Object { $DefaultsID -notcontains $_.PSChildName } |
-                ForEach-Object { UpdateAppSettings $_.GetValue("InstallPath") }
-                }
+    if (Test-Path $webConfigPath) {
 
-                Write-Output "Configuring web-portal API"
-                Get-ChildItem "HKLM:\SOFTWARE\Alloy Software\Web Config API" |
-                Where-Object { $DefaultsID -notcontains $_.PSChildName } |
-                ForEach-Object { UpdateWebConfig $_.GetValue("InstallPath") }
+        $portalId = Get-AlloyPortalIdFromWebConfig -WebConfigPath $webConfigPath
+        if ($null -ne $portalId) {
 
-                Write-Output "Configuring web-portal TP"
-                Get-ChildItem "HKLM:\SOFTWARE\Alloy Software\Web Config Tech" |
-                Where-Object { $DefaultsID -notcontains $_.PSChildName } |
-                ForEach-Object { UpdateWebConfig $_.GetValue("InstallPath") }
-                }
-                }
-                catch {
-                Write-Error $_
-                exit 1
-                }
+        [PSCustomObject]@{
+            Application   = $_.Path
+            AlloyPortalID = $portalId
+        }
+        }
+    }
+}
+
+$allApps | % {
+  $portalQuery = ($queriesToChangeIds[$_.Application] -f $_.AlloyPortalID)
+  Invoke-Sqlcmd -ServerInstance $SQLServerInstance `
+              -Credential $Cred `
+              -Database $AN_SQLDatabase `
+              -Query $portalQuery `
+              -TrustServerCertificate `
+              -ErrorAction Stop `
+              -QueryTimeout 0
+}
+
+Invoke-Command -ArgumentList ($AN_AccessKeyName, $SQLServerInstance, $AN_SQLDatabase)  {
+  param($AN_AccessKeyName, $SQLServerInstance, $AN_SQLDatabase)
+
+  function UpdateWebConfig($InstallPath) {
+      $FileName = "$InstallPath\Web.config"
+      [xml]$xml = Get-Content -Path $FileName
+      ($xml.configuration.appSettings.add | Where-Object { $_.key -eq "KeyName" }).value = $AN_AccessKeyName
+      ($xml.configuration.appSettings.add | Where-Object { $_.key -eq "SQLServer" }).value = $SQLServerInstance
+      ($xml.configuration.appSettings.add | Where-Object { $_.key -eq "Database" }).value = $AN_SQLDatabase
+      $xml.Save($FileName)
+  }
+
+  function UpdateAppSettings($InstallPath) {
+      $FileName = "$InstallPath\appsettings.json"
+      $json = Get-Content -Path $FileName -Raw | ConvertFrom-Json
+      $json.Anit."KeyName" = $AN_AccessKeyName
+      $json.Anit."SQLServer" = $SQLServerInstance
+      $json.Anit."Database" = $AN_SQLDatabase
+      $json | ConvertTo-Json -Depth 10 | Set-Content -Path $FileName -Encoding UTF8
+  }
+
+  $DefaultsID = @(
+      '{E850F970-051E-4B64-82CC-A1BF5324C370}',
+      '{1766B1CF-887E-46C7-A9A0-4E204BEBC4F3}',
+      '{031C27A5-6012-41B6-9EE0-459CF920A3DF}',
+      '{C685B83D-C7C5-48F2-A509-CB4B048E7F1D}',
+      '{85FFA55B-C1CE-454C-B111-F83EFAE376FE}',
+      '{DD41C119-1E29-4814-9024-AB5B0D3AD00C}')
+
+  Write-Output "Configuring web-portal SSP"
+  Get-ChildItem "HKLM:\SOFTWARE\Alloy Software\Web Config" |
+      Where-Object { $DefaultsID -notcontains $_.PSChildName } |
+      ForEach-Object { UpdateAppSettings $_.GetValue("InstallPath") }
+
+  Write-Output "Configuring web-portal API"
+  Get-ChildItem "HKLM:\SOFTWARE\Alloy Software\Web Config API" |
+      Where-Object { $DefaultsID -notcontains $_.PSChildName } |
+      ForEach-Object { UpdateWebConfig $_.GetValue("InstallPath") }
+
+  Write-Output "Configuring web-portal TP"
+  Get-ChildItem "HKLM:\SOFTWARE\Alloy Software\Web Config Tech" |
+      Where-Object { $DefaultsID -notcontains $_.PSChildName } |
+      ForEach-Object { UpdateWebConfig $_.GetValue("InstallPath") }
+}
+catch {
+    Write-Error $_
+    exit 1
+}
