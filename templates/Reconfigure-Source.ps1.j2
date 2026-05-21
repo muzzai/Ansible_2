@@ -425,12 +425,21 @@ Invoke-Command -ArgumentList ($AN_AccessKeyName, $SQLServerInstance, $AN_SQLData
       $xml.Save($FileName)
   }
 
-  function UpdateAppSettings($InstallPath) {
+  function UpdateAppSettingsSSP($InstallPath) {
       $FileName = "$InstallPath\appsettings.json"
       $json = Get-Content -Path $FileName -Raw | ConvertFrom-Json
       $json.Anit."KeyName" = $AN_AccessKeyName
       $json.Anit."SQLServer" = $SQLServerInstance
       $json.Anit."Database" = $AN_SQLDatabase
+      $json | ConvertTo-Json -Depth 10 | Set-Content -Path $FileName -Encoding UTF8
+  }
+
+  function UpdateAppSettingsWAC($InstallPath) {
+      $FileName = "$InstallPath\admin-center\appsettings.json"
+      $json = Get-Content -Path $FileName -Raw | ConvertFrom-Json
+      $json.Database."KeyName" = $AN_AccessKeyName
+      $json.Database."SQLServer" = $SQLServerInstance
+      $json.Database."Database" = $AN_SQLDatabase
       $json | ConvertTo-Json -Depth 10 | Set-Content -Path $FileName -Encoding UTF8
   }
 
@@ -445,7 +454,7 @@ Invoke-Command -ArgumentList ($AN_AccessKeyName, $SQLServerInstance, $AN_SQLData
   Write-Output "Configuring web-portal SSP"
   Get-ChildItem "HKLM:\SOFTWARE\Alloy Software\Web Config" |
       Where-Object { $DefaultsID -notcontains $_.PSChildName } |
-      ForEach-Object { UpdateAppSettings $_.GetValue("InstallPath") }
+      ForEach-Object { UpdateAppSettingsSSP $_.GetValue("InstallPath") }
 
   Write-Output "Configuring web-portal API"
   Get-ChildItem "HKLM:\SOFTWARE\Alloy Software\Web Config API" |
@@ -460,5 +469,5 @@ Invoke-Command -ArgumentList ($AN_AccessKeyName, $SQLServerInstance, $AN_SQLData
   Write-Output "Configuring web-portal WAC"
   Get-ChildItem "HKLM:\SOFTWARE\Alloy Software\Web Config Tech" |
       Where-Object { $DefaultsID -notcontains $_.PSChildName } |
-      ForEach-Object { UpdateAppSettings ($_.GetValue("InstallPath") + "\admin-center") }    
+      ForEach-Object { UpdateAppSettingsWAC $_.GetValue("InstallPath") }    
 }
