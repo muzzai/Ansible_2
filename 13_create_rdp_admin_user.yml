@@ -26,14 +26,6 @@
           - new_username is defined and new_username | length > 0
           - new_password is defined and new_password | length > 0
         fail_msg: "Variables 'new_username' and 'new_password' are required."
-
-    - name: "Get host connection details"
-      delegate_to: localhost
-      block:
-        - name: Build connection details
-          ansible.builtin.include_role:
-            name: build_connection_details
-
   tasks:
     # ── 1. Create local user ──────────────────────────────────────
     - name: "Create local user '{{ new_username }}'"
