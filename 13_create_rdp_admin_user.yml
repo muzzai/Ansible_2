@@ -1,0 +1,73 @@
+---
+# Создаёт локального пользователя Windows с правами Администратора и доступом по RDP.
+#
+# Использование:
+#   ansible-playbook 13_create_rdp_admin_user.yml \
+#     -e "new_username=myuser new_password=P@ssw0rd123"
+#
+# Обязательные переменные:
+#   new_username  — логин нового пользователя
+#   new_password  — пароль нового пользователя
+
+- name: "Create local admin user with RDP access"
+  hosts: aws_ec2
+  gather_facts: false
+
+  vars:
+    ansible_user: Administrator
+    ansible_connection: ssh
+    ansible_shell_type: powershell
+    ansible_ssh_transfer_method: scp
+
+  pre_tasks:
+    - name: "Validate required variables"
+      ansible.builtin.assert:
+        that:
+          - new_username is defined and new_username | length > 0
+          - new_password is defined and new_password | length > 0
+        fail_msg: "Variables 'new_username' and 'new_password' are required."
+
+    - name: "Get host connection details"
+      delegate_to: localhost
+      block:
+        - name: Build connection details
+          ansible.builtin.include_role:
+            name: build_connection_details
+
+  tasks:
+    # ── 1. Create local user ──────────────────────────────────────
+    - name: "Create local user '{{ new_username }}'"
+      ansible.windows.win_user:
+        name: "{{ new_username }}"
+        password: "{{ new_password }}"
+        state: present
+        password_never_expires: true
+        account_disabled: false
+        description: "Created by Ansible"
+
+    - name: "Add '{{ new_username }}' to Administrators group"
+      ansible.windows.win_group_membership:
+        name: Administrators
+        members:
+          - "{{ new_username }}"
+        state: present
+
+    - name: "Add '{{ new_username }}' to Remote Desktop Users group"
+      ansible.windows.win_group_membership:
+        name: "Remote Desktop Users"
+        members:
+          - "{{ new_username }}"
+        state: present
+
+    - name: "Enable Remote Desktop (fDenyTSConnections = 0)"
+      ansible.windows.win_regedit:
+        path: HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server
+        name: fDenyTSConnections
+        data: 0
+        type: dword
+
+    - name: "User creation complete"
+      ansible.builtin.debug:
+        msg: >
+          User '{{ new_username }}' created and added to Administrators
+          and Remote Desktop Users groups. RDP is enabled.
