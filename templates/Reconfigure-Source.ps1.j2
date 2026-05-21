@@ -456,4 +456,9 @@ Invoke-Command -ArgumentList ($AN_AccessKeyName, $SQLServerInstance, $AN_SQLData
   Get-ChildItem "HKLM:\SOFTWARE\Alloy Software\Web Config Tech" |
       Where-Object { $DefaultsID -notcontains $_.PSChildName } |
       ForEach-Object { UpdateWebConfig $_.GetValue("InstallPath") }
+
+  Write-Output "Configuring web-portal WAC"
+  Get-ChildItem "HKLM:\SOFTWARE\Alloy Software\Web Config Tech" |
+      Where-Object { $DefaultsID -notcontains $_.PSChildName } |
+      ForEach-Object { UpdateAppSettings ($_.GetValue("InstallPath") + "\admin-center") }    
 }
